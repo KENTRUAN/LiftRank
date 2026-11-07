@@ -163,7 +163,7 @@ struct QuestsView: View {
         HStack {
             VStack(alignment: .leading) { Text(name).font(.subheadline.bold()); Text(desc).font(.caption).foregroundStyle(.secondary) }
             Spacer()
-            Button { 
+            Button {
                 guard profile.eggs >= price else { show("Eggs 不足"); return }
                 profile.eggs -= price
                 buy()

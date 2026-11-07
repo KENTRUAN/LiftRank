@@ -141,14 +141,19 @@ enum WorkoutGenerator {
         for (i, split) in splits(daysPerWeek: max(1, min(6, daysPerWeek))).prefix(max(1, daysPerWeek)).enumerated() {
             var chosen: [Exercise] = []
             var groups = split.groups
+            var chosenAtPassStart = 0
             while chosen.count < perDay, !groups.isEmpty {
                 let g = groups.removeFirst()
                 // Prefer barbell/machine compounds first, then whatever is left for the group.
                 let candidates = pool.filter { $0.muscleGroup == g && !chosen.contains($0) }
                     .sorted { ($0.isRanked ? 0 : 1, $0.equipment == .barbell ? 0 : 1) < ($1.isRanked ? 0 : 1, $1.equipment == .barbell ? 0 : 1) }
                 if let pick = candidates.first { chosen.append(pick) }
-                if groups.isEmpty && chosen.count < perDay { groups = split.groups.reversed() }
-                if chosen.count >= pool.count { break }
+                if groups.isEmpty && chosen.count < perDay {
+                    // Stop when a full pass cannot add an exercise for this split.
+                    guard chosen.count > chosenAtPassStart else { break }
+                    chosenAtPassStart = chosen.count
+                    groups = split.groups.reversed()
+                }
             }
             let items = chosen.map { ex in
                 TemplateExercise(exerciseKey: ex.key, exerciseName: ex.name, sets: scheme.sets, repsLow: scheme.low, repsHigh: scheme.high,

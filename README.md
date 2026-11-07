@@ -11,11 +11,45 @@ SwiftUI + SwiftData，iOS 17+，本地离线版本。按《游戏化力量训练
    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
    ```
 
-2. 用 Xcode 打开 `LiftRank.xcodeproj`，选择 iPhone 模拟器运行。
-   工程由 `project.yml` 通过 xcodegen 生成；改动文件结构后运行 `xcodegen generate`。
+2. 用 Xcode 打开 `LiftRank.xcodeproj`，选择 `LiftRank` scheme 和 iPhone 模拟器运行。
+   工程配置保存在 `project.yml`；改动文件结构后可用 XcodeGen 重新生成工程（`xcodegen generate`），
+   并提交更新后的工程与共享 scheme。仓库只保留这一份 Xcode 工程。
 
-3. 不开 Xcode 的命令行构建（当前验证用的方式）：`build/manual/build.sh`，产物为 `build/manual/LiftRank.app`，
-   可用 `simctl install` / `simctl launch` 装到模拟器。
+3. 命令行构建（需要 macOS 与 Xcode）：
+
+   ```bash
+   xcodebuild build -project LiftRank.xcodeproj -scheme LiftRank \
+     -destination 'generic/platform=iOS Simulator' \
+     -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO
+   ```
+
+   产物为 `build/DerivedData/Build/Products/Debug-iphonesimulator/LiftRank.app`。
+
+## 检查与回归测试
+
+不需要安装第三方依赖。仓库 lint 使用 Python 3 标准库，检查空白字符、冲突标记、
+JSON/plist/XML、Xcode 源文件成员与测试 scheme；Windows 上使用 `python` 运行同一命令：
+
+```bash
+python3 scripts/lint.py
+```
+
+macOS 上还可检查 Swift 语法：`python3 scripts/lint.py --swift`。
+这不替代编译和运行测试。使用 Xcode 16.4 与 iOS 18.5 模拟器运行 XCTest：
+
+```bash
+xcodebuild test -project LiftRank.xcodeproj -scheme LiftRank \
+  -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+  -parallel-testing-enabled NO -test-timeouts-enabled YES \
+  -maximum-test-execution-time-allowance 60 \
+  -derivedDataPath build/DerivedData CODE_SIGNING_ALLOWED=NO
+```
+
+其他 Xcode 版本可按已安装的模拟器调整 `-destination`，或在 Xcode 中按 Command-U。
+`LiftRankTests` 覆盖训练生成器的有限动作库与存储加载失败/重试。
+GitHub Actions 在 `codex/**` 分支推送及目标为 `main` 的 PR 上运行仓库 lint、Swift 语法检查、
+模拟器构建与测试（macOS 15 / Xcode 16.4），并保存测试结果 7 天。
+Windows 无法运行 iOS 编译或 XCTest；请等待原生 CI 通过再合并。
 
 ## 调试开关（环境变量）
 
