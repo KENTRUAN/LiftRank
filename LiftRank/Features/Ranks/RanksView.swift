@@ -29,8 +29,12 @@ struct RanksView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text("肌群段位图").font(.headline)
+                            Text("我的形象").font(.headline)
                             Spacer()
+                            NavigationLink {
+                                ShopView(profile: profile, gsr: overall, muscles: muscleScores, slots: CosmeticSlot.avatarSlots, title: "形象工坊")
+                            } label: { Label("修改形象", systemImage: "wand.and.stars").font(.subheadline.bold()).labelStyle(.titleAndIcon) }
+                            .padding(.trailing, 4)
                             HStack(spacing: 2) {
                                 sideButton("正面", showsFront: true)
                                 sideButton("背面", showsFront: false)
@@ -38,10 +42,10 @@ struct RanksView: View {
                             .padding(3)
                             .background(.quaternary, in: Capsule())
                         }
-                        Text(front ? "点选肌群查看细分段位 · 三头肌在背面" : "点选肌群查看细分段位")
+                        Text(front ? "小人的身体按各肌群段位着色，点选肌群查看细分段位 · 三头肌在背面" : "点选肌群查看细分段位")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        MuscleMapView(scores: muscleScores, front: front)
+                        MuscleMapView(scores: muscleScores, front: front, spec: profile.avatar)
                         TierLegend()
                     }.card()
 
@@ -198,6 +202,7 @@ private struct MuscleRankDetail: View {
 struct MuscleMapView: View {
     let scores: [MuscleGroup: Int]
     let front: Bool
+    var spec = AvatarSpec()
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -209,27 +214,12 @@ struct MuscleMapView: View {
             ? AnyLayout(VStackLayout(alignment: .center, spacing: 12))
             : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
         layout {
-            ZStack {
-                BodySilhouette()
-                    .fill(Color.secondary.opacity(0.12))
-                    .allowsHitTesting(false)
-                ForEach(groups) { group in
-                    let region = BodyRegion(group: group, front: front)
-                    NavigationLink(value: group) {
-                        region
-                            .fill(LinearGradient(colors: [color(for: group), color(for: group).opacity(0.72)],
-                                                 startPoint: .top, endPoint: .bottom))
-                            .overlay { region.strokeBorderColor }
-                            .contentShape(region)
-                    }
-                    .buttonStyle(.plain)
-                }
+            AvatarFigureView(spec: spec, muscles: scores, front: front)
+                .frame(width: 170, height: 300)
                 .id(front)
                 .transition(.opacity)
-            }
-            .frame(width: 160, height: 310)
-            .accessibilityHidden(true)
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: front)
+                .accessibilityHidden(true)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: front)
 
             VStack(spacing: 0) {
                 ForEach(groups) { group in
@@ -257,92 +247,5 @@ struct MuscleMapView: View {
 
     private func color(for group: MuscleGroup) -> Color {
         scores[group].map { RankTier.tier(for: $0).color } ?? .secondary.opacity(0.38)
-    }
-}
-
-private struct BodySilhouette: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addEllipse(in: CGRect(x: rect.width * 0.415, y: rect.height * 0.01,
-                                   width: rect.width * 0.17, height: rect.height * 0.12))
-        path.addRoundedOutline([(45, 20), (55, 20), (57, 27), (71, 30), (73, 46), (65, 68),
-                                (69, 87), (60, 96), (40, 96), (31, 87), (35, 68),
-                                (27, 46), (29, 30), (43, 27)], in: rect)
-        path.addMirroredOutline([(31, 29), (23, 30), (16, 41), (13, 61), (9, 76), (7, 93),
-                                 (10, 100), (15, 98), (19, 80), (24, 65), (29, 53), (34, 41)], in: rect)
-        path.addMirroredOutline([(32, 84), (49, 91), (47, 114), (43, 137), (43, 150),
-                                 (39, 172), (42, 177), (29, 178), (29, 173), (31, 151),
-                                 (29, 135), (26, 111), (27, 94)], in: rect)
-        return path
-    }
-}
-
-private struct BodyRegion: Shape {
-    let group: MuscleGroup
-    let front: Bool
-
-    var strokeBorderColor: some View {
-        stroke(Color(.systemBackground).opacity(0.65), lineWidth: 0.8)
-    }
-
-    func path(in rect: CGRect) -> Path {
-        let points: [BodyPoint]
-        switch group {
-        case .shoulders:
-            points = [(31, 30), (25, 31), (20, 36), (18, 45), (23, 46), (29, 42), (33, 35)]
-        case .chest:
-            points = [(34, 33), (46, 33), (49, 37), (48, 51), (39, 53), (29, 48), (30, 41)]
-        case .biceps, .triceps:
-            points = front
-                ? [(19, 46), (26, 46), (28, 50), (24, 61), (19, 66), (15, 62), (16, 53)]
-                : [(18, 46), (25, 46), (27, 51), (23, 62), (17, 67), (14, 62), (15, 53)]
-        case .forearms:
-            points = [(16, 65), (22, 66), (21, 72), (15, 89), (10, 91), (10, 83), (12, 74)]
-        case .abs:
-            points = [(37, 53), (47, 54), (49, 62), (48, 79), (44, 86), (36, 80), (36, 70)]
-        case .quads:
-            points = [(34, 88), (46, 94), (46, 105), (43, 120), (40, 133), (34, 135), (30, 122), (28, 104), (29, 94)]
-        case .calves:
-            points = [(34, 136), (41, 136), (42, 143), (39, 157), (36, 169), (32, 171), (32, 160), (31, 146)]
-        case .traps:
-            points = [(44, 26), (49, 24), (49, 49), (44, 49), (40, 38), (33, 32)]
-        case .back:
-            points = [(33, 37), (40, 39), (44, 50), (49, 52), (46, 64), (41, 72), (36, 64), (31, 51)]
-        case .lowerBack:
-            points = [(47, 64), (49, 64), (49, 79), (46, 85), (38, 79), (40, 73)]
-        case .glutes:
-            points = [(35, 81), (44, 84), (49, 89), (48, 97), (42, 101), (33, 98), (29, 92)]
-        case .hamstrings:
-            points = [(30, 100), (38, 103), (46, 100), (44, 115), (40, 132), (34, 134), (31, 125), (28, 108)]
-        case .cardio, .fullBody:
-            return Path()
-        }
-        var path = Path()
-        path.addMirroredOutline(points, in: rect)
-        return path
-    }
-}
-
-private typealias BodyPoint = (x: CGFloat, y: CGFloat)
-
-private extension Path {
-    mutating func addMirroredOutline(_ points: [BodyPoint], in rect: CGRect) {
-        addRoundedOutline(points, in: rect)
-        addRoundedOutline(points.reversed().map { (100 - $0.x, $0.y) }, in: rect)
-    }
-
-    mutating func addRoundedOutline(_ points: [BodyPoint], in rect: CGRect) {
-        let scaled = points.map { CGPoint(x: rect.minX + $0.x * rect.width / 100,
-                                          y: rect.minY + $0.y * rect.height / 180) }
-        guard let first = scaled.first, let last = scaled.last else { return }
-        func midpoint(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
-            CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
-        }
-        move(to: midpoint(last, first))
-        for (index, point) in scaled.enumerated() {
-            let next = scaled[(index + 1) % scaled.count]
-            addQuadCurve(to: midpoint(point, next), control: point)
-        }
-        closeSubpath()
     }
 }

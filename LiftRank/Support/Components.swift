@@ -256,18 +256,25 @@ struct ProLockedNote: View {
     }
 }
 
-/// Avatar with the equipped frame cosmetic.
+/// Avatar with the equipped frame cosmetic; shows the character's head when a spec is given, else the initial.
 struct AvatarBadge: View {
     let name: String
     let frame: Cosmetic
     var size: CGFloat = 56
+    var spec: AvatarSpec? = nil
     var body: some View {
         ZStack {
             Circle().fill(frame.gradient).frame(width: size, height: size)
             Circle().fill(Color(.secondarySystemGroupedBackground)).frame(width: size - 8, height: size - 8)
-            Text(String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
-                .font(.system(size: size * 0.4, weight: .bold, design: .rounded))
-                .foregroundStyle(frame.primaryColor)
+            if let spec {
+                AvatarFigureView(spec: spec, bust: true, showBackdrop: false)
+                    .frame(width: size - 8, height: size - 8)
+                    .clipShape(Circle())
+            } else {
+                Text(String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
+                    .font(.system(size: size * 0.4, weight: .bold, design: .rounded))
+                    .foregroundStyle(frame.primaryColor)
+            }
             if frame.icon != "circle" {
                 Image(systemName: frame.icon).font(.system(size: size * 0.24)).foregroundStyle(frame.primaryColor)
                     .offset(x: size * 0.34, y: -size * 0.34)

@@ -94,7 +94,7 @@ struct SocialView: View {
                     ForEach(Array(rows.enumerated()), id: \.element.0) { i, r in
                         HStack(spacing: 10) {
                             Text("\(i + 1)").font(.headline.monospacedDigit()).frame(width: 24)
-                            AvatarBadge(name: r.1, frame: CosmeticCatalog.item(r.4.first { $0.hasPrefix("frame.") } ?? "") ?? CosmeticCatalog.defaultItem(for: .frame), size: 36)
+                            AvatarBadge(name: r.1, frame: CosmeticCatalog.item(r.4.first { $0.hasPrefix("frame.") } ?? "") ?? CosmeticCatalog.defaultItem(for: .frame), size: 36, spec: AvatarSpec(ids: r.4))
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 4) {
                                     Text(r.1).font(.subheadline.bold())
@@ -108,7 +108,7 @@ struct SocialView: View {
                             TierBadge(tier: RankTier.tier(for: r.2), compact: true)
                         }
                         if !r.5, let f = friends.first(where: { $0.code == r.0 }) {
-                            NavigationLink { FriendCompareView(friend: f, myMuscles: muscles, myGSR: gsr) } label: {
+                            NavigationLink { FriendCompareView(friend: f, myMuscles: muscles, myGSR: gsr, mySpec: profile.avatar) } label: {
                                 Text("与 \(f.name) 对比肌群 · 更新于 \(f.updatedAt.shortString)").font(.caption).foregroundStyle(Color.accentColor)
                             }
                             .swipeActions { Button(role: .destructive) { context.delete(f); try? context.save() } label: { Label("删除", systemImage: "trash") } }
@@ -164,7 +164,7 @@ struct RankCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                AvatarBadge(name: name, frame: frame, size: 56)
+                AvatarBadge(name: name, frame: frame, size: 56, spec: AvatarSpec(ids: cosmetics))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name).font(.title3.bold()).foregroundStyle(dark ? .white : .primary)
                     TitleTag(cosmetic: title)
@@ -199,8 +199,22 @@ struct FriendCompareView: View {
     let friend: Friend
     let myMuscles: [MuscleGroup: Int]
     let myGSR: Int
+    var mySpec = AvatarSpec()
     var body: some View {
         List {
+            Section {
+                HStack(spacing: 20) {
+                    VStack(spacing: 4) {
+                        AvatarFigureView(spec: mySpec, muscles: myMuscles).frame(height: 180)
+                        Text("我").font(.caption.bold())
+                    }.frame(maxWidth: .infinity)
+                    VStack(spacing: 4) {
+                        AvatarFigureView(spec: AvatarSpec(ids: friend.cosmetics), muscles: friend.muscleScores).frame(height: 180)
+                        Text(friend.name).font(.caption.bold())
+                    }.frame(maxWidth: .infinity)
+                }
+                .listRowBackground(Color.clear)
+            }
             Section("总体") {
                 HStack { Text("我"); Spacer(); Text("\(myGSR)").bold(); TierBadge(tier: RankTier.tier(for: myGSR), compact: true) }
                 HStack { Text(friend.name); Spacer(); Text("\(friend.gsr)").bold(); TierBadge(tier: RankTier.tier(for: friend.gsr), compact: true) }

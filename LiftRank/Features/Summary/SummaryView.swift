@@ -186,10 +186,10 @@ struct SummaryView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack { Text("AI 点评").font(.headline); Spacer(); if aiLoading { ProgressView() } }
                     if let aiText { Text(markdown(aiText)).font(.subheadline) }
-                    else { Text(profile.isAIConfigured ? "让 AI 根据本周期数据给出总结与下一步建议。" : "配置 AI 后可生成总结点评（我的 → AI 助手）。").font(.footnote).foregroundStyle(.secondary) }
+                    else { Text(AIBackend.isConfigured ? "让 AI 根据本周期数据给出总结与下一步建议。" : "AI 服务开通后可生成总结点评。").font(.footnote).foregroundStyle(.secondary) }
                     if let aiError { Text(aiError).font(.footnote).foregroundStyle(.red) }
                     Button { generateAI(s) } label: { Label(aiText == nil ? "生成点评" : "重新生成", systemImage: "sparkles").frame(maxWidth: .infinity) }
-                        .buttonStyle(.bordered).disabled(aiLoading || !profile.isAIConfigured)
+                        .buttonStyle(.bordered).disabled(aiLoading || !AIBackend.isConfigured)
                 }.card()
             }.padding()
         }
@@ -200,7 +200,7 @@ struct SummaryView: View {
     }
 
     private func generateAI(_ s: SummaryStats) {
-        guard let config = profile.aiConfig else { return }
+        guard let config = AIBackend.config else { return }
         aiLoading = true; aiError = nil
         let data = """
         周期：\(period.label(interval))。训练天数 \(s.trainingDays)，力量训练 \(s.workouts) 次 \(s.sets) 组，训练量 \(s.volumeKg.fmt(0)) kg，时长 \(s.durationMin.fmt(0)) 分钟。

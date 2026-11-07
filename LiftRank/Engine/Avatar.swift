@@ -1,0 +1,530 @@
+import SwiftUI
+
+// MARK: - Spec
+
+/// Everything needed to draw a character ("小人"): resolved from cosmetic ids such as "hair.spiky" or "outfitColor.red".
+struct AvatarSpec: Equatable {
+    var skin: Color = AvatarPalette.skin["light"]!
+    var hair = "short"
+    var hairColor: Color = AvatarPalette.hair["black"]!
+    var eyes = "normal"
+    var outfit = "tank"
+    var outfitColor: Color = AvatarPalette.cloth["gray"]!
+    var accessory = "none"
+    var accessoryColor: Color = .red
+    var backdrop = "none"
+
+    init() {}
+
+    /// Unknown or missing slots keep their defaults.
+    init(ids: [String]) {
+        for slot in CosmeticSlot.avatarSlots {
+            let prefix = slot.rawValue + "."
+            guard let id = ids.first(where: { $0.hasPrefix(prefix) }), let item = CosmeticCatalog.item(id) else { continue }
+            apply(item)
+        }
+    }
+
+    mutating func apply(_ item: Cosmetic) {
+        let key = item.optionKey
+        switch item.slot {
+        case .skin: skin = item.primaryColor
+        case .hair: hair = key
+        case .hairColor: hairColor = item.primaryColor
+        case .eyes: eyes = key
+        case .outfit: outfit = key
+        case .outfitColor: outfitColor = item.primaryColor
+        case .accessory: accessory = key; accessoryColor = item.primaryColor
+        case .backdrop: backdrop = key
+        default: break
+        }
+    }
+
+    func applying(_ item: Cosmetic) -> AvatarSpec { var s = self; s.apply(item); return s }
+
+    static let defaultCoachIDs = ["skin.fair", "hair.ponytail", "hairColor.blue", "eyes.happy", "outfit.hoodie", "outfitColor.purple", "accessory.headband", "backdrop.gym"]
+}
+
+enum AvatarPalette {
+    static let skin: [String: Color] = [
+        "light": Color(red: 0.98, green: 0.86, blue: 0.74), "fair": Color(red: 0.95, green: 0.79, blue: 0.66),
+        "tan": Color(red: 0.86, green: 0.66, blue: 0.48), "olive": Color(red: 0.76, green: 0.58, blue: 0.42),
+        "brown": Color(red: 0.60, green: 0.42, blue: 0.28), "dark": Color(red: 0.40, green: 0.27, blue: 0.18),
+    ]
+    static let hair: [String: Color] = [
+        "black": Color(red: 0.12, green: 0.12, blue: 0.14), "brown": Color(red: 0.40, green: 0.26, blue: 0.15),
+        "blonde": Color(red: 0.93, green: 0.80, blue: 0.45), "red": Color(red: 0.75, green: 0.25, blue: 0.15),
+        "white": Color(red: 0.90, green: 0.90, blue: 0.92), "blue": Color(red: 0.25, green: 0.45, blue: 0.95),
+        "pink": Color(red: 0.95, green: 0.45, blue: 0.70), "green": Color(red: 0.25, green: 0.70, blue: 0.45),
+        "purple": Color(red: 0.55, green: 0.35, blue: 0.85),
+    ]
+    static let cloth: [String: Color] = [
+        "gray": Color(red: 0.55, green: 0.56, blue: 0.60), "black": Color(red: 0.15, green: 0.15, blue: 0.17),
+        "white": Color(red: 0.95, green: 0.95, blue: 0.96), "red": Color(red: 0.85, green: 0.22, blue: 0.22),
+        "blue": Color(red: 0.22, green: 0.45, blue: 0.90), "green": Color(red: 0.20, green: 0.65, blue: 0.40),
+        "orange": Color(red: 0.95, green: 0.55, blue: 0.15), "purple": Color(red: 0.50, green: 0.30, blue: 0.80),
+        "pink": Color(red: 0.95, green: 0.50, blue: 0.70), "gold": Color(red: 0.92, green: 0.72, blue: 0.20),
+    ]
+    static let gold = Color(red: 0.95, green: 0.78, blue: 0.25)
+    static let ink = Color(red: 0.16, green: 0.13, blue: 0.14)
+}
+
+// MARK: - View
+
+/// Chibi character drawn with Canvas. Muscle groups with a score are tinted with their tier color.
+struct AvatarFigureView: View {
+    var spec: AvatarSpec
+    var muscles: [MuscleGroup: Int] = [:]
+    var front = true
+    var bust = false
+    var showBackdrop = true
+
+    var body: some View {
+        Canvas { ctx, size in
+            AvatarPainter(spec: spec, muscles: muscles, front: front).draw(&ctx, size: size, bust: bust, backdrop: showBackdrop)
+        }
+        .accessibilityLabel(bust ? "头像" : "角色形象")
+    }
+}
+
+// MARK: - Painter
+
+/// Draws in a 100×180 unit space (x: 0–100, y: −10–182) and scales to the canvas.
+struct AvatarPainter {
+    let spec: AvatarSpec
+    let muscles: [MuscleGroup: Int]
+    let front: Bool
+
+    private typealias P = CGPoint
+
+    func draw(_ ctx: inout GraphicsContext, size: CGSize, bust: Bool, backdrop: Bool) {
+        if backdrop { drawBackdrop(&ctx, size: size) }
+        let unit = bust ? CGRect(x: 18, y: -8, width: 64, height: 74) : CGRect(x: 0, y: -12, width: 100, height: 194)
+        let scale = min(size.width / unit.width, size.height / unit.height)
+        ctx.translateBy(x: (size.width - unit.width * scale) / 2 - unit.minX * scale,
+                        y: (size.height - unit.height * scale) / 2 - unit.minY * scale)
+        ctx.scaleBy(x: scale, y: scale)
+        hairBack(&ctx)
+        if spec.outfit == "hoodie" { fill(&ctx, ellipse(28, 40, 44, 26), spec.outfitColor) }
+        legs(&ctx)
+        arms(&ctx)
+        torso(&ctx)
+        outfit(&ctx)
+        shoulders(&ctx)
+        head(&ctx)
+        hairFront(&ctx)
+        if front { face(&ctx) }
+        accessory(&ctx)
+    }
+
+    // MARK: Colors
+
+    private func tint(_ g: MuscleGroup) -> Color { muscles[g].map { RankTier.tier(for: $0).color } ?? spec.skin }
+    /// Clothes are translucent when muscle tiers need to show through; otherwise nearly opaque.
+    private func cloth(_ base: Double) -> Double { muscles.isEmpty ? min(1, base * 2.4) : base }
+    private var outline: Color { spec.skin.darkened(0.42) }
+
+    // MARK: Layers
+
+    private func drawBackdrop(_ ctx: inout GraphicsContext, size: CGSize) {
+        let rect = CGRect(origin: .zero, size: size)
+        let path = Path(roundedRect: rect, cornerRadius: min(size.width, size.height) * 0.12)
+        let colors: [Color]
+        switch spec.backdrop {
+        case "gym": colors = [Color(red: 0.30, green: 0.32, blue: 0.38), Color(red: 0.14, green: 0.15, blue: 0.19)]
+        case "sunset": colors = [Color(red: 0.98, green: 0.62, blue: 0.30), Color(red: 0.55, green: 0.25, blue: 0.55)]
+        case "dojo": colors = [Color(red: 0.93, green: 0.85, blue: 0.70), Color(red: 0.72, green: 0.45, blue: 0.30)]
+        case "galaxy": colors = [Color(red: 0.08, green: 0.06, blue: 0.22), Color(red: 0.30, green: 0.10, blue: 0.45)]
+        default: return
+        }
+        ctx.fill(path, with: .linearGradient(Gradient(colors: colors), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+        switch spec.backdrop {
+        case "gym":
+            var bar = Path()
+            bar.move(to: CGPoint(x: size.width * 0.12, y: size.height * 0.9)); bar.addLine(to: CGPoint(x: size.width * 0.88, y: size.height * 0.9))
+            ctx.stroke(bar, with: .color(.white.opacity(0.18)), style: StrokeStyle(lineWidth: size.height * 0.02, lineCap: .round))
+            for x in [0.16, 0.84] {
+                ctx.fill(Path(roundedRect: CGRect(x: size.width * x - size.width * 0.03, y: size.height * 0.84, width: size.width * 0.06, height: size.height * 0.12), cornerRadius: 3), with: .color(.white.opacity(0.22)))
+            }
+        case "galaxy":
+            var seed: UInt32 = 7
+            for _ in 0..<28 {
+                seed = seed &* 1_103_515_245 &+ 12345
+                let x = Double((seed >> 8) % 1000) / 1000 * size.width
+                seed = seed &* 1_103_515_245 &+ 12345
+                let y = Double((seed >> 8) % 1000) / 1000 * size.height
+                let r = Double((seed >> 4) % 3) * 0.5 + 0.8
+                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)), with: .color(.white.opacity(0.7)))
+            }
+        case "dojo":
+            ctx.fill(Path(CGRect(x: 0, y: size.height * 0.78, width: size.width, height: size.height * 0.06)), with: .color(Color(red: 0.55, green: 0.15, blue: 0.12).opacity(0.6)))
+        case "sunset":
+            ctx.fill(Path(ellipseIn: CGRect(x: size.width * 0.6, y: size.height * 0.08, width: size.width * 0.22, height: size.width * 0.22)), with: .color(.yellow.opacity(0.75)))
+        default: break
+        }
+    }
+
+    private func hairBack(_ ctx: inout GraphicsContext) {
+        let c = spec.hairColor
+        switch spec.hair {
+        case "long":
+            fill(&ctx, rounded(23, 18, 11, 44, 5), c); fill(&ctx, rounded(66, 18, 11, 44, 5), c)
+        case "ponytail":
+            if front { limb(&ctx, P(x: 72, y: 20), P(x: 80, y: 58), 9, c) } else { limb(&ctx, P(x: 50, y: 34), P(x: 50, y: 66), 10, c) }
+        default: break
+        }
+    }
+
+    private func legs(_ ctx: inout GraphicsContext) {
+        for side in [false, true] {
+            let thigh = front ? tint(.quads) : tint(.hamstrings)
+            limb(&ctx, m(P(x: 41, y: 110), side), m(P(x: 39, y: 142), side), 15, thigh)
+            limb(&ctx, m(P(x: 39, y: 142), side), m(P(x: 38, y: 168), side), 11, tint(.calves))
+            fill(&ctx, ellipse(side ? 54 : 26, 166, 20, 10), AvatarPalette.ink.opacity(0.85), outlined: false)
+        }
+        if !front {
+            fill(&ctx, Path(ellipseIn: CGRect(x: 33, y: 97, width: 17, height: 18)), tint(.glutes))
+            fill(&ctx, Path(ellipseIn: CGRect(x: 50, y: 97, width: 17, height: 18)), tint(.glutes))
+        }
+        ctx.opacity = cloth(0.5)
+        fill(&ctx, rounded(32, 104, 36, 18, 5), spec.outfitColor.darkened(0.25))
+        ctx.opacity = 1
+    }
+
+    private func arms(_ ctx: inout GraphicsContext) {
+        for side in [false, true] {
+            limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 11, front ? tint(.biceps) : tint(.triceps))
+            limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 118), side), 9, tint(.forearms))
+            fill(&ctx, Path(ellipseIn: CGRect(x: (side ? 100 - 14 : 14) - 5, y: 116, width: 10, height: 10)), spec.skin)
+        }
+    }
+
+    private func torso(_ ctx: inout GraphicsContext) {
+        fill(&ctx, smooth([(29, 60), (71, 60), (69, 84), (66, 106), (34, 106), (31, 84)]), spec.skin)
+        if front {
+            fill(&ctx, rounded(33, 64, 17, 16, 6), tint(.chest))
+            fill(&ctx, rounded(50, 64, 17, 16, 6), tint(.chest))
+            fill(&ctx, rounded(37, 82, 26, 24, 6), tint(.abs))
+            var lines = Path()
+            lines.move(to: P(x: 50, y: 84)); lines.addLine(to: P(x: 50, y: 104))
+            for y in [90.0, 98.0] { lines.move(to: P(x: 40, y: y)); lines.addLine(to: P(x: 60, y: y)) }
+            ctx.stroke(lines, with: .color(outline.opacity(0.5)), lineWidth: 0.9)
+        } else {
+            fill(&ctx, smooth([(36, 60), (64, 60), (58, 72), (42, 72)]), tint(.traps))
+            fill(&ctx, rounded(32, 68, 36, 22, 7), tint(.back))
+            fill(&ctx, rounded(38, 90, 24, 14, 5), tint(.lowerBack))
+            var spine = Path(); spine.move(to: P(x: 50, y: 70)); spine.addLine(to: P(x: 50, y: 102))
+            ctx.stroke(spine, with: .color(outline.opacity(0.5)), lineWidth: 0.9)
+        }
+    }
+
+    private func shoulders(_ ctx: inout GraphicsContext) {
+        for side in [false, true] {
+            let c = m(P(x: 28, y: 66), side)
+            fill(&ctx, Path(ellipseIn: CGRect(x: c.x - 9, y: c.y - 9, width: 18, height: 18)), tint(.shoulders))
+            if ["tee", "hoodie", "robe", "armor"].contains(spec.outfit) {
+                ctx.opacity = cloth(spec.outfit == "armor" ? 0.7 : 0.32)
+                fill(&ctx, Path(ellipseIn: CGRect(x: c.x - 10, y: c.y - 10, width: 20, height: 20)), spec.outfit == "armor" ? spec.outfitColor.darkened(0.2) : spec.outfitColor, outlined: spec.outfit == "armor")
+                ctx.opacity = 1
+            }
+        }
+    }
+
+    private func outfit(_ ctx: inout GraphicsContext) {
+        let c = spec.outfitColor
+        let body = smooth([(29, 60), (71, 60), (69, 84), (66, 106), (34, 106), (31, 84)])
+        switch spec.outfit {
+        case "tank":
+            ctx.opacity = cloth(0.22); fill(&ctx, body, c, outlined: false); ctx.opacity = 1
+            fill(&ctx, rounded(36, 59, 7, 12, 3), c, outlined: false); fill(&ctx, rounded(57, 59, 7, 12, 3), c, outlined: false)
+            fill(&ctx, rounded(33, 98, 34, 9, 3), c, outlined: false)
+        case "tee":
+            ctx.opacity = cloth(0.32); fill(&ctx, body, c, outlined: false)
+            for side in [false, true] { limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 23, y: 82), side), 13, c, outlined: false) }
+            ctx.opacity = 1
+            if front { ctx.stroke(ellipse(42, 57, 16, 8), with: .color(c.darkened(0.3)), lineWidth: 1) }
+        case "hoodie":
+            ctx.opacity = cloth(0.36); fill(&ctx, body, c, outlined: false)
+            for side in [false, true] {
+                limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 13, c, outlined: false)
+                limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 114), side), 11, c, outlined: false)
+            }
+            ctx.opacity = 1
+            if front {
+                ctx.stroke(rounded(40, 92, 20, 10, 3), with: .color(c.darkened(0.3)), lineWidth: 1)
+                var cords = Path(); cords.move(to: P(x: 46, y: 62)); cords.addLine(to: P(x: 45, y: 76)); cords.move(to: P(x: 54, y: 62)); cords.addLine(to: P(x: 55, y: 76))
+                ctx.stroke(cords, with: .color(.white.opacity(0.8)), lineWidth: 1)
+            }
+        case "robe":
+            ctx.opacity = cloth(0.42); fill(&ctx, body, c, outlined: false)
+            for side in [false, true] {
+                limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 14, c, outlined: false)
+                limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 112), side), 12, c, outlined: false)
+            }
+            ctx.opacity = 1
+            var trim = Path(); trim.move(to: P(x: 50, y: 61)); trim.addLine(to: P(x: 50, y: 105))
+            ctx.stroke(trim, with: .color(AvatarPalette.gold), lineWidth: 1.6)
+            fill(&ctx, rounded(33, 96, 34, 5, 2), AvatarPalette.gold, outlined: false)
+        case "armor":
+            ctx.opacity = cloth(0.55); fill(&ctx, body, c.darkened(0.1)); ctx.opacity = 1
+            var plates = Path()
+            plates.move(to: P(x: 50, y: 62)); plates.addLine(to: P(x: 50, y: 104))
+            plates.move(to: P(x: 34, y: 82)); plates.addLine(to: P(x: 66, y: 82))
+            ctx.stroke(plates, with: .color(c.darkened(0.45)), lineWidth: 1.2)
+            fill(&ctx, smooth([(50, 66), (56, 72), (50, 78), (44, 72)]), AvatarPalette.gold)
+        default: break
+        }
+    }
+
+    private func head(_ ctx: inout GraphicsContext) {
+        fill(&ctx, rounded(44, 54, 12, 10, 4), spec.skin)
+        fill(&ctx, Path(ellipseIn: CGRect(x: 22, y: 30, width: 9, height: 9)), spec.skin)
+        fill(&ctx, Path(ellipseIn: CGRect(x: 69, y: 30, width: 9, height: 9)), spec.skin)
+        fill(&ctx, ellipse(26, 6, 48, 52), spec.skin)
+    }
+
+    private func hairFront(_ ctx: inout GraphicsContext) {
+        let c = spec.hairColor
+        if !front {
+            switch spec.hair {
+            case "none": break
+            case "buzz": ctx.opacity = 0.55; fill(&ctx, ellipse(26, 6, 48, 44), c); ctx.opacity = 1
+            case "mohawk":
+                ctx.opacity = 0.55; fill(&ctx, ellipse(26, 6, 48, 44), c); ctx.opacity = 1
+                fill(&ctx, rounded(45, -6, 10, 46, 5), c)
+            default: fill(&ctx, ellipse(26, 6, 48, 44), c)
+            }
+            if spec.hair == "bun" { fill(&ctx, Path(ellipseIn: CGRect(x: 42, y: 0, width: 16, height: 16)), c) }
+            if spec.hair == "curly" { curls(&ctx, c) }
+            if spec.hair == "spiky" { spikes(&ctx, c) }
+            return
+        }
+        switch spec.hair {
+        case "none": return
+        case "buzz": ctx.opacity = 0.55; fill(&ctx, ellipse(26, 6, 48, 22), c); ctx.opacity = 1
+        case "short":
+            fill(&ctx, ellipse(26, 6, 48, 22), c)
+            fill(&ctx, rounded(26, 20, 6, 11, 2), c); fill(&ctx, rounded(68, 20, 6, 11, 2), c)
+        case "spiky": fill(&ctx, ellipse(26, 6, 48, 22), c); spikes(&ctx, c)
+        case "long":
+            fill(&ctx, ellipse(26, 6, 48, 22), c)
+            fill(&ctx, smooth([(26, 16), (36, 12), (34, 30), (28, 34)]), c); fill(&ctx, smooth([(74, 16), (64, 12), (66, 30), (72, 34)]), c)
+        case "bun": fill(&ctx, ellipse(26, 6, 48, 22), c); fill(&ctx, Path(ellipseIn: CGRect(x: 42, y: -4, width: 16, height: 16)), c)
+        case "curly": fill(&ctx, ellipse(26, 6, 48, 22), c); curls(&ctx, c)
+        case "ponytail": fill(&ctx, ellipse(26, 6, 48, 22), c); fill(&ctx, Path(ellipseIn: CGRect(x: 66, y: 14, width: 10, height: 10)), c)
+        case "mohawk":
+            ctx.opacity = 0.55; fill(&ctx, ellipse(26, 6, 48, 22), c); ctx.opacity = 1
+            fill(&ctx, rounded(45, -6, 10, 30, 5), c)
+        default: fill(&ctx, ellipse(26, 6, 48, 22), c)
+        }
+    }
+
+    private func spikes(_ ctx: inout GraphicsContext, _ c: Color) {
+        for pts in [[(31, 14), (36, -2), (43, 12)], [(43, 11), (50, -8), (57, 11)], [(57, 12), (64, -2), (69, 14)]] {
+            fill(&ctx, smooth(pts), c)
+        }
+    }
+
+    private func curls(_ ctx: inout GraphicsContext, _ c: Color) {
+        for (x, y) in [(24, 14), (31, 5), (42, 0), (54, 0), (64, 5), (71, 14)] {
+            fill(&ctx, Path(ellipseIn: CGRect(x: x, y: y, width: 14, height: 14)), c)
+        }
+    }
+
+    private func face(_ ctx: inout GraphicsContext) {
+        let ink = AvatarPalette.ink
+        func dot(_ x: CGFloat) {
+            ctx.fill(Path(ellipseIn: CGRect(x: x - 3.2, y: 32, width: 6.4, height: 6.4)), with: .color(ink))
+            ctx.fill(Path(ellipseIn: CGRect(x: x - 0.4, y: 32.6, width: 2, height: 2)), with: .color(.white))
+        }
+        func hump(_ x: CGFloat) {
+            var p = Path(); p.move(to: P(x: x - 3.6, y: 37)); p.addQuadCurve(to: P(x: x + 3.6, y: 37), control: P(x: x, y: 30.5))
+            ctx.stroke(p, with: .color(ink), style: StrokeStyle(lineWidth: 1.7, lineCap: .round))
+        }
+        switch spec.eyes {
+        case "happy": hump(41); hump(59)
+        case "cool":
+            for x in [41.0, 59.0] { ctx.fill(Path(roundedRect: CGRect(x: x - 4.5, y: 33.5, width: 9, height: 3), cornerRadius: 1.5), with: .color(ink)) }
+        case "determined":
+            dot(41); dot(59)
+            var brows = Path()
+            brows.move(to: P(x: 36, y: 28)); brows.addLine(to: P(x: 45, y: 30.5))
+            brows.move(to: P(x: 64, y: 28)); brows.addLine(to: P(x: 55, y: 30.5))
+            ctx.stroke(brows, with: .color(ink), style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+        case "wink": dot(41); hump(59)
+        default: dot(41); dot(59)
+        }
+        var mouth = Path()
+        switch spec.eyes {
+        case "happy": mouth.move(to: P(x: 44, y: 44)); mouth.addQuadCurve(to: P(x: 56, y: 44), control: P(x: 50, y: 52))
+        case "cool": mouth.move(to: P(x: 46, y: 46)); mouth.addLine(to: P(x: 54, y: 46))
+        default: mouth.move(to: P(x: 45, y: 45)); mouth.addQuadCurve(to: P(x: 55, y: 45), control: P(x: 50, y: 50))
+        }
+        ctx.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+        if spec.accessory == "beard" { fill(&ctx, rounded(36, 43, 28, 12, 6), spec.hairColor) }
+    }
+
+    private func accessory(_ ctx: inout GraphicsContext) {
+        let c = spec.accessoryColor
+        switch spec.accessory {
+        case "headband": fill(&ctx, rounded(26, 23, 48, 5, 1.5), c, outlined: false)
+        case "cap":
+            fill(&ctx, ellipse(25, 2, 50, 26), c)
+            if front { fill(&ctx, rounded(26, 23, 48, 5, 2), c.darkened(0.2)) }
+            fill(&ctx, Path(ellipseIn: CGRect(x: 48, y: 0, width: 4, height: 4)), c.darkened(0.3), outlined: false)
+        case "glasses" where front:
+            var g = Path()
+            g.addEllipse(in: CGRect(x: 34, y: 28.5, width: 14, height: 13)); g.addEllipse(in: CGRect(x: 52, y: 28.5, width: 14, height: 13))
+            g.move(to: P(x: 48, y: 35)); g.addLine(to: P(x: 52, y: 35))
+            ctx.stroke(g, with: .color(AvatarPalette.ink), lineWidth: 1.4)
+        case "sunglasses" where front:
+            fill(&ctx, rounded(33, 30, 15, 9, 3), AvatarPalette.ink, outlined: false); fill(&ctx, rounded(52, 30, 15, 9, 3), AvatarPalette.ink, outlined: false)
+            var b = Path(); b.move(to: P(x: 48, y: 33)); b.addLine(to: P(x: 52, y: 33)); ctx.stroke(b, with: .color(AvatarPalette.ink), lineWidth: 1.6)
+        case "wristbands":
+            for side in [false, true] {
+                let p = m(P(x: 16, y: 113), side)
+                ctx.stroke(Path(ellipseIn: CGRect(x: p.x - 5.5, y: p.y - 5.5, width: 11, height: 11)), with: .color(c), lineWidth: 3)
+            }
+        case "crown":
+            fill(&ctx, smooth([(34, 12), (34, -2), (42, 5), (50, -8), (58, 5), (66, -2), (66, 12)]), AvatarPalette.gold)
+            for (x, col) in [(42.0, Color.red), (50.0, Color.blue), (58.0, Color.green)] {
+                ctx.fill(Path(ellipseIn: CGRect(x: x - 1.6, y: 5, width: 3.2, height: 3.2)), with: .color(col))
+            }
+        case "halo":
+            ctx.stroke(ellipse(33, -10, 34, 10), with: .color(AvatarPalette.gold), lineWidth: 2.2)
+        default: break
+        }
+    }
+
+    // MARK: Primitives
+
+    private func m(_ p: CGPoint, _ mirrored: Bool) -> CGPoint { mirrored ? CGPoint(x: 100 - p.x, y: p.y) : p }
+    private func ellipse(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> Path { Path(ellipseIn: CGRect(x: x, y: y, width: w, height: h)) }
+    private func rounded(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat) -> Path { Path(roundedRect: CGRect(x: x, y: y, width: w, height: h), cornerRadius: r) }
+
+    private func smooth(_ pts: [(Int, Int)]) -> Path {
+        let p = pts.map { CGPoint(x: CGFloat($0.0), y: CGFloat($0.1)) }
+        var path = Path()
+        guard let first = p.first, let last = p.last else { return path }
+        func mid(_ a: CGPoint, _ b: CGPoint) -> CGPoint { CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
+        path.move(to: mid(last, first))
+        for (i, pt) in p.enumerated() { path.addQuadCurve(to: mid(pt, p[(i + 1) % p.count]), control: pt) }
+        path.closeSubpath()
+        return path
+    }
+
+    private func fill(_ ctx: inout GraphicsContext, _ path: Path, _ color: Color, outlined: Bool = true) {
+        ctx.fill(path, with: .color(color))
+        if outlined { ctx.stroke(path, with: .color(color.darkened(0.42)), lineWidth: 1.1) }
+    }
+
+    private func limb(_ ctx: inout GraphicsContext, _ a: CGPoint, _ b: CGPoint, _ width: CGFloat, _ color: Color, outlined: Bool = true) {
+        var p = Path(); p.move(to: a); p.addLine(to: b)
+        if outlined { ctx.stroke(p, with: .color(color.darkened(0.42)), style: StrokeStyle(lineWidth: width + 2.2, lineCap: .round)) }
+        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: width, lineCap: .round))
+    }
+}
+
+extension Color {
+    func darkened(_ amount: Double) -> Color {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard UIColor(self).getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        return Color(hue: h, saturation: s, brightness: max(0, b * (1 - amount)), opacity: a)
+    }
+}
+
+// MARK: - Natural-language → avatar
+
+/// Turns a description such as "粉色长发、戴墨镜、穿黑色连帽衫的女生" into cosmetic ids. Works offline; the AI backend refines it when available.
+enum AvatarDescriber {
+    static let jsonKeys = ["skin", "hair", "hairColor", "eyes", "outfit", "outfitColor", "accessory", "backdrop"]
+
+    /// Allowed values per slot, for prompts.
+    static var optionList: String {
+        CosmeticSlot.avatarSlots.map { slot in
+            "\(slot.rawValue): " + CosmeticCatalog.items(for: slot).map { "\($0.optionKey)(\($0.name))" }.joined(separator: "/")
+        }.joined(separator: "\n")
+    }
+
+    private static let colorWords: [(String, String)] = [
+        ("black", "黑"), ("brown", "棕|褐|栗"), ("blonde", "金|黄"), ("red", "红"), ("white", "白|银"), ("blue", "蓝"),
+        ("pink", "粉"), ("green", "绿"), ("purple", "紫"), ("gray", "灰"), ("orange", "橙|橘"),
+    ]
+    private static let rules: [(CosmeticSlot, String, String)] = [
+        (.hair, "none", "光头|没有头发|秃"), (.hair, "buzz", "寸头|板寸|平头"), (.hair, "mohawk", "莫西干|鸡冠头"), (.hair, "spiky", "刺猬|竖起|炸毛|尖发"),
+        (.hair, "bun", "丸子|发髻|盘发"), (.hair, "ponytail", "马尾"), (.hair, "curly", "卷发|卷毛"), (.hair, "long", "长发"), (.hair, "short", "短发"),
+        (.skin, "light", "白皙|皮肤白|肤色浅"), (.skin, "tan", "小麦|古铜|健康肤色|晒黑"), (.skin, "dark", "黑皮肤|深色皮肤|肤色深"), (.skin, "brown", "棕色皮肤|棕皮"),
+        (.eyes, "happy", "开心|微笑|笑眯眯|爱笑|可爱"), (.eyes, "cool", "冷酷|很酷|酷酷|眯眼|高冷"), (.eyes, "determined", "坚定|认真|严肃|凶"), (.eyes, "wink", "眨眼|wink|俏皮"),
+        (.outfit, "none", "赤膊|不穿上衣|光膀子|裸上身"), (.outfit, "armor", "盔甲|铠甲|战甲"), (.outfit, "robe", "长袍|道袍|斗篷|袍子"), (.outfit, "hoodie", "连帽|卫衣"),
+        (.outfit, "tee", "T恤|t恤|短袖|体恤"), (.outfit, "tank", "背心"),
+        (.accessory, "sunglasses", "墨镜|太阳镜"), (.accessory, "glasses", "眼镜"), (.accessory, "cap", "棒球帽|鸭舌帽|帽子"), (.accessory, "headband", "发带|头带|头巾"),
+        (.accessory, "wristbands", "护腕"), (.accessory, "crown", "皇冠|王冠"), (.accessory, "halo", "光环|天使"), (.accessory, "beard", "胡子|胡须|络腮"),
+        (.backdrop, "gym", "健身房"), (.backdrop, "dojo", "道场|武馆"), (.backdrop, "galaxy", "星空|宇宙|银河|太空"), (.backdrop, "sunset", "夕阳|日落|黄昏"),
+    ]
+
+    static func parse(_ text: String, base: [String]) -> [String] {
+        var ids = base
+        var touched: Set<CosmeticSlot> = []
+        for (slot, key, pattern) in rules where !touched.contains(slot) {
+            if text.range(of: pattern, options: .regularExpression) != nil { ids = replacing(ids, slot: slot, key: key); touched.insert(slot) }
+        }
+        for (key, words) in colorWords {
+            if !touched.contains(.hairColor), text.range(of: "(\(words))(色)?(的)?(头发|长发|短发|卷发|马尾|发)", options: .regularExpression) != nil,
+               CosmeticCatalog.item("hairColor.\(key)") != nil {
+                ids = replacing(ids, slot: .hairColor, key: key); touched.insert(.hairColor)
+            }
+            let clothKey = key == "blonde" ? "gold" : key
+            if !touched.contains(.outfitColor), text.range(of: "(\(words))(色)?(的)?(衣|背心|T恤|t恤|短袖|连帽|卫衣|外套|袍|盔甲|铠甲|上衣|衬衫)", options: .regularExpression) != nil,
+               CosmeticCatalog.item("outfitColor.\(clothKey)") != nil {
+                ids = replacing(ids, slot: .outfitColor, key: clothKey); touched.insert(.outfitColor)
+            }
+        }
+        if !touched.contains(.hair) {
+            if text.range(of: "女", options: .regularExpression) != nil { ids = replacing(ids, slot: .hair, key: "long") }
+            else if text.range(of: "男", options: .regularExpression) != nil { ids = replacing(ids, slot: .hair, key: "short") }
+        }
+        return ids
+    }
+
+    static func name(in text: String) -> String? {
+        guard let r = text.range(of: "(叫|名字是|名为|名叫|称呼)([\\p{Han}A-Za-z0-9]{1,8})", options: .regularExpression) else { return nil }
+        let match = String(text[r])
+        for p in ["名字是", "名为", "名叫", "称呼", "叫"] where match.hasPrefix(p) { return String(match.dropFirst(p.count)) }
+        return nil
+    }
+
+    /// Applies a JSON object produced by the model ({"hair":"spiky", ...}) on top of existing ids.
+    static func ids(from json: [String: Any], base: [String]) -> [String] {
+        var ids = base
+        for slot in CosmeticSlot.avatarSlots {
+            guard let key = json[slot.rawValue] as? String, CosmeticCatalog.item("\(slot.rawValue).\(key)") != nil else { continue }
+            ids = replacing(ids, slot: slot, key: key)
+        }
+        return ids
+    }
+
+    static func replacing(_ ids: [String], slot: CosmeticSlot, key: String) -> [String] {
+        var out = ids.filter { !$0.hasPrefix(slot.rawValue + ".") }
+        out.append("\(slot.rawValue).\(key)")
+        return out
+    }
+
+    /// Offline parse first, then the AI backend (when configured) refines the result.
+    static func describe(_ text: String, base: [String]) async -> (ids: [String], name: String?, usedAI: Bool) {
+        var ids = parse(text, base: base)
+        var name = name(in: text)
+        guard let config = AIBackend.config else { return (ids, name, false) }
+        let system = """
+        你负责把用户对一个卡通健身助手外观的描述转换成 JSON。只输出一个 JSON 对象，不要其他文字。
+        字段：name（可选，助手名字，用户没提就省略）以及以下字段，值必须从给定选项里选，用户没提到的字段省略：
+        \(optionList)
+        """
+        if let reply = try? await AIService.complete(system: system, messages: [AIChatMessage(role: .user, text: text)], config: config, maxTokens: 400),
+           let obj = AIJSON.extractObject(from: reply) {
+            ids = self.ids(from: obj, base: ids)
+            if let n = obj["name"] as? String, !n.isEmpty { name = n }
+            return (ids, name, true)
+        }
+        return (ids, name, false)
+    }
+}

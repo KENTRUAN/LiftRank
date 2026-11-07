@@ -15,10 +15,17 @@ targets:
     platform: iOS
     sources:
       - path: LiftRank
+    configFiles:
+      Debug: Config/AI.xcconfig
+      Release: Config/AI.xcconfig
     info:
       path: LiftRank/Info.plist
       properties:
         CFBundleDisplayName: 段位健身
+        LiftRankAIProvider: $(LIFTRANK_AI_PROVIDER)
+        LiftRankAIModel: $(LIFTRANK_AI_MODEL)
+        LiftRankAIBaseURL: $(LIFTRANK_AI_BASE_URL)
+        LiftRankAIKey: $(LIFTRANK_AI_KEY)
         CFBundleDevelopmentRegion: zh_CN
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]

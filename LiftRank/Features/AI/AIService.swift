@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 enum AIProvider: String, CaseIterable, Identifiable, Codable {
     case anthropic, openai, deepseek, gemini
@@ -28,14 +27,6 @@ enum AIProvider: String, CaseIterable, Identifiable, Codable {
         case .gemini: "https://generativelanguage.googleapis.com"
         }
     }
-    var keyPlaceholder: String {
-        switch self {
-        case .anthropic: "sk-ant-..."
-        case .openai: "sk-..."
-        case .deepseek: "sk-..."
-        case .gemini: "AIza..."
-        }
-    }
 }
 
 struct AIChatMessage: Identifiable, Equatable {
@@ -61,7 +52,7 @@ enum AIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: "还没有配置 AI。请在「我的 → AI 助手」填写 API Key。"
+        case .notConfigured: "AI 服务暂未开通：此构建没有配置开发者接口。"
         case .http(let code, let body): "请求失败（HTTP \(code)）：\(body.prefix(300))"
         case .refusal: "模型拒绝回答这个请求。"
         case .emptyResponse: "模型没有返回内容。"
@@ -70,46 +61,37 @@ enum AIError: LocalizedError {
     }
 }
 
-/// Minimal Keychain storage for provider API keys.
-enum Keychain {
-    private static let service = "com.liftrank.ai"
+/// The AI backend is provided by the developer, not entered by users.
+/// Values come from `Config/AI.xcconfig` (plus the git-ignored `Config/AI.local.xcconfig`) through Info.plist,
+/// and can be overridden with `LIFTRANK_AI_*` environment variables when launching from Xcode or `simctl`.
+/// Point `LIFTRANK_AI_BASE_URL` at your own relay server to keep the real provider key off the device.
+enum AIBackend {
+    static let displayName = "段位健身 AI"
+    static let unavailableHint = "AI 能力由开发者统一提供，无需填写 Key。当前构建没有配置接口（Config/AI.local.xcconfig），所以暂时不可用。"
 
-    static func set(_ value: String, account: String) {
-        delete(account: account)
-        guard let data = value.data(using: .utf8), !value.isEmpty else { return }
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                    kSecAttrAccount as String: account, kSecValueData as String: data,
-                                    kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
-        SecItemAdd(query as CFDictionary, nil)
-    }
-
-    static func get(account: String) -> String? {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
-                                    kSecAttrAccount as String: account, kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
-        var out: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess, let data = out as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    static func delete(account: String) {
-        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
-        SecItemDelete(query as CFDictionary)
-    }
-}
-
-extension UserProfile {
-    /// Resolved configuration, or nil when no key has been saved for the chosen provider.
-    var aiConfig: AIConfig? {
-        guard let key = Keychain.get(account: aiProvider.rawValue), !key.isEmpty else { return nil }
-        return AIConfig(provider: aiProvider,
-                        model: aiModel.trimmingCharacters(in: .whitespaces).isEmpty ? aiProvider.defaultModel : aiModel.trimmingCharacters(in: .whitespaces),
-                        baseURL: aiBaseURL.trimmingCharacters(in: .whitespaces).isEmpty ? aiProvider.defaultBaseURL : aiBaseURL.trimmingCharacters(in: .whitespaces),
+    static var config: AIConfig? {
+        let env = ProcessInfo.processInfo.environment
+        let info = Bundle.main.infoDictionary ?? [:]
+        func value(_ plistKey: String, _ envKey: String) -> String {
+            let raw = env[envKey] ?? (info[plistKey] as? String) ?? ""
+            let v = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return v.hasPrefix("$(") ? "" : v
+        }
+        let key = value("LiftRankAIKey", "LIFTRANK_AI_KEY")
+        guard !key.isEmpty else { return nil }
+        let provider = AIProvider(rawValue: value("LiftRankAIProvider", "LIFTRANK_AI_PROVIDER")) ?? .anthropic
+        let model = value("LiftRankAIModel", "LIFTRANK_AI_MODEL")
+        let base = value("LiftRankAIBaseURL", "LIFTRANK_AI_BASE_URL")
+        return AIConfig(provider: provider,
+                        model: model.isEmpty ? provider.defaultModel : model,
+                        baseURL: base.isEmpty ? provider.defaultBaseURL : base,
                         apiKey: key)
     }
-    var isAIConfigured: Bool { aiConfig != nil }
+
+    static var isConfigured: Bool { config != nil }
 }
 
-/// Raw HTTP clients for the supported providers. Requests go straight from the device to the provider.
+/// Raw HTTP clients for the supported providers (or a developer relay that speaks the same protocol).
 enum AIService {
     static func complete(system: String, messages: [AIChatMessage], config: AIConfig, maxTokens: Int = 4096) async throws -> String {
         switch config.provider {

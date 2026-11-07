@@ -1,0 +1,12 @@
+// Copy to Config/AI.local.xcconfig (git-ignored) and fill in. Any key here overrides AI.xcconfig.
+// Provider protocol: anthropic | openai | deepseek | gemini (openai/deepseek = OpenAI-compatible /chat/completions).
+
+// Option A — direct provider key (fine for internal test builds):
+// LIFTRANK_AI_PROVIDER = anthropic
+// LIFTRANK_AI_MODEL = claude-opus-5-5
+// LIFTRANK_AI_KEY = sk-ant-...
+
+// Option B — your relay server that speaks the same protocol and keeps the real key server-side:
+// LIFTRANK_AI_PROVIDER = anthropic
+// LIFTRANK_AI_BASE_URL = https:/$()/ai.your-domain.com
+// LIFTRANK_AI_KEY = app-token-issued-by-your-server

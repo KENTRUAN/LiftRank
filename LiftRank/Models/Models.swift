@@ -31,10 +31,10 @@ final class UserProfile {
     var planEquipmentRaw: String = EquipmentAccess.fullGym.rawValue
     var planExperienceRaw: String = ExperienceLevel.beginner.rawValue
     var autoPublishDailyPlan: Bool = true
-    // AI assistant configuration (the API key itself lives in the Keychain).
-    var aiProviderRaw: String = AIProvider.anthropic.rawValue
-    var aiModel: String = ""
-    var aiBaseURL: String = ""
+    // AI assistant persona: display name, the character parts drawn in chat ("hair.spiky", …) and the user's description.
+    var coachName: String = "小段"
+    var coachAvatarIDs: [String] = []
+    var coachIntro: String = ""
     var lastBodyAnalysis: String = ""
     var lastBodyAnalysisAt: Date?
     /// Stable identifier embedded in the rank code shared with friends.
@@ -61,7 +61,6 @@ final class UserProfile {
     var planGoal: WorkoutGoal { get { WorkoutGoal(rawValue: planGoalRaw) ?? .hypertrophy } set { planGoalRaw = newValue.rawValue } }
     var planEquipment: EquipmentAccess { get { EquipmentAccess(rawValue: planEquipmentRaw) ?? .fullGym } set { planEquipmentRaw = newValue.rawValue } }
     var planExperience: ExperienceLevel { get { ExperienceLevel(rawValue: planExperienceRaw) ?? .beginner } set { planExperienceRaw = newValue.rawValue } }
-    var aiProvider: AIProvider { get { AIProvider(rawValue: aiProviderRaw) ?? .anthropic } set { aiProviderRaw = newValue.rawValue } }
 
     static var birthdayCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)

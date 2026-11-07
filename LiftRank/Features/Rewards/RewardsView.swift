@@ -131,10 +131,11 @@ struct RewardsView: View {
             HStack {
                 Text("外观与商店").font(.headline)
                 Spacer()
-                NavigationLink { ShopView(profile: profile, gsr: gsr) } label: { Label("进入商店", systemImage: "cart.fill").font(.subheadline.bold()) }
+                NavigationLink { ShopView(profile: profile, gsr: gsr, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.subheadline.bold()) }
+                NavigationLink { ShopView(profile: profile, gsr: gsr) } label: { Label("商店", systemImage: "cart.fill").font(.subheadline.bold()) }
             }
             HStack(spacing: 14) {
-                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 60)
+                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 60, spec: profile.avatar)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         Text(profile.name).font(.subheadline.bold())
@@ -145,7 +146,7 @@ struct RewardsView: View {
                         Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary)
                     }
                     HStack(spacing: 8) {
-                        ForEach(CosmeticSlot.allCases) { slot in
+                        ForEach(CosmeticSlot.badgeSlots) { slot in
                             let item = profile.equipped(slot)
                             HStack(spacing: 2) {
                                 RoundedRectangle(cornerRadius: 3).fill(item.gradient).frame(width: 10, height: 10)
@@ -156,7 +157,7 @@ struct RewardsView: View {
                 }
                 Spacer()
             }
-            Text("用每日训练赚到的 Eggs 购买头像框、称号、主题色与段位卡；高段位外观需要达到对应段位。").font(.caption2).foregroundStyle(.secondary)
+            Text("用每日训练赚到的 Eggs 购买小人的发型、衣服、配饰、背景，以及头像框、称号、主题色与段位卡；高段位外观需要达到对应段位。").font(.caption2).foregroundStyle(.secondary)
         }.card()
     }
 

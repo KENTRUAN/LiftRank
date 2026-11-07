@@ -83,11 +83,10 @@ struct BodyAnalysisView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                if !profile.isAIConfigured {
+                if !AIBackend.isConfigured {
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("还没有配置 AI", systemImage: "key.fill").font(.headline)
-                        Text("在「我的 → AI 助手」填入 Claude / GPT / DeepSeek / Gemini 的 API Key 后即可生成分析。").font(.footnote).foregroundStyle(.secondary)
-                        NavigationLink("去配置") { AISettingsView(profile: profile) }.buttonStyle(.borderedProminent)
+                        Label("AI 服务暂未开通", systemImage: "exclamationmark.triangle.fill").font(.headline)
+                        Text(AIBackend.unavailableHint).font(.footnote).foregroundStyle(.secondary)
                     }.card()
                 }
                 VStack(alignment: .leading, spacing: 8) {
@@ -107,7 +106,7 @@ struct BodyAnalysisView: View {
                     Button { analyze() } label: {
                         Label(profile.lastBodyAnalysis.isEmpty ? "生成分析" : "重新分析", systemImage: "sparkles").frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent).disabled(loading || !profile.isAIConfigured)
+                    .buttonStyle(.borderedProminent).disabled(loading || !AIBackend.isConfigured)
                 }.card()
                 DisclosureGroup("发送给模型的数据", isExpanded: $showData) {
                     Text(summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
@@ -120,7 +119,7 @@ struct BodyAnalysisView: View {
     }
 
     private func analyze() {
-        guard let config = profile.aiConfig else { return }
+        guard let config = AIBackend.config else { return }
         loading = true; error = nil
         let data = summary
         let system = """

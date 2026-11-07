@@ -1,0 +1,12 @@
+// Developer-provided AI backend. These values are copied into Info.plist (LiftRankAI*) at build time.
+// Put the secret in Config/AI.local.xcconfig (git-ignored) — see AI.local.example.xcconfig.
+// Recommended for release builds: point LIFTRANK_AI_BASE_URL at your own relay server that holds the
+// real provider key and use an app token as LIFTRANK_AI_KEY, so the provider key never ships in the app.
+// xcconfig treats "//" as a comment, hence the "$()" trick inside URLs.
+
+LIFTRANK_AI_PROVIDER = anthropic
+LIFTRANK_AI_MODEL = claude-opus-5-5
+LIFTRANK_AI_BASE_URL = https:/$()/api.anthropic.com
+LIFTRANK_AI_KEY =
+
+#include? "AI.local.xcconfig"

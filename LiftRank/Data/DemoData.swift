@@ -55,10 +55,11 @@ enum DemoData {
             context.insert(c)
         }
         profile.eggs += 320
-        profile.ownedCosmetics = ["frame.bronze", "title.iron", "theme.blue"]
+        profile.ownedCosmetics = ["frame.bronze", "title.iron", "theme.blue", "hair.spiky", "hairColor.blue", "outfit.hoodie", "outfitColor.red", "accessory.headband", "backdrop.gym"]
+        profile.equippedCosmetics = ["frame:frame.bronze", "skin:skin.tan", "hair:hair.spiky", "outfit:outfit.hoodie", "outfitColor:outfitColor.red", "accessory:accessory.headband", "backdrop:backdrop.gym"]
         let friendMuscles = ["chest": 540, "back": 610, "quads": 580, "shoulders": 470, "biceps": 420]
         let json = (try? JSONEncoder().encode(friendMuscles)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-        context.insert(Friend(code: "demo1234", name: "阿力", gsr: 572, muscleScoresJSON: json, cosmetics: ["frame.gold", "title.squat"], streakDays: 12, updatedAt: Date().adding(days: -1)))
+        context.insert(Friend(code: "demo1234", name: "阿力", gsr: 572, muscleScoresJSON: json, cosmetics: ["frame.gold", "title.squat", "skin.fair", "hair.bun", "hairColor.pink", "eyes.happy", "outfit.tee", "outfitColor.blue"], streakDays: 12, updatedAt: Date().adding(days: -1)))
         if autoOpenActive, let bench = byKey["bench_press"], let row = byKey["barbell_row"] {
             let w = Workout(title: "推拉日（进行中）", bodyweightKg: 75)
             w.startedAt = Date().addingTimeInterval(-25 * 60)

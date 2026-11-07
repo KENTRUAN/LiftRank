@@ -7,6 +7,7 @@ struct ProfileView: View {
     @Bindable var profile: UserProfile
     @Environment(\.modelContext) private var context
     @Query private var workouts: [Workout]
+    @Query private var exercises: [Exercise]
     @State private var nicknameDraft = ""
     @State private var showNicknameEditor = false
     @State private var weightText = ""
@@ -33,18 +34,21 @@ struct ProfileView: View {
         }
     }
 
+    private var muscles: [MuscleGroup: Int] { RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)) }
+    private var gsr: Int { RankAggregator.overall(muscleScores: muscles) }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     HStack(spacing: 14) {
-                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
+                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar)
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                             HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
                         }
                         Spacer()
-                        NavigationLink { SocialView(profile: profile) } label: { Label("段位卡", systemImage: "square.and.arrow.up").font(.caption.bold()) }.fixedSize()
+                        NavigationLink { ShopView(profile: profile, gsr: gsr, muscles: muscles, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.caption.bold()).labelStyle(.titleAndIcon) }.fixedSize()
                     }
                 }
                 Section("个人资料") {
@@ -69,11 +73,11 @@ struct ProfileView: View {
                     Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
                 }
                 Section("AI 助手") {
-                    NavigationLink { AISettingsView(profile: profile) } label: {
-                        HStack { Label("模型与 API Key", systemImage: "key.fill"); Spacer(); Text(profile.isAIConfigured ? profile.aiProvider.name : "未配置").font(.caption).foregroundStyle(.secondary) }
+                    NavigationLink { AIAssistantView(profile: profile) } label: {
+                        HStack { Label("助手形象与服务状态", systemImage: "person.crop.square"); Spacer(); Text(AIBackend.isConfigured ? "已开通" : "未开通").font(.caption).foregroundStyle(.secondary) }
                     }
                     NavigationLink { BodyAnalysisView(profile: profile) } label: { Label("AI 身体综合分析", systemImage: "waveform.path.ecg") }
-                    Button { AppState.shared.perform(.openCoach) } label: { Label("AI 训练助手 / 语音指令", systemImage: "sparkles") }
+                    Button { AppState.shared.perform(.openCoach) } label: { Label("和 \(profile.coachName) 聊天 / 语音指令", systemImage: "sparkles") }
                     Text("Siri 快捷指令：「在段位健身开始训练」「用段位健身记录体重」。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("训练与总结") {

@@ -18,6 +18,7 @@ struct CoachChatView: View {
     @State private var input = ""
     @State private var sending = false
     @State private var error: String?
+    @State private var showAvatar = false
 
     private var plan: DailyPlan? { plans.first { $0.dayKey == Date().dayKey } }
 
@@ -42,17 +43,28 @@ struct CoachChatView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("关闭") { speech.stop(); dismiss() } } }
             .onChange(of: speech.transcript) { _, t in if speech.isRecording { input = t } }
+            .sheet(isPresented: $showAvatar) { CoachAvatarView(profile: profile) }
         }
     }
 
     private var planHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if let p = plan {
-                Text("今日训练：\(p.title)").font(.subheadline.bold())
-                Text(p.items.map { "\($0.exerciseName) \($0.sets)×\($0.repsLow)–\($0.repsHigh)" }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            } else {
-                Text("今天还没有训练安排，可以让我帮你生成一份。").font(.caption).foregroundStyle(.secondary)
+        HStack(spacing: 12) {
+            Button { showAvatar = true } label: {
+                AvatarFigureView(spec: profile.coachAvatar, bust: true).frame(width: 56, height: 56).clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(alignment: .bottomTrailing) {
+                        Image(systemName: "pencil.circle.fill").font(.caption).foregroundStyle(Color.accentColor).background(Color(.systemBackground), in: Circle()).offset(x: 4, y: 4)
+                    }
+            }.buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(profile.coachName).font(.subheadline.bold())
+                if let p = plan {
+                    Text("今日训练：\(p.title)").font(.caption).foregroundStyle(.primary)
+                    Text(p.items.map { "\($0.exerciseName) \($0.sets)×\($0.repsLow)–\($0.repsHigh)" }.joined(separator: " · ")).font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                } else {
+                    Text("今天还没有训练安排，可以让我帮你生成一份。").font(.caption).foregroundStyle(.secondary)
+                }
             }
+            Spacer()
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(12)
         .background(Color(.secondarySystemGroupedBackground))
@@ -60,11 +72,11 @@ struct CoachChatView: View {
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !profile.isAIConfigured {
-                Label("还没有配置 AI，先去「我的 → AI 助手」填写 API Key。", systemImage: "key.fill").font(.footnote).foregroundStyle(.red)
+            if !AIBackend.isConfigured {
+                Label("AI 服务暂未开通（此构建没有配置开发者接口）。点左上角头像仍可定义助手形象。", systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(.orange)
             }
-            Text("可以这样说：").font(.footnote).foregroundStyle(.secondary)
-            ForEach(["把深蹲换成腿举，再加一组", "今天肩膀不舒服，去掉推举类动作", "改成 30 分钟的减脂训练", "开始今天的训练", "记录体重 74.5 公斤", "帮我记一次 5 公里跑步，30 分钟"], id: \.self) { s in
+            Text("可以对 \(profile.coachName) 这样说：").font(.footnote).foregroundStyle(.secondary)
+            ForEach(["把深蹲换成腿举，再加一组", "今天肩膀不舒服，去掉推举类动作", "改成 30 分钟的减脂训练", "开始今天的训练", "记录体重 74.5 公斤", "帮我记一次 5 公里跑步，30 分钟", "把你的头发改成蓝色，再戴个墨镜"], id: \.self) { s in
                 Button { input = s } label: {
                     Text("“\(s)”").font(.subheadline).padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Color(.secondarySystemGroupedBackground), in: Capsule())
@@ -74,8 +86,13 @@ struct CoachChatView: View {
     }
 
     private func bubble(_ m: AIChatMessage) -> some View {
-        HStack {
-            if m.role == .user { Spacer(minLength: 40) }
+        HStack(alignment: .bottom, spacing: 6) {
+            if m.role == .user {
+                Spacer(minLength: 40)
+            } else {
+                AvatarFigureView(spec: profile.coachAvatar, bust: true, showBackdrop: false).frame(width: 30, height: 30)
+                    .background(Color(.tertiarySystemGroupedBackground), in: Circle()).clipShape(Circle())
+            }
             Text(markdown(m.text)).font(.subheadline).padding(12)
                 .background(m.role == .user ? Color.accentColor.opacity(0.18) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
             if m.role == .assistant { Spacer(minLength: 40) }
@@ -109,7 +126,7 @@ struct CoachChatView: View {
         input = ""
         error = nil
         messages.append(AIChatMessage(role: .user, text: text))
-        guard let config = profile.aiConfig else { error = AIError.notConfigured.localizedDescription; return }
+        guard let config = AIBackend.config else { error = AIError.notConfigured.localizedDescription; return }
         sending = true
         let system = systemPrompt()
         let history = messages
@@ -131,7 +148,7 @@ struct CoachChatView: View {
             return "{\"title\":\"\(p.title)\",\"items\":\(s)}"
         }()
         return """
-        你是「段位健身」App 内的训练助手，帮助用户用自然语言修改今日训练，并可以直接调用 App 功能。用简体中文回答，简短友好。
+        你是「段位健身」App 内的训练助手，名字叫「\(profile.coachName)」。\(profile.coachIntro.isEmpty ? "" : "你的形象设定：\(profile.coachIntro)。")帮助用户用自然语言修改今日训练，并可以直接调用 App 功能。用简体中文回答，简短友好。
         用户信息：\(profile.sex.label)，\(profile.age) 岁，体重 \(profile.bodyweightKg.fmt(1)) kg，目标 \(profile.planGoal.name)，器械 \(profile.planEquipment.name)，经验 \(profile.planExperience.name)，默认组间休息 \(profile.defaultRestSeconds) 秒。
         今日训练（JSON）：\(planJSON)
         可用动作库（key=名称/肌群/器械）：\(catalog)
@@ -139,7 +156,9 @@ struct CoachChatView: View {
         你必须只输出一个 JSON 对象，不要输出其他文字或代码块标记。格式：
         {"reply": "给用户看的回复（可用 Markdown 粗体与列表）",
          "plan": null 或 {"title": "训练名称", "items": [{"exerciseKey": "动作库中的 key", "sets": 3, "repsLow": 8, "repsHigh": 12, "restSeconds": 90}]},
-         "actions": [] 或 [{"type": "start_workout"} | {"type": "open_tab", "tab": 0-4} | {"type": "log_weight", "kg": 74.5} | {"type": "add_cardio", "cardioType": "running|walking|hiking|cycling|swimming|rowing|elliptical|stairs|jumpRope|hiit|other", "minutes": 30, "distanceKm": 5} | {"type": "open_cardio"}]}
+         "actions": [] 或 [{"type": "start_workout"} | {"type": "open_tab", "tab": 0-4} | {"type": "log_weight", "kg": 74.5} | {"type": "add_cardio", "cardioType": "running|walking|hiking|cycling|swimming|rowing|elliptical|stairs|jumpRope|hiit|other", "minutes": 30, "distanceKm": 5} | {"type": "open_cardio"} | {"type": "set_avatar", "avatar": {"hair": "spiky", "hairColor": "blue", ...}, "name": "可选的新名字"}]}
+        用户要求改变你（助手）的外观或名字时返回 set_avatar；avatar 只包含用户提到的字段，值必须从下面的选项里选：
+        \(AvatarDescriber.optionList)
         规则：只有当用户要求修改/生成训练时才返回 plan（返回完整的新 items 列表，而不是差异）；exerciseKey 必须来自动作库。
         tab 对应：0 训练，1 段位，2 奖励，3 饮食，4 我的。用户说"开始训练"时返回 start_workout；说"记录体重 X"时返回 log_weight（单位换算为公斤）；说记录跑步/骑行等时返回 add_cardio。
         不确定时在 reply 中追问，并让 plan 为 null、actions 为空。
@@ -192,6 +211,17 @@ struct CoachChatView: View {
             if let t = a["tab"] as? Int, (0...4).contains(t) { dismiss(); AppState.shared.perform(.openTab(t)); return "已切换页面" }
         case "open_cardio":
             dismiss(); AppState.shared.perform(.openCardio); return "已打开有氧记录"
+        case "set_avatar":
+            let base = profile.coachAvatarIDs.isEmpty ? AvatarSpec.defaultCoachIDs : profile.coachAvatarIDs
+            var changed = false
+            if let obj = a["avatar"] as? [String: Any] {
+                let ids = AvatarDescriber.ids(from: obj, base: base)
+                if ids != base { profile.coachAvatarIDs = ids; changed = true }
+            }
+            if let n = a["name"] as? String, !n.trimmingCharacters(in: .whitespaces).isEmpty { profile.coachName = n.trimmingCharacters(in: .whitespaces); changed = true }
+            guard changed else { break }
+            try? context.save()
+            return "已更新 \(profile.coachName) 的形象"
         case "log_weight":
             if let kg = (a["kg"] as? Double) ?? (a["kg"] as? Int).map(Double.init), kg > 20, kg < 400 {
                 context.insert(BodyMeasurement(date: Date(), metric: .weight, value: kg))

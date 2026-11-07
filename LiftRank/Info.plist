@@ -22,6 +22,14 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LiftRankAIBaseURL</key>
+	<string>$(LIFTRANK_AI_BASE_URL)</string>
+	<key>LiftRankAIKey</key>
+	<string>$(LIFTRANK_AI_KEY)</string>
+	<key>LiftRankAIModel</key>
+	<string>$(LIFTRANK_AI_MODEL)</string>
+	<key>LiftRankAIProvider</key>
+	<string>$(LIFTRANK_AI_PROVIDER)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍照记餐与扫描食品条码。</string>
 	<key>NSHealthShareUsageDescription</key>

@@ -10,3 +10,6 @@ DerivedData/
 
 # macOS
 .DS_Store
+
+# Developer AI secrets (see Config/AI.local.example.xcconfig)
+Config/AI.local.xcconfig
