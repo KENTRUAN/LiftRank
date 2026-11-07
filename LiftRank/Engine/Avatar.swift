@@ -71,6 +71,16 @@ enum AvatarPalette {
 
 // MARK: - View
 
+/// Optional contour changes for the training avatar. Score never changes limb length or pose.
+struct AvatarPhysique {
+    let build: Double
+    let scores: [MuscleGroup: Double]
+
+    func growth(_ group: MuscleGroup) -> CGFloat {
+        CGFloat(min(1, max(0, scores[group, default: 0] / 1000)))
+    }
+}
+
 /// Chibi character drawn with Canvas. Muscle groups with a score are tinted with their tier color.
 struct AvatarFigureView: View {
     var spec: AvatarSpec
@@ -78,10 +88,11 @@ struct AvatarFigureView: View {
     var front = true
     var bust = false
     var showBackdrop = true
+    var physique: AvatarPhysique?
 
     var body: some View {
         Canvas { ctx, size in
-            AvatarPainter(spec: spec, muscles: muscles, front: front).draw(&ctx, size: size, bust: bust, backdrop: showBackdrop)
+            AvatarPainter(spec: spec, muscles: muscles, front: front, physique: physique).draw(&ctx, size: size, bust: bust, backdrop: showBackdrop)
         }
         .accessibilityLabel(bust ? "头像" : "角色形象")
     }
@@ -94,6 +105,7 @@ struct AvatarPainter {
     let spec: AvatarSpec
     let muscles: [MuscleGroup: Int]
     let front: Bool
+    let physique: AvatarPhysique?
 
     private typealias P = CGPoint
 
@@ -123,6 +135,23 @@ struct AvatarPainter {
     /// Clothes are translucent when muscle tiers need to show through; otherwise nearly opaque.
     private func cloth(_ base: Double) -> Double { muscles.isEmpty ? min(1, base * 2.4) : base }
     private var outline: Color { spec.skin.darkened(0.42) }
+
+    private func growth(_ group: MuscleGroup) -> CGFloat { physique?.growth(group) ?? 0 }
+    private var build: CGFloat { CGFloat(physique?.build ?? 0) }
+    private var upperArm: CGFloat { 3.4 * (0.55 * growth(.biceps) + 0.45 * growth(.triceps)) }
+    private var shoulderWidth: CGFloat { 2.6 * build + 4.3 * growth(.shoulders) + 1.2 * growth(.traps) }
+    private var chestWidth: CGFloat { 1.4 * build + 3.8 * growth(.chest) + 2.0 * growth(.back) }
+    private var waistWidth: CGFloat { 2.2 * build + growth(.abs) + growth(.lowerBack) }
+
+    private var torsoShape: Path {
+        smooth([(29 - shoulderWidth, 60), (71 + shoulderWidth, 60),
+                (69 + chestWidth, 84), (66 + waistWidth, 106),
+                (34 - waistWidth, 106), (31 - chestWidth, 84)])
+    }
+
+    private func armPoint(_ x: CGFloat, _ y: CGFloat, _ side: Bool) -> P {
+        m(P(x: x - shoulderWidth * max(0, (95 - y) / 29), y: y), side)
+    }
 
     // MARK: Layers
 
@@ -178,8 +207,8 @@ struct AvatarPainter {
     private func legs(_ ctx: inout GraphicsContext) {
         for side in [false, true] {
             let thigh = front ? tint(.quads) : tint(.hamstrings)
-            limb(&ctx, m(P(x: 41, y: 110), side), m(P(x: 39, y: 142), side), 15, thigh)
-            limb(&ctx, m(P(x: 39, y: 142), side), m(P(x: 38, y: 168), side), 11, tint(.calves))
+            limb(&ctx, m(P(x: 41, y: 110), side), m(P(x: 39, y: 142), side), 15 + build * 0.35 + 1.6 * max(growth(.quads), growth(.hamstrings)), thigh)
+            limb(&ctx, m(P(x: 39, y: 142), side), m(P(x: 38, y: 168), side), 11 + 1.1 * growth(.calves), tint(.calves))
             fill(&ctx, ellipse(side ? 54 : 26, 166, 20, 10), AvatarPalette.ink.opacity(0.85), outlined: false)
         }
         if !front {
@@ -187,28 +216,39 @@ struct AvatarPainter {
             fill(&ctx, Path(ellipseIn: CGRect(x: 50, y: 97, width: 17, height: 18)), tint(.glutes))
         }
         ctx.opacity = cloth(0.5)
-        fill(&ctx, rounded(32, 104, 36, 18, 5), spec.outfitColor.darkened(0.25))
+        fill(&ctx, rounded(32 - growth(.glutes), 104, 36 + 2 * growth(.glutes), 18, 5), spec.outfitColor.darkened(0.25))
         ctx.opacity = 1
     }
 
     private func arms(_ ctx: inout GraphicsContext) {
         for side in [false, true] {
-            limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 11, front ? tint(.biceps) : tint(.triceps))
-            limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 118), side), 9, tint(.forearms))
+            limb(&ctx, armPoint(27, 70, side), armPoint(19, 94, side), 11 + upperArm, front ? tint(.biceps) : tint(.triceps))
+            limb(&ctx, armPoint(19, 94, side), armPoint(15, 118, side), 9 + 2.3 * growth(.forearms), tint(.forearms))
             fill(&ctx, Path(ellipseIn: CGRect(x: (side ? 100 - 14 : 14) - 5, y: 116, width: 10, height: 10)), spec.skin)
         }
     }
 
     private func torso(_ ctx: inout GraphicsContext) {
-        fill(&ctx, smooth([(29, 60), (71, 60), (69, 84), (66, 106), (34, 106), (31, 84)]), spec.skin)
+        fill(&ctx, torsoShape, spec.skin)
         if front {
-            fill(&ctx, rounded(33, 64, 17, 16, 6), tint(.chest))
-            fill(&ctx, rounded(50, 64, 17, 16, 6), tint(.chest))
-            fill(&ctx, rounded(37, 82, 26, 24, 6), tint(.abs))
+            if physique != nil {
+                var definition = Path()
+                for side in [false, true] {
+                    definition.move(to: m(P(x: 33 - chestWidth / 2, y: 76), side))
+                    definition.addQuadCurve(to: m(P(x: 49, y: 76), side),
+                                            control: m(P(x: 40, y: 81 + 3 * growth(.chest)), side))
+                }
+                ctx.stroke(definition, with: .color(outline.opacity(0.18 + 0.6 * growth(.chest))),
+                           style: StrokeStyle(lineWidth: 1.1, lineCap: .round))
+            } else {
+                fill(&ctx, rounded(33, 64, 17, 16, 6), tint(.chest))
+                fill(&ctx, rounded(50, 64, 17, 16, 6), tint(.chest))
+                fill(&ctx, rounded(37, 82, 26, 24, 6), tint(.abs))
+            }
             var lines = Path()
             lines.move(to: P(x: 50, y: 84)); lines.addLine(to: P(x: 50, y: 104))
             for y in [90.0, 98.0] { lines.move(to: P(x: 40, y: y)); lines.addLine(to: P(x: 60, y: y)) }
-            ctx.stroke(lines, with: .color(outline.opacity(0.5)), lineWidth: 0.9)
+            ctx.stroke(lines, with: .color(outline.opacity(physique == nil ? 0.5 : 0.13 + 0.62 * growth(.abs))), lineWidth: 0.9)
         } else {
             fill(&ctx, smooth([(36, 60), (64, 60), (58, 72), (42, 72)]), tint(.traps))
             fill(&ctx, rounded(32, 68, 36, 22, 7), tint(.back))
@@ -220,11 +260,12 @@ struct AvatarPainter {
 
     private func shoulders(_ ctx: inout GraphicsContext) {
         for side in [false, true] {
-            let c = m(P(x: 28, y: 66), side)
-            fill(&ctx, Path(ellipseIn: CGRect(x: c.x - 9, y: c.y - 9, width: 18, height: 18)), tint(.shoulders))
+            let c = armPoint(28, 66, side)
+            let radius = 9 + 2.5 * growth(.shoulders)
+            fill(&ctx, ellipse(c.x - radius, c.y - radius, 2 * radius, 2 * radius), tint(.shoulders))
             if ["tee", "hoodie", "robe", "armor"].contains(spec.outfit) {
                 ctx.opacity = cloth(spec.outfit == "armor" ? 0.7 : 0.32)
-                fill(&ctx, Path(ellipseIn: CGRect(x: c.x - 10, y: c.y - 10, width: 20, height: 20)), spec.outfit == "armor" ? spec.outfitColor.darkened(0.2) : spec.outfitColor, outlined: spec.outfit == "armor")
+                fill(&ctx, ellipse(c.x - radius - 1, c.y - radius - 1, 2 * radius + 2, 2 * radius + 2), spec.outfit == "armor" ? spec.outfitColor.darkened(0.2) : spec.outfitColor, outlined: spec.outfit == "armor")
                 ctx.opacity = 1
             }
         }
@@ -232,7 +273,7 @@ struct AvatarPainter {
 
     private func outfit(_ ctx: inout GraphicsContext) {
         let c = spec.outfitColor
-        let body = smooth([(29, 60), (71, 60), (69, 84), (66, 106), (34, 106), (31, 84)])
+        let body = torsoShape
         switch spec.outfit {
         case "tank":
             ctx.opacity = cloth(0.22); fill(&ctx, body, c, outlined: false); ctx.opacity = 1
@@ -240,14 +281,14 @@ struct AvatarPainter {
             fill(&ctx, rounded(33, 98, 34, 9, 3), c, outlined: false)
         case "tee":
             ctx.opacity = cloth(0.32); fill(&ctx, body, c, outlined: false)
-            for side in [false, true] { limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 23, y: 82), side), 13, c, outlined: false) }
+            for side in [false, true] { limb(&ctx, armPoint(27, 70, side), armPoint(23, 82, side), 13 + upperArm, c, outlined: false) }
             ctx.opacity = 1
             if front { ctx.stroke(ellipse(42, 57, 16, 8), with: .color(c.darkened(0.3)), lineWidth: 1) }
         case "hoodie":
             ctx.opacity = cloth(0.36); fill(&ctx, body, c, outlined: false)
             for side in [false, true] {
-                limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 13, c, outlined: false)
-                limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 114), side), 11, c, outlined: false)
+                limb(&ctx, armPoint(27, 70, side), armPoint(19, 94, side), 13 + upperArm, c, outlined: false)
+                limb(&ctx, armPoint(19, 94, side), armPoint(15, 114, side), 11 + 2.3 * growth(.forearms), c, outlined: false)
             }
             ctx.opacity = 1
             if front {
@@ -258,8 +299,8 @@ struct AvatarPainter {
         case "robe":
             ctx.opacity = cloth(0.42); fill(&ctx, body, c, outlined: false)
             for side in [false, true] {
-                limb(&ctx, m(P(x: 27, y: 70), side), m(P(x: 19, y: 94), side), 14, c, outlined: false)
-                limb(&ctx, m(P(x: 19, y: 94), side), m(P(x: 15, y: 112), side), 12, c, outlined: false)
+                limb(&ctx, armPoint(27, 70, side), armPoint(19, 94, side), 14 + upperArm, c, outlined: false)
+                limb(&ctx, armPoint(19, 94, side), armPoint(15, 112, side), 12 + 2.3 * growth(.forearms), c, outlined: false)
             }
             ctx.opacity = 1
             var trim = Path(); trim.move(to: P(x: 50, y: 61)); trim.addLine(to: P(x: 50, y: 105))
@@ -320,7 +361,8 @@ struct AvatarPainter {
     }
 
     private func spikes(_ ctx: inout GraphicsContext, _ c: Color) {
-        for pts in [[(31, 14), (36, -2), (43, 12)], [(43, 11), (50, -8), (57, 11)], [(57, 12), (64, -2), (69, 14)]] {
+        let spikes: [[(CGFloat, CGFloat)]] = [[(31, 14), (36, -2), (43, 12)], [(43, 11), (50, -8), (57, 11)], [(57, 12), (64, -2), (69, 14)]]
+        for pts in spikes {
             fill(&ctx, smooth(pts), c)
         }
     }
@@ -402,8 +444,8 @@ struct AvatarPainter {
     private func ellipse(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> Path { Path(ellipseIn: CGRect(x: x, y: y, width: w, height: h)) }
     private func rounded(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat) -> Path { Path(roundedRect: CGRect(x: x, y: y, width: w, height: h), cornerRadius: r) }
 
-    private func smooth(_ pts: [(Int, Int)]) -> Path {
-        let p = pts.map { CGPoint(x: CGFloat($0.0), y: CGFloat($0.1)) }
+    private func smooth(_ points: [(CGFloat, CGFloat)]) -> Path {
+        let p = points.map { CGPoint(x: $0.0, y: $0.1) }
         var path = Path()
         guard let first = p.first, let last = p.last else { return path }
         func mid(_ a: CGPoint, _ b: CGPoint) -> CGPoint { CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2) }
@@ -462,19 +504,36 @@ enum AvatarDescriber {
         (.backdrop, "gym", "健身房"), (.backdrop, "dojo", "道场|武馆"), (.backdrop, "galaxy", "星空|宇宙|银河|太空"), (.backdrop, "sunset", "夕阳|日落|黄昏"),
     ]
 
+    /// Limit the chat fallback to explicit appearance requests; general chat still needs a backend.
+    static func offlineChatLook(_ text: String, base: [String]) -> [String]? {
+        let request = "^(请|帮我|能不能|可以|麻烦)*(把|给|让|改|换|染|穿|戴|变|留|剪|弄|设置)"
+        let excluded = "不要|别|不用|不想|如果|假如|是否|能否|会不会|可以吗|好不好"
+        let appearance = "形象|头像|外观|头发|发型|发色|[长短卷]发|马尾|光头|墨镜|眼镜|肤色|皮肤|帽子|衣|连帽|卫衣|T恤|t恤|背心|服装|背景|护腕|发带|胡子|盔甲"
+        guard text.range(of: request, options: .regularExpression) != nil,
+              text.range(of: excluded, options: .regularExpression) == nil,
+              text.range(of: appearance, options: .regularExpression) != nil else { return nil }
+        return parse(text, base: base)
+    }
+
     static func parse(_ text: String, base: [String]) -> [String] {
         var ids = base
         var touched: Set<CosmeticSlot> = []
         for (slot, key, pattern) in rules where !touched.contains(slot) {
             if text.range(of: pattern, options: .regularExpression) != nil { ids = replacing(ids, slot: slot, key: key); touched.insert(slot) }
         }
+        let hairTarget = "(头发|发色|长发|短发|卷发|马尾)"
+        let clothTarget = "(衣服|服装|背心|[Tt]恤|短袖|连帽衫|卫衣|外套|长袍|盔甲|铠甲|上衣|衬衫)"
         for (key, words) in colorWords {
-            if !touched.contains(.hairColor), text.range(of: "(\(words))(色)?(的)?(头发|长发|短发|卷发|马尾|发)", options: .regularExpression) != nil,
+            let color = "(\(words))(色)?"
+            let connector = "(改成|染成|换成|变成|调成|设成|弄成|变为|改为|换为|用)"
+            let hairPattern = "\(color)的?\(hairTarget)|\(hairTarget)\\s*\(connector)\\s*\(color)"
+            if !touched.contains(.hairColor), text.range(of: hairPattern, options: .regularExpression) != nil,
                CosmeticCatalog.item("hairColor.\(key)") != nil {
                 ids = replacing(ids, slot: .hairColor, key: key); touched.insert(.hairColor)
             }
             let clothKey = key == "blonde" ? "gold" : key
-            if !touched.contains(.outfitColor), text.range(of: "(\(words))(色)?(的)?(衣|背心|T恤|t恤|短袖|连帽|卫衣|外套|袍|盔甲|铠甲|上衣|衬衫)", options: .regularExpression) != nil,
+            let clothPattern = "\(color)的?\(clothTarget)|\(clothTarget)\\s*\(connector)\\s*\(color)"
+            if !touched.contains(.outfitColor), text.range(of: clothPattern, options: .regularExpression) != nil,
                CosmeticCatalog.item("outfitColor.\(clothKey)") != nil {
                 ids = replacing(ids, slot: .outfitColor, key: clothKey); touched.insert(.outfitColor)
             }

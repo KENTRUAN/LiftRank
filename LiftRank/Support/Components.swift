@@ -262,11 +262,16 @@ struct AvatarBadge: View {
     let frame: Cosmetic
     var size: CGFloat = 56
     var spec: AvatarSpec? = nil
+    var portrait: UIImage? = nil
     var body: some View {
         ZStack {
             Circle().fill(frame.gradient).frame(width: size, height: size)
             Circle().fill(Color(.secondarySystemGroupedBackground)).frame(width: size - 8, height: size - 8)
-            if let spec {
+            if let portrait {
+                Image(uiImage: portrait).resizable().scaledToFill()
+                    .frame(width: size - 8, height: size - 8)
+                    .clipShape(Circle())
+            } else if let spec {
                 AvatarFigureView(spec: spec, bust: true, showBackdrop: false)
                     .frame(width: size - 8, height: size - 8)
                     .clipShape(Circle())

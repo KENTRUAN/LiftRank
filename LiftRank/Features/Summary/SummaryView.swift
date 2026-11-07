@@ -202,17 +202,21 @@ struct SummaryView: View {
     private func generateAI(_ s: SummaryStats) {
         guard let config = AIBackend.config else { return }
         aiLoading = true; aiError = nil
+        let weightCount = measurements.filter { $0.metric == .weight && interval.contains($0.date) }.count
+        let weightTrend = weightCount >= 2
+            ? "\(s.weightStart.map { $0.fmt(1) } ?? "—") → \(s.weightEnd.map { $0.fmt(1) } ?? "—") kg"
+            : "仅 \(weightCount) 次测量，无法判断趋势"
         let data = """
         周期：\(period.label(interval))。训练天数 \(s.trainingDays)，力量训练 \(s.workouts) 次 \(s.sets) 组，训练量 \(s.volumeKg.fmt(0)) kg，时长 \(s.durationMin.fmt(0)) 分钟。
         有氧 \(s.cardioSessions) 次 \(s.cardioMinutes.fmt(0)) 分钟 \(s.cardioKm.fmt(1)) km。GSR \(s.gsrStart) → \(s.gsrEnd)。
         肌群组数：\(s.muscleSets.map { "\($0.0.name) \($0.1)" }.joined(separator: "，"))。
         PR：\(s.prs.isEmpty ? "无" : s.prs.joined(separator: "；"))。
-        体重：\(s.weightStart.map { $0.fmt(1) } ?? "—") → \(s.weightEnd.map { $0.fmt(1) } ?? "—") kg。
+        体重：\(weightTrend)。
         用户目标 \(profile.planGoal.name)，经验 \(profile.planExperience.name)。
         """
         Task {
             do {
-                aiText = try await AIService.complete(system: "你是力量训练教练。根据给定周期数据，用简体中文写一段 150–250 字的总结：先肯定亮点，再指出 1–2 个不足，最后给出下一周期的 3 条具体建议。使用 Markdown 粗体与列表，不要用标题符号。", messages: [AIChatMessage(role: .user, text: data)], config: config, maxTokens: 1024)
+                aiText = try await AIService.complete(system: "你是力量训练教练。根据给定周期数据，用简体中文写一段 150–250 字的总结：先肯定亮点，再指出 1–2 个不足，最后给出下一周期的 3 条具体建议。引用具体记录，分别说明各肌群的组数，不从重量或段位推断体脂、肌肉量、能量摄入或能量平衡。使用 Markdown 粗体与列表，不要用标题符号。", messages: [AIChatMessage(role: .user, text: data)], config: config, maxTokens: 1024)
             } catch { aiError = error.localizedDescription }
             aiLoading = false
         }

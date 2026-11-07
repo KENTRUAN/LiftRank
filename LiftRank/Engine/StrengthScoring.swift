@@ -71,25 +71,57 @@ struct ExerciseBest: Identifiable {
     var tier: RankTier { RankTier.tier(for: bestScore) }
 }
 
+struct MuscleRankSnapshot: Identifiable, Equatable {
+    let date: Date
+    let scores: [MuscleGroup: Int]
+    var id: Date { date }
+}
+
 enum RankAggregator {
     /// Best score per ranked exercise across published workouts.
     static func exerciseBests(workouts: [Workout], exercises: [Exercise], sex: Sex) -> [ExerciseBest] {
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
         var best: [String: ExerciseBest] = [:]
         for w in workouts where w.isPublished {
-            for we in w.exercises {
-                guard let ex = byKey[we.exerciseKey], ex.isRanked else { continue }
-                for s in we.sets where s.isCompleted && s.type != .warmup {
-                    let score = StrengthScoring.score(set: s, exercise: ex, bodyweightKg: w.bodyweightKg, sex: sex)
-                    let e = StrengthScoring.e1RM(set: s, exercise: ex, bodyweightKg: w.bodyweightKg)
-                    if score > (best[ex.key]?.bestScore ?? -1) {
-                        best[ex.key] = ExerciseBest(exerciseKey: ex.key, name: ex.name, muscleGroup: ex.muscleGroup,
-                                                    bestScore: score, bestE1RM: e, date: w.publishedAt ?? w.startedAt)
-                    }
-                }
-            }
+            recordBests(for: w, exercises: byKey, sex: sex, into: &best)
         }
         return best.values.sorted { $0.bestScore > $1.bestScore }
+    }
+
+    /// End-of-day ranks for the most recent training days, including earlier bests.
+    static func muscleHistory(workouts: [Workout], exercises: [Exercise], sex: Sex) -> [MuscleRankSnapshot] {
+        let calendar = Calendar.current
+        let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
+        let published = workouts.filter(\.isPublished)
+        let byDay = Dictionary(grouping: published) { calendar.startOfDay(for: $0.publishedAt ?? $0.startedAt) }
+        let days = byDay.keys.sorted()
+        let recentDays = Set(days.suffix(30))
+        var best: [String: ExerciseBest] = [:]
+        var history: [MuscleRankSnapshot] = []
+        for day in days {
+            for workout in byDay[day, default: []] {
+                recordBests(for: workout, exercises: byKey, sex: sex, into: &best)
+            }
+            if recentDays.contains(day) {
+                history.append(MuscleRankSnapshot(date: day, scores: muscleScores(bests: Array(best.values))))
+            }
+        }
+        return history
+    }
+
+    private static func recordBests(for workout: Workout, exercises: [String: Exercise], sex: Sex,
+                                    into best: inout [String: ExerciseBest]) {
+        for workoutExercise in workout.exercises {
+            guard let exercise = exercises[workoutExercise.exerciseKey], exercise.isRanked else { continue }
+            for set in workoutExercise.sets where set.isCompleted && set.type != .warmup {
+                let score = StrengthScoring.score(set: set, exercise: exercise, bodyweightKg: workout.bodyweightKg, sex: sex)
+                guard score > (best[exercise.key]?.bestScore ?? -1) else { continue }
+                let e1RM = StrengthScoring.e1RM(set: set, exercise: exercise, bodyweightKg: workout.bodyweightKg)
+                best[exercise.key] = ExerciseBest(exerciseKey: exercise.key, name: exercise.name,
+                                                   muscleGroup: exercise.muscleGroup, bestScore: score,
+                                                   bestE1RM: e1RM, date: workout.publishedAt ?? workout.startedAt)
+            }
+        }
     }
 
     /// Weighted average where the strongest exercise in a group counts most.

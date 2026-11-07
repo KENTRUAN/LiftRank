@@ -1,4 +1,6 @@
 import Foundation
+import CryptoKit
+import Security
 
 enum AIProvider: String, CaseIterable, Identifiable, Codable {
     case anthropic, openai, deepseek, gemini
@@ -89,6 +91,24 @@ enum AIBackend {
     }
 
     static var isConfigured: Bool { config != nil }
+
+    static var showsPortraitControls: Bool {
+        Bundle.main.bundleIdentifier == "com.liftrank.app.demo" || portraitConfig != nil
+    }
+
+    static var permitsLocalRelayCertificate: Bool {
+        #if DEBUG
+        let bundleID = Bundle.main.bundleIdentifier
+        return bundleID == "com.liftrank.app" || bundleID == "com.liftrank.app.demo"
+        #else
+        return false
+        #endif
+    }
+
+    static var portraitConfig: AIConfig? {
+        guard let config, config.provider == .openai else { return nil }
+        return config
+    }
 }
 
 /// Raw HTTP clients for the supported providers (or a developer relay that speaks the same protocol).
@@ -103,6 +123,34 @@ enum AIService {
 
     static func test(config: AIConfig) async throws -> String {
         try await complete(system: "你是一个健身助手。", messages: [AIChatMessage(role: .user, text: "请只回复两个字：连接成功")], config: config, maxTokens: 64)
+    }
+
+    static func generatePortrait(description: String, config: AIConfig) async throws -> Data {
+        guard config.provider == .openai,
+              let url = URL(string: config.baseURL.trimmingSlash + "/images/generations") else {
+            throw AIError.notConfigured
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
+        let body: [String: Any] = [
+            "model": "gpt-image-2",
+            "n": 1,
+            "size": "1024x1024",
+            "quality": "low",
+            "output_format": "jpeg",
+            "prompt": """
+            Create a single stylized illustrated portrait of an adult training avatar for a fitness game.
+            Frame the head and shoulders, centered, with natural proportions, a clean silhouette, and a simple backdrop.
+            No lettering, score labels, or anatomy heat map. Appearance request: \(description)
+            """,
+        ]
+        let json = try await send(request, body: body, timeout: 180)
+        guard let images = json["data"] as? [[String: Any]],
+              let encoded = images.first?["b64_json"] as? String,
+              let image = Data(base64Encoded: encoded), !image.isEmpty else { throw AIError.badResponse }
+        return image
     }
 
     // MARK: - Anthropic Messages API
@@ -168,15 +216,72 @@ enum AIService {
         return text
     }
 
-    private static func send(_ request: URLRequest, body: [String: Any]) async throws -> [String: Any] {
+    private static let session: URLSession = {
+        guard AIBackend.permitsLocalRelayCertificate,
+              let hex = Bundle.main.object(forInfoDictionaryKey: "LiftRankRelayCertificateSHA256") as? String,
+              hex.count == 64, hex.allSatisfy(\.isHexDigit),
+              let base = AIBackend.config.flatMap({ URL(string: $0.baseURL) }),
+              base.scheme == "https", let host = base.host else { return .shared }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForResource = 185
+        return URLSession(configuration: configuration,
+                          delegate: TestRelayTrust(host: host, port: base.port ?? 443, fingerprint: hex.lowercased()),
+                          delegateQueue: nil)
+    }()
+
+    private static func send(_ request: URLRequest, body: [String: Any], timeout: TimeInterval = 120) async throws -> [String: Any] {
         var req = request
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        req.timeoutInterval = 120
-        let (data, response) = try await URLSession.shared.data(for: req)
+        req.timeoutInterval = timeout
+        let (data, response) = try await session.data(for: req)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else { throw AIError.http(status, String(data: data, encoding: .utf8) ?? "") }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw AIError.badResponse }
         return json
+    }
+}
+
+/// Accept the locally generated relay certificate only for the configured test app host.
+private final class TestRelayTrust: NSObject, URLSessionTaskDelegate {
+    let host: String
+    let port: Int
+    let fingerprint: String
+
+    init(host: String, port: Int, fingerprint: String) {
+        self.host = host
+        self.port = port
+        self.fingerprint = fingerprint
+    }
+
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge,
+                    completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let space = challenge.protectionSpace
+        guard space.authenticationMethod == NSURLAuthenticationMethodServerTrust else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        guard space.host == host, space.port == port,
+              let trust = space.serverTrust else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+        _ = SecTrustEvaluateWithError(trust, nil)
+        guard let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+        let digest = SHA256.hash(data: SecCertificateCopyData(leaf) as Data)
+            .map { String(format: "%02x", $0) }.joined()
+        guard digest == fingerprint else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+        completionHandler(.useCredential, URLCredential(trust: trust))
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
     }
 }
 

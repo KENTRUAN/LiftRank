@@ -8,13 +8,13 @@ enum FitnessDataSummary {
         let since = Date().adding(days: -days)
         var out: [String] = []
         out.append("## 用户")
-        out.append("昵称 \(profile.name)，\(profile.sex.label)，\(profile.age) 岁，身高 \(profile.heightCm.fmt(0)) cm，体重 \(profile.bodyweightKg.fmt(1)) kg，活动水平 \(profile.activityLevel.name)，饮食目标 \(profile.nutritionGoal.name)。")
+        out.append("\(profile.sex.label)，\(profile.age) 岁，身高 \(profile.heightCm.fmt(0)) cm，体重 \(profile.bodyweightKg.fmt(1)) kg，活动水平 \(profile.activityLevel.name)，饮食目标 \(profile.nutritionGoal.name)。")
 
         let bests = RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)
         let muscles = RankAggregator.muscleScores(bests: bests)
         let gsr = RankAggregator.overall(muscleScores: muscles)
         out.append("## 力量段位")
-        out.append("总体评分 GSR \(gsr)（\(RankTier.tier(for: gsr).name)）。评分 1–1000，按 e1RM/体重与性别曲线换算。")
+        out.append("总体评分 GSR \(gsr)，当前已经是 \(RankTier.tier(for: gsr).name) 段位。评分 1–1000，按 e1RM/体重与性别曲线换算。")
         let muscleLine = MuscleGroup.rankable.compactMap { g in muscles[g].map { "\(g.name) \($0)" } }.joined(separator: "，")
         if !muscleLine.isEmpty { out.append("肌群评分：\(muscleLine)。") }
         if !bests.isEmpty { out.append("动作最佳：" + bests.prefix(10).map { "\($0.name) e1RM \($0.bestE1RM.fmt(1)) kg（\($0.bestScore)）" }.joined(separator: "，")) }
@@ -22,6 +22,10 @@ enum FitnessDataSummary {
         let recent = workouts.filter { $0.isPublished && ($0.publishedAt ?? $0.startedAt) >= since }
         out.append("## 最近 \(days) 天力量训练")
         out.append("共 \(recent.count) 次，总训练量 \(recent.reduce(0) { $0 + $1.totalVolumeKg }.fmt(0)) kg，\(recent.reduce(0) { $0 + $1.completedSets.count }) 组。")
+        if let earliest = recent.map({ $0.publishedAt ?? $0.startedAt }).min(),
+           let latest = recent.map({ $0.publishedAt ?? $0.startedAt }).max() {
+            out.append("本窗口实际训练记录日期范围：\(earliest.shortString)–\(latest.shortString)。")
+        }
         var setsByGroup: [MuscleGroup: Int] = [:]
         for w in recent { for we in w.exercises { setsByGroup[we.muscleGroup, default: 0] += we.sets.filter { $0.isCompleted }.count } }
         if !setsByGroup.isEmpty { out.append("各肌群组数：" + setsByGroup.sorted { $0.value > $1.value }.map { "\($0.key.name) \($0.value)" }.joined(separator: "，")) }
@@ -42,9 +46,11 @@ enum FitnessDataSummary {
         }
 
         out.append("## 身体数据")
-        let weights = measurements.filter { $0.metric == .weight }.sorted { $0.date < $1.date }
-        if let first = weights.first, let last = weights.last, weights.count >= 2 {
-            out.append("体重：\(first.date.shortString) \(first.value.fmt(1)) kg → \(last.date.shortString) \(last.value.fmt(1)) kg（共 \(weights.count) 次记录）。")
+        for metric in [BodyMetric.weight, .bodyFat, .waist] {
+            let values = measurements.filter { $0.metric == metric && $0.date >= since }.sorted { $0.date < $1.date }
+            if let first = values.first, let last = values.last, values.count >= 2 {
+                out.append("\(metric.name)：\(first.date.shortString) \(first.value.fmt(1)) \(metric.unit) → \(last.date.shortString) \(last.value.fmt(1)) \(metric.unit)（共 \(values.count) 次记录）。")
+            }
         }
         var latest: [BodyMetric: BodyMeasurement] = [:]
         for m in measurements.sorted(by: { $0.date > $1.date }) where latest[m.metric] == nil && m.metric != .weight { latest[m.metric] = m }
@@ -53,14 +59,15 @@ enum FitnessDataSummary {
         let recentFood = foods.filter { $0.date >= Date().adding(days: -7) }
         out.append("## 最近 7 天饮食")
         if recentFood.isEmpty { out.append("无记录。") } else {
-            let daysLogged = max(1, Set(recentFood.map { $0.date.dayKey }).count)
-            let kcal = recentFood.reduce(0) { $0 + $1.kcal } / Double(daysLogged)
-            let p = recentFood.reduce(0) { $0 + $1.protein } / Double(daysLogged)
-            let f = recentFood.reduce(0) { $0 + $1.fat } / Double(daysLogged)
-            let c = recentFood.reduce(0) { $0 + $1.carbs } / Double(daysLogged)
-            let tdee = NutritionEngine.tdee(sex: profile.sex, weightKg: profile.bodyweightKg, heightCm: profile.heightCm, age: profile.age, activity: profile.activityLevel)
-            let t = NutritionEngine.targets(tdee: tdee, weightKg: profile.bodyweightKg, goal: profile.nutritionGoal)
-            out.append("记录 \(daysLogged) 天，日均 \(kcal.fmt(0)) kcal（蛋白 \(p.fmt(0)) g，脂肪 \(f.fmt(0)) g，碳水 \(c.fmt(0)) g）；目标 \(t.kcal.fmt(0)) kcal（蛋白 \(t.protein.fmt(0)) g，脂肪 \(t.fat.fmt(0)) g，碳水 \(t.carbs.fmt(0)) g）。")
+            let daysLogged = Set(recentFood.map { $0.date.dayKey }).count
+            out.append("有餐食记录的天数：\(daysLogged)/7；共 \(recentFood.count) 条。没有全天记录完整性的标记，无法判断是否达到每日摄入目标。")
+            if daysLogged <= 2 {
+                out.append("有效记录太少，不提供摄入估算；建议补记几天完整饮食后再评估。")
+            } else {
+                for entry in recentFood.sorted(by: { $0.date > $1.date }).prefix(8) {
+                    out.append("- \(entry.date.shortString) \(entry.meal.name)：\(entry.name)（仅一条记录）。")
+                }
+            }
         }
         return out.joined(separator: "\n")
     }
@@ -125,14 +132,20 @@ struct BodyAnalysisView: View {
         let system = """
         你是一位专业的力量训练与营养教练。根据用户提供的训练、段位、有氧、身体与饮食数据，用简体中文给出综合分析。
         要求：结构化、具体、可执行；分为「总体评价」「力量结构与短板」「身体成分与体重趋势」「饮食与恢复」「未来 4 周建议」五部分，每部分 2–4 条要点。
-        不要编造数据；数据缺失时指出需要补充什么。不要给医疗诊断。使用 Markdown 的粗体与列表，不要使用标题符号 #。
+        引用具体日期、动作或数值支持主要判断。「身体成分与体重趋势」只描述实际测量值、日期和数据缺口，不解释体重变化原因。体脂记录不足时直接写无法判断体脂趋势。若饮食有效记录只有 0–2 天，「饮食与恢复」只写缺了哪些记录和怎么补记，不推断当前饮食质量、恢复状态、蛋白质或热量。即使条目较多也不能断定全天饮食不足或解释体重变化。力量段位与肌群组数反映记录表现，不等同于肌肉量。指出缺的数据，不做医疗诊断。使用 Markdown 的粗体与列表，不要使用标题符号 #。
         """
         Task {
             do {
                 let text = try await AIService.complete(system: system, messages: [AIChatMessage(role: .user, text: data)], config: config, maxTokens: 4096)
+                let previous = (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt)
                 profile.lastBodyAnalysis = text
                 profile.lastBodyAnalysisAt = Date()
-                try? context.save()
+                do {
+                    try context.save()
+                } catch {
+                    (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt) = previous
+                    throw error
+                }
             } catch {
                 self.error = error.localizedDescription
             }

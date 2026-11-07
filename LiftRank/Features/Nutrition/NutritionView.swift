@@ -50,6 +50,11 @@ struct NutritionView: View {
                     Label("目标：\(profile.nutritionGoal.name) · \(t.kcal.fmt(0)) kcal", systemImage: "target")
                 }
             }
+            Section("分析") {
+                NavigationLink { BodyAnalysisView(profile: profile) } label: {
+                    Label("AI 饮食与身体分析", systemImage: "sparkles")
+                }
+            }
             Section("添加") {
                 Button { alert = "条码录入需要相机与食品数据库服务，当前版本未接入。可先用手动录入或自定义餐食。" } label: { Label("扫描条码", systemImage: "barcode.viewfinder") }
                 Button { alert = profile.isPro ? "AI 拍照记餐需要联网的识别服务，当前版本未接入后端。" : "AI 拍照记餐属于 Pro 功能，且需要联网。" } label: {

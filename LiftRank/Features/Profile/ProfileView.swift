@@ -8,6 +8,8 @@ struct ProfileView: View {
     @Environment(\.modelContext) private var context
     @Query private var workouts: [Workout]
     @Query private var exercises: [Exercise]
+    @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
+    @State private var portrait: UIImage?
     @State private var nicknameDraft = ""
     @State private var showNicknameEditor = false
     @State private var weightText = ""
@@ -42,7 +44,7 @@ struct ProfileView: View {
             Form {
                 Section {
                     HStack(spacing: 14) {
-                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar)
+                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar, portrait: portrait)
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                             HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
@@ -115,6 +117,7 @@ struct ProfileView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
+            .task(id: portraitRevision) { portrait = TrainingPortraitFile.image() }
             .navigationTitle("我的")
             .scrollDismissesKeyboard(.interactively)
             .onSubmit { focusedField = nil }

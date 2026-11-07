@@ -10,3 +10,12 @@
 // LIFTRANK_AI_PROVIDER = anthropic
 // LIFTRANK_AI_BASE_URL = https:/$()/ai.your-domain.com
 // LIFTRANK_AI_KEY = app-token-issued-by-your-server
+
+
+// LiftRank test OpenAI relay: scripts/openai_test_relay.py reads the OpenAI API key
+// from the Mac/server environment. Expose its loopback port through HTTPS for a phone.
+// The following key is the relay token, not your OpenAI API key.
+// LIFTRANK_AI_PROVIDER = openai
+// LIFTRANK_AI_MODEL = gpt-4o
+// LIFTRANK_AI_BASE_URL = https:/$()/your-test-relay.example/v1
+// LIFTRANK_AI_KEY = app-token-issued-by-your-server

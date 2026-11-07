@@ -3,7 +3,14 @@ import SwiftData
 
 /// Development helper: launch with env LIFTRANK_DEMO=1 to seed a sample history, LIFTRANK_TAB=<0-4> to open a tab.
 enum DemoData {
-    static var isEnabled: Bool { ProcessInfo.processInfo.environment["LIFTRANK_DEMO"] == "1" }
+    static var isEnabled: Bool {
+        #if DEBUG
+        Bundle.main.bundleIdentifier == "com.liftrank.app.demo"
+            && ProcessInfo.processInfo.environment["LIFTRANK_DEMO"] == "1"
+        #else
+        false
+        #endif
+    }
     static var initialTab: Int { Int(ProcessInfo.processInfo.environment["LIFTRANK_TAB"] ?? "") ?? 0 }
     static var autoOpenActive: Bool { ProcessInfo.processInfo.environment["LIFTRANK_ACTIVE"] == "1" }
 
