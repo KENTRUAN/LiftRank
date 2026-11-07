@@ -1,0 +1,53 @@
+name: iOS checks
+
+on:
+  push:
+    branches: ["codex/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Repository lint and Swift syntax checks
+        run: |
+          python3 scripts/lint.py --swift
+          plutil -lint LiftRank.xcodeproj/project.pbxproj LiftRank/Info.plist
+      - name: Build and run regression tests
+        run: |
+          xcodebuild -version
+          xcodebuild test \
+            -project LiftRank.xcodeproj \
+            -scheme LiftRank \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.5' \
+            -parallel-testing-enabled NO \
+            -maximum-test-execution-time-allowance 60 \
+            -test-timeouts-enabled YES \
+            -derivedDataPath build/DerivedData \
+            -resultBundlePath build/TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ios-test-results
+          path: build/TestResults.xcresult
+          if-no-files-found: ignore
+          retention-days: 7

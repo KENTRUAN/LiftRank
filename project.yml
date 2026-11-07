@@ -34,3 +34,18 @@ targets:
         CODE_SIGN_STYLE: Automatic
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+    scheme:
+      testTargets:
+        - LiftRankTests
+  LiftRankTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LiftRankTests
+    dependencies:
+      - target: LiftRank
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.liftrank.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"

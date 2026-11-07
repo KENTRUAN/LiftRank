@@ -34,7 +34,38 @@
 		EBC4537C69BA100E161FB573 /* ExerciseProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF65741D36FA953BFE08AC2A /* ExerciseProgressView.swift */; };
 		F3D00AAA7B1950A75037DB26 /* QuestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D075812526A989A863580B1B /* QuestsView.swift */; };
 		FF2A7E86019B9D30E573D81C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ED6717546E188BF214E65A0 /* Components.swift */; };
+		C0DE00000000000000000001 /* StoreLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000004 /* StoreLoader.swift */; };
+		C0DE00000000000000000002 /* StoreLoadingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000005 /* StoreLoadingTests.swift */; };
+		C0DE00000000000000000003 /* WorkoutGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000006 /* WorkoutGeneratorTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C0DE00000000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A9EA75D3510B862115A4C5E9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1C5C9F7DBBB1212B16BC6C6C;
+			remoteInfo = LiftRank;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0DE0000000000000000000D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0DE0000000000000000000F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1C5C9F7DBBB1212B16BC6C6C /* LiftRank */;
+			targetProxy = C0DE00000000000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXFileReference section */
 		054759A1ECA21AD1058021D0 /* PlateCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlateCalculatorView.swift; sourceTree = "<group>"; };
@@ -66,6 +97,10 @@
 		EDACAE50444FF00F2114BC61 /* RankCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RankCalculatorView.swift; sourceTree = "<group>"; };
 		FB10CD68116DA6C54DCEFAA9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		FCEA9F85A017611879B7B39E /* LiftRank.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiftRank.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0DE00000000000000000004 /* StoreLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLoader.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000005 /* StoreLoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreLoadingTests.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000006 /* WorkoutGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutGeneratorTests.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000007 /* LiftRankTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiftRankTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -137,6 +172,7 @@
 			isa = PBXGroup;
 			children = (
 				FCEA9F85A017611879B7B39E /* LiftRank.app */,
+				C0DE00000000000000000007 /* LiftRankTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -185,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				7F28876AB6EE373AED4A02FC /* LiftRankApp.swift */,
+				C0DE00000000000000000004 /* StoreLoader.swift */,
 				AE85A3D74A9C32D86EB80E20 /* RootView.swift */,
 			);
 			path = App;
@@ -194,6 +231,7 @@
 			isa = PBXGroup;
 			children = (
 				008749FE62153E6F4FEADCA4 /* LiftRank */,
+				C0DE00000000000000000009 /* LiftRankTests */,
 				589B8F14B4F54F5CCBAE1853 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -214,6 +252,15 @@
 				189DBA837291BE88B6650A55 /* Assets.xcassets */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		C0DE00000000000000000009 /* LiftRankTests */ = {
+			isa = PBXGroup;
+			children = (
+				C0DE00000000000000000005 /* StoreLoadingTests.swift */,
+				C0DE00000000000000000006 /* WorkoutGeneratorTests.swift */,
+			);
+			path = LiftRankTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -237,6 +284,24 @@
 			productReference = FCEA9F85A017611879B7B39E /* LiftRank.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C0DE0000000000000000000A /* LiftRankTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0DE0000000000000000000B /* Build configuration list for PBXNativeTarget "LiftRankTests" */;
+			buildPhases = (
+				C0DE0000000000000000000C /* Sources */,
+				C0DE0000000000000000000D /* Frameworks */,
+				C0DE0000000000000000000E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0DE0000000000000000000F /* PBXTargetDependency */,
+			);
+			name = LiftRankTests;
+			productName = LiftRankTests;
+			productReference = C0DE00000000000000000007 /* LiftRankTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -246,6 +311,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					C0DE0000000000000000000A = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = 1C5C9F7DBBB1212B16BC6C6C;
+					};
 					1C5C9F7DBBB1212B16BC6C6C = {
 						ProvisioningStyle = Automatic;
 					};
@@ -266,6 +335,7 @@
 			projectRoot = "";
 			targets = (
 				1C5C9F7DBBB1212B16BC6C6C /* LiftRank */,
+				C0DE0000000000000000000A /* LiftRankTests */,
 			);
 		};
 /* End PBXProject section */
@@ -276,6 +346,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				31252E5215BEAD17F2BAB898 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0DE0000000000000000000E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +373,7 @@
 				B0E99285C3AB47F6FCC1D82F /* ExerciseSeed.swift in Sources */,
 				23E4A5921CAD987F2AD8634A /* Gamification.swift in Sources */,
 				E82949910C9E1AF41777ECC9 /* LiftRankApp.swift in Sources */,
+				C0DE00000000000000000001 /* StoreLoader.swift in Sources */,
 				549E777700AA34975126E151 /* Models.swift in Sources */,
 				722D33CBC76612CB8CD29028 /* MuscleGroup.swift in Sources */,
 				BA4820E7210CF07636ACBABF /* NutritionView.swift in Sources */,
@@ -312,6 +390,15 @@
 				401E80340159B1E4E336A9C8 /* WorkoutGeneratorView.swift in Sources */,
 				4C33C5A62B6D2426CF04CFC4 /* WorkoutHomeView.swift in Sources */,
 				BDDC95D39E0071DE6E5F717C /* WorkoutPublisher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0DE0000000000000000000C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0DE00000000000000000002 /* StoreLoadingTests.swift in Sources */,
+				C0DE00000000000000000003 /* WorkoutGeneratorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +566,42 @@
 			};
 			name = Release;
 		};
+		C0DE00000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.liftrank.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiftRank.app/LiftRank";
+			};
+			name = Debug;
+		};
+		C0DE00000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.liftrank.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiftRank.app/LiftRank";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -496,6 +619,15 @@
 			buildConfigurations = (
 				D067A9C8D96C6D5F6364EF70 /* Debug */,
 				F59B031A11094500052CDD9F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C0DE0000000000000000000B /* Build configuration list for PBXNativeTarget "LiftRankTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0DE00000000000000000010 /* Debug */,
+				C0DE00000000000000000011 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
