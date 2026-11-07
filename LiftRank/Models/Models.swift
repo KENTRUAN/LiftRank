@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var name: String = "训练者"
+    private(set) var name: String = "训练者"
     var sexRaw: String = Sex.male.rawValue
     var birthYear: Int = 1995
     var birthday: Date?
@@ -20,10 +20,17 @@ final class UserProfile {
     var streakBridgeDays: [String] = []
     var isPro: Bool = false
     var defaultRestSeconds: Int = 90
-    var hasOnboarded: Bool = false
+    private(set) var hasOnboarded: Bool = false
     var createdAt: Date = Date()
 
     init() {}
+
+    func completeOnboarding(name: String) {
+        guard !hasOnboarded else { return }
+        let nickname = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !nickname.isEmpty { self.name = nickname }
+        hasOnboarded = true
+    }
 
     var sex: Sex { get { Sex(rawValue: sexRaw) ?? .male } set { sexRaw = newValue.rawValue } }
     var unit: WeightUnit { get { WeightUnit(rawValue: unitRaw) ?? .kg } set { unitRaw = newValue.rawValue } }

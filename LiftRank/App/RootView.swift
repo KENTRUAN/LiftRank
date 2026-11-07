@@ -20,6 +20,7 @@ struct RootView: View {
 struct RootTabView: View {
     @Bindable var profile: UserProfile
     @State private var tab = DemoData.initialTab
+    @State private var showWelcomePreview = false
 
     var body: some View {
         TabView(selection: $tab) {
@@ -31,9 +32,19 @@ struct RootTabView: View {
                 .tabItem { Label("任务", systemImage: "flame.fill") }.tag(2)
             NutritionView(profile: profile)
                 .tabItem { Label("饮食", systemImage: "fork.knife") }.tag(3)
-            ProfileView(profile: profile)
+            ProfileView(profile: profile) { showWelcomePreview = true }
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }.tag(4)
         }
+        .sheet(isPresented: $showWelcomePreview) { OnboardingPreview() }
+    }
+}
+
+private struct OnboardingPreview: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft = UserProfile()
+
+    var body: some View {
+        OnboardingView(profile: draft) { dismiss() }
     }
 }
 
@@ -41,9 +52,19 @@ struct OnboardingView: View {
     private enum Field { case nickname, height, weight }
 
     @Bindable var profile: UserProfile
-    @State private var weightText = ""
-    @State private var heightText = ""
+    var onPreviewClose: (() -> Void)?
+    @State private var nickname: String
+    @State private var weightText: String
+    @State private var heightText: String
     @FocusState private var focusedField: Field?
+
+    init(profile: UserProfile, onPreviewClose: (() -> Void)? = nil) {
+        self.profile = profile
+        self.onPreviewClose = onPreviewClose
+        _nickname = State(initialValue: profile.name)
+        _weightText = State(initialValue: profile.bodyweightKg.formatted(.number))
+        _heightText = State(initialValue: profile.heightCm.formatted(.number))
+    }
 
     var body: some View {
         NavigationStack {
@@ -55,55 +76,66 @@ struct OnboardingView: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+                    if onPreviewClose != nil {
+                        Text("预览中的输入仅用于试用。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Section("基础信息") {
-                    LabeledContent("昵称") {
-                        TextField("昵称", text: $profile.name)
-                            .multilineTextAlignment(.trailing)
+                    InputRow("昵称") {
+                        TextField("昵称", text: $nickname)
                             .focused($focusedField, equals: .nickname)
                             .submitLabel(.done)
+                            .formInputStyle()
                     }
-                    Picker("性别", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
+                    InputRow("性别") {
+                        Picker("性别", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
+                            .labelsHidden().pickerStyle(.menu)
+                    }
                     BirthdayField(profile: profile) { focusedField = nil }
-                    LabeledContent("身高 (cm)") {
+                    InputRow("身高 (cm)") {
                         TextField("身高", text: $heightText)
                             .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: .height)
+                            .formInputStyle()
                     }
-                    LabeledContent("体重 (kg)") {
+                    InputRow("体重 (kg)") {
                         TextField("体重", text: $weightText)
                             .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
                             .focused($focusedField, equals: .weight)
+                            .formInputStyle()
                     }
                 }
                 Section("单位") {
-                    Picker("重量单位", selection: $profile.unit) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
-                        .pickerStyle(.segmented)
+                    InputRow("重量单位") {
+                        Picker("重量单位", selection: $profile.unit) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                            .labelsHidden().pickerStyle(.segmented)
+                    }
                 }
                 Section {
                     Button {
                         focusedField = nil
                         if let h = try? Double(heightText, format: .number), h.isFinite, h > 100 { profile.heightCm = h }
                         if let w = try? Double(weightText, format: .number), w.isFinite, w > 30 { profile.bodyweightKg = w }
-                        profile.hasOnboarded = true
+                        profile.completeOnboarding(name: nickname)
+                        onPreviewClose?()
                     } label: { Text("开始训练").frame(maxWidth: .infinity).bold() }
                 }
             }
             .scrollDismissesKeyboard(.interactively)
-            .onTapGesture { focusedField = nil }
             .onSubmit { focusedField = nil }
             .navigationTitle("欢迎")
             .toolbar {
+                if let onPreviewClose {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("关闭预览", action: onPreviewClose)
+                    }
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("完成") { focusedField = nil }
                 }
-            }
-            .onAppear {
-                heightText = profile.heightCm.formatted(.number)
-                weightText = profile.bodyweightKg.formatted(.number)
             }
         }
     }

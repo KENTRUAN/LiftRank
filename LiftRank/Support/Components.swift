@@ -1,4 +1,113 @@
 import SwiftUI
+import UIKit
+
+struct InputRow<Control: View>: View {
+    let title: String
+    let control: () -> Control
+
+    init(_ title: String, @ViewBuilder control: @escaping () -> Control) {
+        self.title = title
+        self.control = control
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            control()
+            Spacer(minLength: 0)
+            Text(title)
+                .multilineTextAlignment(.trailing)
+                .layoutPriority(1)
+                .accessibilityHidden(true)
+        }
+        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+    }
+}
+
+extension View {
+    func formInputStyle(maxWidth: CGFloat = 148) -> some View {
+        textFieldStyle(.roundedBorder)
+            .multilineTextAlignment(.leading)
+            .foregroundStyle(.primary)
+            .frame(maxWidth: maxWidth)
+    }
+}
+
+struct InputStepper: View {
+    let title: String
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+
+    var body: some View {
+        InputRow(title) {
+            HStack(spacing: 8) {
+                Text(String(value)).monospacedDigit().accessibilityHidden(true)
+                Stepper(title, value: $value, in: range)
+                    .labelsHidden()
+                    .accessibilityValue(String(value))
+            }
+            .fixedSize()
+        }
+    }
+}
+
+struct KeyboardDismissal: UIViewRepresentable {
+    func makeUIView(context: Context) -> WindowObserver {
+        let observer = WindowObserver()
+        observer.isUserInteractionEnabled = false
+        return observer
+    }
+
+    func updateUIView(_ view: WindowObserver, context: Context) {}
+
+    final class WindowObserver: UIView, UIGestureRecognizerDelegate {
+        private weak var observedWindow: UIWindow?
+        private weak var inputAtTouchStart: UIView?
+
+        private lazy var tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            observedWindow?.removeGestureRecognizer(tap)
+            observedWindow = window
+            tap.delegate = self
+            tap.cancelsTouchesInView = false
+            tap.delaysTouchesBegan = false
+            tap.delaysTouchesEnded = false
+            window?.addGestureRecognizer(tap)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            inputAtTouchStart = nil
+            var target = touch.view
+            while let view = target {
+                if view is UITextInput { return false }
+                target = view.superview
+            }
+
+            inputAtTouchStart = window.flatMap { firstResponder(in: $0) }
+            return inputAtTouchStart != nil
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            true
+        }
+
+        @objc private func dismissKeyboard() {
+            if let input = inputAtTouchStart, input.isFirstResponder {
+                input.resignFirstResponder()
+            }
+        }
+
+        private func firstResponder(in view: UIView) -> UIView? {
+            if view.isFirstResponder, view is UITextInput { return view }
+            for child in view.subviews {
+                if let responder = firstResponder(in: child) { return responder }
+            }
+            return nil
+        }
+    }
+}
 
 struct BirthdayField: View {
     @Bindable var profile: UserProfile
@@ -14,25 +123,30 @@ struct BirthdayField: View {
         return calendar.date(from: localDay) ?? Date()
     }
 
+    private var selectionLabel: String {
+        if let birthday = profile.birthday {
+            return birthday.formatted(Date.FormatStyle(date: .long, time: .omitted,
+                                                       locale: locale, calendar: calendar, timeZone: calendar.timeZone))
+        }
+        return profile.hasOnboarded ? "\(String(profile.birthYear)) 年" : "选择日期"
+    }
+
     var body: some View {
-        Button {
-            onOpen()
-            let existingDate = profile.birthday ?? calendar.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1))
-            draft = min(existingDate ?? today, today)
-            isPresented = true
-        } label: {
-            LabeledContent("生日") {
-                if let birthday = profile.birthday {
-                    Text(birthday, format: Date.FormatStyle(date: .long, time: .omitted,
-                                                            locale: locale, calendar: calendar, timeZone: calendar.timeZone))
-                } else if profile.hasOnboarded {
-                    Text("\(String(profile.birthYear)) 年")
-                } else {
-                    Text("选择日期")
+        InputRow("生日") {
+            Button {
+                onOpen()
+                let existingDate = profile.birthday ?? calendar.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1))
+                draft = min(existingDate ?? today, today)
+                isPresented = true
+            } label: {
+                HStack(spacing: 6) {
+                    Text(selectionLabel)
+                    Image(systemName: "calendar").accessibilityHidden(true)
                 }
             }
-            .foregroundStyle(.primary)
-            .contentShape(Rectangle())
+            .buttonStyle(.borderless)
+            .accessibilityLabel("生日")
+            .accessibilityValue(selectionLabel)
         }
         .sheet(isPresented: $isPresented) {
             NavigationStack {

@@ -66,7 +66,11 @@ struct MeasurementEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                HStack { Text(metric.name); Spacer(); TextField("0", text: $text).keyboardType(.decimalPad).multilineTextAlignment(.trailing); Text(metric.unit).foregroundStyle(.secondary) }
+                InputRow("\(metric.name) (\(metric.unit))") {
+                    TextField(metric.name, text: $text, prompt: Text("0"))
+                        .keyboardType(.decimalPad)
+                        .formInputStyle()
+                }
             }
             .navigationTitle("记录\(metric.name)")
             .navigationBarTitleDisplayMode(.inline)
@@ -94,7 +98,10 @@ struct BodyFatCalculatorView: View {
         let result = BodyFatCalculator.percent(sex: sex, heightCm: Double(height) ?? 0, neckCm: Double(neck) ?? 0, waistCm: Double(waist) ?? 0, hipCm: Double(hip) ?? 0)
         Form {
             Section("围度 (cm)") {
-                Picker("性别", selection: $sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
+                InputRow("性别") {
+                    Picker("性别", selection: $sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
+                        .labelsHidden().pickerStyle(.segmented)
+                }
                 field("身高", $height); field("颈围", $neck); field("腰围（肚脐处）", $waist)
                 if sex == .female { field("臀围", $hip) }
             }
@@ -112,7 +119,9 @@ struct BodyFatCalculatorView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { sex = profile.sex; height = profile.heightCm.fmt(0) }
     }
-    private func field(_ l: String, _ b: Binding<String>) -> some View {
-        HStack { Text(l); Spacer(); TextField("0", text: b).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+    private func field(_ label: String, _ text: Binding<String>) -> some View {
+        InputRow(label) {
+            TextField(label, text: text, prompt: Text("0")).keyboardType(.decimalPad).formInputStyle()
+        }
     }
 }

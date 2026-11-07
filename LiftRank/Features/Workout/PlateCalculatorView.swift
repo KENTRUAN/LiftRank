@@ -14,12 +14,20 @@ struct PlateCalculatorView: View {
         NavigationStack {
             Form {
                 Section("目标") {
-                    HStack { Text("目标重量 (\(unit.label))"); Spacer(); TextField("", text: $targetText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("杠铃杆 (\(unit.label))"); Spacer(); TextField("", text: $barText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    InputRow("目标重量 (\(unit.label))") {
+                        TextField("目标重量", text: $targetText).keyboardType(.decimalPad).formInputStyle()
+                    }
+                    InputRow("杠铃杆 (\(unit.label))") {
+                        TextField("杠铃杆", text: $barText).keyboardType(.decimalPad).formInputStyle()
+                    }
                 }
                 Section("可用杠铃片") {
                     ForEach(plates, id: \.self) { p in
-                        Toggle("\(p.fmt(2)) \(unit.label)", isOn: Binding(get: { available.contains(p) }, set: { on in if on { available.insert(p) } else { available.remove(p) } }))
+                        let title = "\(p.fmt(2)) \(unit.label)"
+                        InputRow(title) {
+                            Toggle(title, isOn: Binding(get: { available.contains(p) }, set: { on in if on { available.insert(p) } else { available.remove(p) } }))
+                                .labelsHidden()
+                        }
                     }
                 }
                 Section("每侧配重") {

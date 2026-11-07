@@ -30,6 +30,7 @@ struct LiftRankApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .background(KeyboardDismissal())
         }
         .modelContainer(container)
     }

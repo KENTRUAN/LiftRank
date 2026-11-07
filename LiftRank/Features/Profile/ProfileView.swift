@@ -2,31 +2,70 @@ import SwiftUI
 import SwiftData
 
 struct ProfileView: View {
+    private enum Field { case height, weight }
+
     @Bindable var profile: UserProfile
+    let onPreviewOnboarding: () -> Void
     @Query private var workouts: [Workout]
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var info: String?
+    @FocusState private var focusedField: Field?
+
+    private var unitSelection: Binding<WeightUnit> {
+        Binding {
+            profile.unit
+        } set: { unit in
+            saveMeasurement(focusedField)
+            focusedField = nil
+            profile.unit = unit
+            weightText = unit.fromKg(profile.bodyweightKg).formatted(.number)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("个人资料") {
-                    TextField("昵称", text: $profile.name)
-                    Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
-                    BirthdayField(profile: profile)
-                    HStack { Text("身高 (cm)"); Spacer(); TextField("", text: $heightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
-                        .onSubmit { if let v = Double(heightText) { profile.heightCm = v } } }
-                    HStack { Text("体重 (\(profile.unit.label))"); Spacer(); TextField("", text: $weightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
-                        .onSubmit { if let v = Double(weightText) { profile.bodyweightKg = profile.unit.toKg(v) } } }
+                    InputRow("昵称") {
+                        Text(profile.name)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("昵称")
+                            .accessibilityValue(profile.name)
+                    }
+                    InputRow("性别（评分曲线）") {
+                        Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
+                            .labelsHidden().pickerStyle(.menu)
+                    }
+                    BirthdayField(profile: profile) { focusedField = nil }
+                    InputRow("身高 (cm)") {
+                        TextField("身高", text: $heightText)
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .height)
+                            .formInputStyle()
+                    }
+                    InputRow("体重 (\(profile.unit.label))") {
+                        TextField("体重", text: $weightText)
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .weight)
+                            .formInputStyle()
+                    }
+                    Button("预览欢迎页", action: onPreviewOnboarding)
                 }
                 Section("偏好") {
-                    Picker("重量单位", selection: $profile.unit) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
-                        .onChange(of: profile.unit) { _, _ in weightText = profile.unit.fromKg(profile.bodyweightKg).fmt(1) }
-                    Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
+                    InputRow("重量单位") {
+                        Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                            .labelsHidden().pickerStyle(.segmented)
+                    }
+                    InputRow("默认组间休息") {
+                        Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
+                            .labelsHidden().pickerStyle(.menu)
+                    }
                 }
                 Section("Pro") {
-                    Toggle(isOn: $profile.isPro) { Label("Pro 会员（本地模拟）", systemImage: "star.fill") }
+                    InputRow("Pro 会员（本地模拟）") {
+                        Toggle("Pro 会员（本地模拟）", isOn: $profile.isPro).labelsHidden()
+                    }
                     Text("Pro 包含 AI 拍照记餐、更丰富的段位分析与更长时间范围图表、肌肉恢复追踪。实际订阅需接入 App Store 内购；此开关仅用于开发预览。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("计算工具") {
@@ -53,8 +92,39 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("我的")
-            .onAppear { weightText = profile.unit.fromKg(profile.bodyweightKg).fmt(1); heightText = profile.heightCm.fmt(0) }
+            .scrollDismissesKeyboard(.interactively)
+            .onSubmit { focusedField = nil }
+            .onChange(of: focusedField) { previous, _ in saveMeasurement(previous) }
+            .onAppear {
+                weightText = profile.unit.fromKg(profile.bodyweightKg).formatted(.number)
+                heightText = profile.heightCm.formatted(.number)
+            }
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { focusedField = nil }
+                }
+            }
             .alert("说明", isPresented: Binding(get: { info != nil }, set: { if !$0 { info = nil } })) { Button("好") {} } message: { Text(info ?? "") }
+        }
+    }
+
+    private func saveMeasurement(_ field: Field?) {
+        switch field {
+        case .height:
+            if let value = try? Double(heightText, format: .number), value.isFinite, value > 0 {
+                profile.heightCm = value
+            } else {
+                heightText = profile.heightCm.formatted(.number)
+            }
+        case .weight:
+            if let value = try? Double(weightText, format: .number), value.isFinite, value > 0 {
+                profile.bodyweightKg = profile.unit.toKg(value)
+            } else {
+                weightText = profile.unit.fromKg(profile.bodyweightKg).formatted(.number)
+            }
+        case nil:
+            break
         }
     }
 }
@@ -69,8 +139,10 @@ struct OneRMCalculatorView: View {
         let brzycki = StrengthScoring.brzycki(weightKg: w, reps: reps)
         Form {
             Section("输入") {
-                HStack { Text("重量 (\(unit.label))"); Spacer(); TextField("", text: $weight).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                Stepper("次数 \(reps)", value: $reps, in: 1...30)
+                InputRow("重量 (\(unit.label))") {
+                    TextField("重量", text: $weight).keyboardType(.decimalPad).formInputStyle()
+                }
+                InputStepper(title: "次数", value: $reps, range: 1...30)
             }
             Section("估算 1RM") {
                 LabeledContent("Epley", value: "\(epley.fmt(1)) \(unit.label)")

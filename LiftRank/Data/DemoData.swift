@@ -13,8 +13,7 @@ enum DemoData {
         guard published.isEmpty else { return }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
-        profile.hasOnboarded = true
-        profile.name = "示例用户"
+        profile.completeOnboarding(name: "示例用户")
         profile.bodyweightKg = 75
 
         let plan: [(daysAgo: Int, title: String, items: [(String, [(Double, Int)])])] = [
