@@ -18,20 +18,11 @@ struct WorkoutGeneratorView: View {
         NavigationStack {
             Form {
                 Section("条件") {
-                    InputRow("目标") {
-                        Picker("目标", selection: $goal) { ForEach(WorkoutGoal.allCases) { Text($0.name).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
-                    InputStepper(title: "每周天数", value: $days, range: 1...6)
-                    InputRow("器械") {
-                        Picker("器械", selection: $equipment) { ForEach(EquipmentAccess.allCases) { Text($0.name).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
-                    InputRow("经验") {
-                        Picker("经验", selection: $experience) { ForEach(ExperienceLevel.allCases) { Text($0.name).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
-                    InputStepper(title: "计划周数", value: $weeks, range: 1...12)
+                    Picker("目标", selection: $goal) { ForEach(WorkoutGoal.allCases) { Text($0.name).tag($0) } }
+                    Stepper("每周 \(days) 天", value: $days, in: 1...6)
+                    Picker("器械", selection: $equipment) { ForEach(EquipmentAccess.allCases) { Text($0.name).tag($0) } }
+                    Picker("经验", selection: $experience) { ForEach(ExperienceLevel.allCases) { Text($0.name).tag($0) } }
+                    Stepper(weeks == 1 ? "单次训练" : "\(weeks) 周计划", value: $weeks, in: 1...12)
                 }
                 Section {
                     Button { preview = WorkoutGenerator.generate(goal: goal, daysPerWeek: days, equipment: equipment, experience: experience, weeks: weeks, exercises: exercises); saved = false } label: {

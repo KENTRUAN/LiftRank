@@ -39,9 +39,7 @@ struct NutritionView: View {
         let c = todays.reduce(0) { $0 + $1.carbs }
         return List {
             Section {
-                InputRow("日期") {
-                    DatePicker("日期", selection: $day, displayedComponents: .date).labelsHidden()
-                }
+                DatePicker("日期", selection: $day, displayedComponents: .date)
                 HStack(spacing: 16) {
                     MacroRing(title: "热量", value: kcal, target: t.kcal, unit: "kcal", color: .orange)
                     MacroRing(title: "蛋白", value: p, target: t.protein, unit: "g", color: .red)
@@ -122,9 +120,7 @@ struct FoodEntryEditor: View {
         NavigationStack {
             Form {
                 Section("快速选择") {
-                    InputRow("搜索食品") {
-                        TextField("搜索食品", text: $search).formInputStyle(maxWidth: .infinity)
-                    }
+                    TextField("搜索食品", text: $search)
                     ForEach(customMeals.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }) { m in
                         Button { fill(m.name, m.kcal, m.protein, m.fat, m.carbs) } label: { row(m.name, m.kcal, custom: true) }
                     }
@@ -133,13 +129,9 @@ struct FoodEntryEditor: View {
                     }
                 }
                 Section("\(meal.name) · 手动录入") {
-                    InputRow("名称") {
-                        TextField("名称", text: $name).formInputStyle(maxWidth: .infinity)
-                    }
+                    TextField("名称", text: $name)
                     numField("热量 kcal", $kcal); numField("蛋白质 g", $protein); numField("脂肪 g", $fat); numField("碳水 g", $carbs)
-                    InputRow("保存为自定义餐食") {
-                        Toggle("保存为自定义餐食", isOn: $saveAsCustom).labelsHidden()
-                    }
+                    Toggle("保存为自定义餐食", isOn: $saveAsCustom)
                 }
             }
             .navigationTitle("记录饮食")
@@ -162,10 +154,8 @@ struct FoodEntryEditor: View {
     private func row(_ n: String, _ k: Double, custom: Bool) -> some View {
         HStack { Text(n).foregroundStyle(.primary); if custom { Text("自定义").font(.caption2).foregroundStyle(.secondary) }; Spacer(); Text("\(k.fmt(0)) kcal").foregroundStyle(.secondary) }
     }
-    private func numField(_ label: String, _ text: Binding<String>) -> some View {
-        InputRow(label) {
-            TextField(label, text: text, prompt: Text("0")).keyboardType(.decimalPad).formInputStyle()
-        }
+    private func numField(_ label: String, _ b: Binding<String>) -> some View {
+        HStack { Text(label); Spacer(); TextField("0", text: b).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
     }
     private func fill(_ n: String, _ k: Double, _ p: Double, _ f: Double, _ c: Double) {
         name = n; kcal = k.fmt(0); protein = p.fmt(1); fat = f.fmt(1); carbs = c.fmt(1)
@@ -182,14 +172,8 @@ struct NutritionGoalsView: View {
             Section("输入（来自个人资料）") {
                 LabeledContent("性别 / 年龄", value: "\(profile.sex.label) / \(profile.age)")
                 LabeledContent("身高 / 体重", value: "\(profile.heightCm.fmt(0)) cm / \(profile.bodyweightKg.fmt(1)) kg")
-                InputRow("活动水平") {
-                    Picker("活动水平", selection: $profile.activityLevel) { ForEach(ActivityLevel.allCases) { Text($0.name).tag($0) } }
-                        .labelsHidden().pickerStyle(.menu)
-                }
-                InputRow("目标") {
-                    Picker("目标", selection: $profile.nutritionGoal) { ForEach(NutritionGoal.allCases) { Text($0.name).tag($0) } }
-                        .labelsHidden().pickerStyle(.segmented)
-                }
+                Picker("活动水平", selection: $profile.activityLevel) { ForEach(ActivityLevel.allCases) { Text($0.name).tag($0) } }
+                Picker("目标", selection: $profile.nutritionGoal) { ForEach(NutritionGoal.allCases) { Text($0.name).tag($0) } }.pickerStyle(.segmented)
             }
             Section("能量") {
                 LabeledContent("基础代谢 BMR (Mifflin–St Jeor)", value: "\(bmr.fmt(0)) kcal")

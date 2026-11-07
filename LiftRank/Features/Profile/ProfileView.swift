@@ -5,7 +5,6 @@ struct ProfileView: View {
     private enum Field { case height, weight }
 
     @Bindable var profile: UserProfile
-    let onPreviewOnboarding: () -> Void
     @Query private var workouts: [Workout]
     @State private var weightText = ""
     @State private var heightText = ""
@@ -27,45 +26,28 @@ struct ProfileView: View {
         NavigationStack {
             Form {
                 Section("个人资料") {
-                    InputRow("昵称") {
-                        Text(profile.name)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("昵称")
-                            .accessibilityValue(profile.name)
-                    }
-                    InputRow("性别（评分曲线）") {
-                        Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
+                    LabeledContent("昵称", value: profile.name)
+                    Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
                     BirthdayField(profile: profile) { focusedField = nil }
-                    InputRow("身高 (cm)") {
+                    LabeledContent("身高 (cm)") {
                         TextField("身高", text: $heightText)
                             .keyboardType(.decimalPad)
                             .focused($focusedField, equals: .height)
                             .formInputStyle()
                     }
-                    InputRow("体重 (\(profile.unit.label))") {
+                    LabeledContent("体重 (\(profile.unit.label))") {
                         TextField("体重", text: $weightText)
                             .keyboardType(.decimalPad)
                             .focused($focusedField, equals: .weight)
                             .formInputStyle()
                     }
-                    Button("预览欢迎页", action: onPreviewOnboarding)
                 }
                 Section("偏好") {
-                    InputRow("重量单位") {
-                        Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
-                            .labelsHidden().pickerStyle(.segmented)
-                    }
-                    InputRow("默认组间休息") {
-                        Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
+                    Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                    Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
                 }
                 Section("Pro") {
-                    InputRow("Pro 会员（本地模拟）") {
-                        Toggle("Pro 会员（本地模拟）", isOn: $profile.isPro).labelsHidden()
-                    }
+                    Toggle("Pro 会员（本地模拟）", isOn: $profile.isPro)
                     Text("Pro 包含 AI 拍照记餐、更丰富的段位分析与更长时间范围图表、肌肉恢复追踪。实际订阅需接入 App Store 内购；此开关仅用于开发预览。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("计算工具") {
@@ -139,10 +121,10 @@ struct OneRMCalculatorView: View {
         let brzycki = StrengthScoring.brzycki(weightKg: w, reps: reps)
         Form {
             Section("输入") {
-                InputRow("重量 (\(unit.label))") {
+                LabeledContent("重量 (\(unit.label))") {
                     TextField("重量", text: $weight).keyboardType(.decimalPad).formInputStyle()
                 }
-                InputStepper(title: "次数", value: $reps, range: 1...30)
+                Stepper("次数 \(reps)", value: $reps, in: 1...30)
             }
             Section("估算 1RM") {
                 LabeledContent("Epley", value: "\(epley.fmt(1)) \(unit.label)")

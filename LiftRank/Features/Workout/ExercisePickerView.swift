@@ -73,24 +73,12 @@ struct CustomExerciseView: View {
         NavigationStack {
             Form {
                 Section("动作") {
-                    InputRow("名称") {
-                        TextField("名称", text: $name).formInputStyle(maxWidth: .infinity)
-                    }
-                    InputRow("目标肌群") {
-                        Picker("目标肌群", selection: $group) { ForEach(MuscleGroup.allCases) { Text($0.name).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
-                    InputRow("器械") {
-                        Picker("器械", selection: $equipment) { ForEach(Equipment.allCases) { Text($0.name).tag($0) } }
-                            .labelsHidden().pickerStyle(.menu)
-                    }
+                    TextField("名称", text: $name)
+                    Picker("目标肌群", selection: $group) { ForEach(MuscleGroup.allCases) { Text($0.name).tag($0) } }
+                    Picker("器械", selection: $equipment) { ForEach(Equipment.allCases) { Text($0.name).tag($0) } }
                 }
                 Section("说明") {
-                    InputRow("动作说明") {
-                        TextField("动作要点、注意事项", text: $instructions, axis: .vertical)
-                            .lineLimit(3...6)
-                            .formInputStyle(maxWidth: .infinity)
-                    }
+                    TextField("动作要点、注意事项", text: $instructions, axis: .vertical).lineLimit(3...6)
                 }
                 Section("图片") {
                     if let photo { Image(uiImage: photo).resizable().scaledToFit().frame(maxHeight: 180) }

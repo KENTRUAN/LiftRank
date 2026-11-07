@@ -1,52 +1,11 @@
 import SwiftUI
 import UIKit
 
-struct InputRow<Control: View>: View {
-    let title: String
-    let control: () -> Control
-
-    init(_ title: String, @ViewBuilder control: @escaping () -> Control) {
-        self.title = title
-        self.control = control
-    }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            control()
-            Spacer(minLength: 0)
-            Text(title)
-                .multilineTextAlignment(.trailing)
-                .layoutPriority(1)
-                .accessibilityHidden(true)
-        }
-        .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-    }
-}
-
 extension View {
-    func formInputStyle(maxWidth: CGFloat = 148) -> some View {
-        textFieldStyle(.roundedBorder)
-            .multilineTextAlignment(.leading)
+    func formInputStyle() -> some View {
+        textFieldStyle(.plain)
+            .multilineTextAlignment(.trailing)
             .foregroundStyle(.primary)
-            .frame(maxWidth: maxWidth)
-    }
-}
-
-struct InputStepper: View {
-    let title: String
-    @Binding var value: Int
-    let range: ClosedRange<Int>
-
-    var body: some View {
-        InputRow(title) {
-            HStack(spacing: 8) {
-                Text(String(value)).monospacedDigit().accessibilityHidden(true)
-                Stepper(title, value: $value, in: range)
-                    .labelsHidden()
-                    .accessibilityValue(String(value))
-            }
-            .fixedSize()
-        }
     }
 }
 
@@ -128,26 +87,25 @@ struct BirthdayField: View {
             return birthday.formatted(Date.FormatStyle(date: .long, time: .omitted,
                                                        locale: locale, calendar: calendar, timeZone: calendar.timeZone))
         }
-        return profile.hasOnboarded ? "\(String(profile.birthYear)) 年" : "选择日期"
+        return profile.hasOnboarded ? "\(String(profile.birthYear)) 年 · 选择日期" : "选择日期"
     }
 
     var body: some View {
-        InputRow("生日") {
-            Button {
-                onOpen()
-                let existingDate = profile.birthday ?? calendar.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1))
-                draft = min(existingDate ?? today, today)
-                isPresented = true
-            } label: {
-                HStack(spacing: 6) {
-                    Text(selectionLabel)
-                    Image(systemName: "calendar").accessibilityHidden(true)
-                }
+        Button {
+            onOpen()
+            let existingDate = profile.birthday ?? calendar.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1))
+            draft = min(existingDate ?? today, today)
+            isPresented = true
+        } label: {
+            LabeledContent("生日") {
+                Text(selectionLabel).foregroundStyle(Color.accentColor)
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel("生日")
-            .accessibilityValue(selectionLabel)
+            .foregroundStyle(.primary)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("生日")
+        .accessibilityValue(selectionLabel)
         .sheet(isPresented: $isPresented) {
             NavigationStack {
                 ScrollView {

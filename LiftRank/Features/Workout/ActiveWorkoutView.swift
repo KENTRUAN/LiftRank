@@ -22,10 +22,7 @@ struct ActiveWorkoutView: View {
         NavigationStack {
             List {
                 Section {
-                    InputRow("训练名称") {
-                        TextField("训练名称", text: $workout.title).font(.headline)
-                            .formInputStyle(maxWidth: .infinity)
-                    }
+                    TextField("训练名称", text: $workout.title).font(.headline)
                     TimelineView(.periodic(from: .now, by: 1)) { _ in
                         HStack {
                             Label(workout.duration.clockString, systemImage: "timer").monospacedDigit()
@@ -35,10 +32,7 @@ struct ActiveWorkoutView: View {
                         }
                         .font(.subheadline)
                     }
-                    InputRow("备注") {
-                        TextField("备注", text: $workout.notes, axis: .vertical)
-                            .formInputStyle(maxWidth: .infinity)
-                    }
+                    TextField("备注", text: $workout.notes, axis: .vertical)
                 }
 
                 ForEach(workout.sortedExercises) { we in
@@ -150,10 +144,7 @@ private struct ExerciseSection: View {
             } label: { Label("添加一组", systemImage: "plus").font(.subheadline) }
 
             if showNotes || !we.notes.isEmpty {
-                InputRow("动作备注") {
-                    TextField("动作备注", text: $we.notes, axis: .vertical).font(.footnote)
-                        .formInputStyle(maxWidth: .infinity)
-                }
+                TextField("动作备注", text: $we.notes, axis: .vertical).font(.footnote)
             }
         } header: {
             HStack {
@@ -341,14 +332,14 @@ struct FinishWorkoutSheet: View {
                         LabeledContent("训练量", value: "\(profile.unit.fromKg(workout.totalVolumeKg).fmt(0)) \(profile.unit.label)")
                     }
                     Section {
-                        InputRow("体重 (\(profile.unit.label))") {
-                            TextField("体重", text: $bodyweightText).keyboardType(.decimalPad).formInputStyle()
+                        HStack {
+                            Text("体重 (\(profile.unit.label))")
+                            Spacer()
+                            TextField("体重", text: $bodyweightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                         }
                     } footer: { Text("体重用于把 e1RM 换算成相对力量评分。") }
                     Section {
-                        InputRow("发布到 Strava") {
-                            Toggle("发布到 Strava", isOn: $workout.postToStrava).labelsHidden().disabled(true)
-                        }
+                        Toggle("发布到 Strava", isOn: $workout.postToStrava).disabled(true)
                     } footer: { Text("Strava 连接需要在设置中授权，当前版本尚未接入。") }
                     Section {
                         Button {

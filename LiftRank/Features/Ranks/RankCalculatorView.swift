@@ -20,22 +20,12 @@ struct RankCalculatorView: View {
         let w = unit.toKg(Double(weightText) ?? 0)
         Form {
             Section("输入") {
-                InputRow("动作") {
-                    Picker("动作", selection: $exerciseKey) { ForEach(ranked) { Text($0.name).tag($0.key) } }
-                        .labelsHidden().pickerStyle(.menu)
-                }
-                InputRow("重量 (\(unit.label))") {
-                    TextField("重量", text: $weightText).keyboardType(.decimalPad).formInputStyle()
-                }
-                InputStepper(title: "次数", value: $reps, range: 1...30)
-                InputStepper(title: "RIR（剩余次数）", value: $rir, range: 0...6)
-                InputRow("体重 (\(unit.label))") {
-                    TextField("体重", text: $bodyweightText).keyboardType(.decimalPad).formInputStyle()
-                }
-                InputRow("评分曲线") {
-                    Picker("评分曲线", selection: $sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
-                        .labelsHidden().pickerStyle(.segmented)
-                }
+                Picker("动作", selection: $exerciseKey) { ForEach(ranked) { Text($0.name).tag($0.key) } }
+                HStack { Text("重量 (\(unit.label))"); Spacer(); TextField("", text: $weightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                Stepper("次数 \(reps)", value: $reps, in: 1...30)
+                Stepper("RIR（剩余次数）\(rir)", value: $rir, in: 0...6)
+                HStack { Text("体重 (\(unit.label))"); Spacer(); TextField("", text: $bodyweightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                Picker("评分曲线", selection: $sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
             }
             if let ex = exercise, bw > 0 {
                 let load = StrengthScoring.effectiveLoad(exercise: ex, weightKg: w, bodyweightKg: bw)
