@@ -38,9 +38,12 @@ struct RootTabView: View {
 }
 
 struct OnboardingView: View {
+    private enum Field { case nickname, height, weight }
+
     @Bindable var profile: UserProfile
     @State private var weightText = ""
     @State private var heightText = ""
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         NavigationStack {
@@ -54,11 +57,26 @@ struct OnboardingView: View {
                     .padding(.vertical, 4)
                 }
                 Section("基础信息") {
-                    TextField("昵称", text: $profile.name)
+                    LabeledContent("昵称") {
+                        TextField("昵称", text: $profile.name)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .nickname)
+                            .submitLabel(.done)
+                    }
                     Picker("性别", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
-                    Stepper("出生年份 \(String(profile.birthYear))", value: $profile.birthYear, in: 1930...2020)
-                    HStack { Text("身高 (cm)"); Spacer(); TextField("175", text: $heightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
-                    HStack { Text("体重 (kg)"); Spacer(); TextField("70", text: $weightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
+                    BirthdayField(profile: profile) { focusedField = nil }
+                    LabeledContent("身高 (cm)") {
+                        TextField("身高", text: $heightText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .height)
+                    }
+                    LabeledContent("体重 (kg)") {
+                        TextField("体重", text: $weightText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($focusedField, equals: .weight)
+                    }
                 }
                 Section("单位") {
                     Picker("重量单位", selection: $profile.unit) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
@@ -66,16 +84,26 @@ struct OnboardingView: View {
                 }
                 Section {
                     Button {
-                        if let h = Double(heightText), h > 100 { profile.heightCm = h }
-                        if let w = Double(weightText), w > 30 { profile.bodyweightKg = w }
+                        focusedField = nil
+                        if let h = try? Double(heightText, format: .number), h.isFinite, h > 100 { profile.heightCm = h }
+                        if let w = try? Double(weightText, format: .number), w.isFinite, w > 30 { profile.bodyweightKg = w }
                         profile.hasOnboarded = true
                     } label: { Text("开始训练").frame(maxWidth: .infinity).bold() }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture { focusedField = nil }
+            .onSubmit { focusedField = nil }
             .navigationTitle("欢迎")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { focusedField = nil }
+                }
+            }
             .onAppear {
-                heightText = profile.heightCm.fmt(0)
-                weightText = profile.bodyweightKg.fmt(1)
+                heightText = profile.heightCm.formatted(.number)
+                weightText = profile.bodyweightKg.formatted(.number)
             }
         }
     }

@@ -14,7 +14,7 @@ struct ProfileView: View {
                 Section("个人资料") {
                     TextField("昵称", text: $profile.name)
                     Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
-                    Stepper("出生年份 \(String(profile.birthYear))", value: $profile.birthYear, in: 1930...2020)
+                    BirthdayField(profile: profile)
                     HStack { Text("身高 (cm)"); Spacer(); TextField("", text: $heightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
                         .onSubmit { if let v = Double(heightText) { profile.heightCm = v } } }
                     HStack { Text("体重 (\(profile.unit.label))"); Spacer(); TextField("", text: $weightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing)

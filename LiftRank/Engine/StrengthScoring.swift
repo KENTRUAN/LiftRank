@@ -96,11 +96,15 @@ enum RankAggregator {
     static func muscleScores(bests: [ExerciseBest]) -> [MuscleGroup: Int] {
         var out: [MuscleGroup: Int] = [:]
         for g in MuscleGroup.rankable {
-            let scores = bests.filter { $0.muscleGroup == g }.map { Double($0.bestScore) }.sorted(by: >)
-            guard !scores.isEmpty else { continue }
-            out[g] = weighted(scores, decay: 0.5)
+            out[g] = muscleScore(bests: bests.filter { $0.muscleGroup == g })
         }
         return out
+    }
+
+    static func muscleScore(bests: [ExerciseBest]) -> Int? {
+        let scores = bests.map { Double($0.bestScore) }.sorted(by: >)
+        guard !scores.isEmpty else { return nil }
+        return weighted(scores, decay: 0.5)
     }
 
     /// Overall strength score (GSR): stronger groups weigh more.

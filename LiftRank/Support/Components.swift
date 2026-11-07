@@ -1,5 +1,70 @@
 import SwiftUI
 
+struct BirthdayField: View {
+    @Bindable var profile: UserProfile
+    var onOpen: () -> Void = {}
+    @State private var isPresented = false
+    @State private var draft = Date()
+
+    private let calendar = UserProfile.birthdayCalendar
+    private let locale = Locale(identifier: "zh_CN")
+
+    private var today: Date {
+        let localDay = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: Date())
+        return calendar.date(from: localDay) ?? Date()
+    }
+
+    var body: some View {
+        Button {
+            onOpen()
+            let existingDate = profile.birthday ?? calendar.date(from: DateComponents(year: profile.birthYear, month: 1, day: 1))
+            draft = min(existingDate ?? today, today)
+            isPresented = true
+        } label: {
+            LabeledContent("生日") {
+                if let birthday = profile.birthday {
+                    Text(birthday, format: Date.FormatStyle(date: .long, time: .omitted,
+                                                            locale: locale, calendar: calendar, timeZone: calendar.timeZone))
+                } else if profile.hasOnboarded {
+                    Text("\(String(profile.birthYear)) 年")
+                } else {
+                    Text("选择日期")
+                }
+            }
+            .foregroundStyle(.primary)
+            .contentShape(Rectangle())
+        }
+        .sheet(isPresented: $isPresented) {
+            NavigationStack {
+                ScrollView {
+                    DatePicker("生日", selection: $draft, in: ...today, displayedComponents: .date)
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .environment(\.calendar, calendar)
+                        .environment(\.locale, locale)
+                        .environment(\.timeZone, calendar.timeZone)
+                        .padding(.horizontal)
+                }
+                .navigationTitle("选择生日")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消") { isPresented = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("确定") {
+                            profile.birthday = calendar.startOfDay(for: draft)
+                            profile.birthYear = calendar.component(.year, from: draft)
+                            isPresented = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.height(450), .large])
+        }
+    }
+}
+
 struct TierBadge: View {
     let tier: RankTier
     var compact = false

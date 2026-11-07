@@ -6,6 +6,7 @@ final class UserProfile {
     var name: String = "训练者"
     var sexRaw: String = Sex.male.rawValue
     var birthYear: Int = 1995
+    var birthday: Date?
     var heightCm: Double = 175
     var bodyweightKg: Double = 70
     var unitRaw: String = WeightUnit.kg.rawValue
@@ -28,7 +29,25 @@ final class UserProfile {
     var unit: WeightUnit { get { WeightUnit(rawValue: unitRaw) ?? .kg } set { unitRaw = newValue.rawValue } }
     var activityLevel: ActivityLevel { get { ActivityLevel(rawValue: activityLevelRaw) ?? .moderate } set { activityLevelRaw = newValue.rawValue } }
     var nutritionGoal: NutritionGoal { get { NutritionGoal(rawValue: nutritionGoalRaw) ?? .maintain } set { nutritionGoalRaw = newValue.rawValue } }
-    var age: Int { max(10, Calendar.current.component(.year, from: Date()) - birthYear) }
+
+    static var birthdayCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar
+    }
+
+    var age: Int {
+        let calendar = Calendar(identifier: .gregorian)
+        let today = Date()
+        if let birthday {
+            let day = Self.birthdayCalendar.dateComponents([.year, .month, .day], from: birthday)
+            if let localBirthday = calendar.date(from: day),
+               let years = calendar.dateComponents([.year], from: localBirthday, to: today).year {
+                return max(10, years)
+            }
+        }
+        return max(10, calendar.component(.year, from: today) - birthYear)
+    }
 }
 
 @Model
