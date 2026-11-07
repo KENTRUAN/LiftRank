@@ -81,6 +81,8 @@ struct BodyAnalysisView: View {
     @Query private var cardio: [CardioSession]
     @Query private var measurements: [BodyMeasurement]
     @Query private var foods: [FoodEntry]
+    @AppStorage(AIProgram.combinedKey) private var combined = Data()
+    @AppStorage(CoachHistory.key) private var conversation = Data()
     @State private var loading = false
     @State private var error: String?
     @State private var showData = false
@@ -111,12 +113,22 @@ struct BodyAnalysisView: View {
                     }
                     if let error { Text(error).font(.footnote).foregroundStyle(.red) }
                     Button { analyze() } label: {
-                        Label(profile.lastBodyAnalysis.isEmpty ? "生成分析" : "重新分析", systemImage: "sparkles").frame(maxWidth: .infinity)
+                        Label(profile.lastBodyAnalysis.isEmpty ? "生成分析和四周方案" : "重新分析并更新方案", systemImage: "sparkles").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent).disabled(loading || !AIBackend.isConfigured)
                 }.card()
+                if let program = AIProgram.load(combined) {
+                    NavigationLink {
+                        AIProgramView(program: program, focus: .all, exercises: exercises)
+                    } label: {
+                        Label("已同步四周方案到力量、有氧和饮食", systemImage: "calendar.badge.checkmark")
+                    }.card()
+                }
                 DisclosureGroup("发送给模型的数据", isExpanded: $showData) {
                     Text(summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                    if !conversation.isEmpty {
+                        Text("分析也会参考本机保存的近期小段聊天。").font(.caption).foregroundStyle(.secondary)
+                    }
                 }.card()
             }.padding()
         }
@@ -129,19 +141,24 @@ struct BodyAnalysisView: View {
         guard let config = AIBackend.config else { return }
         loading = true; error = nil
         let data = summary
-        let system = """
-        你是一位专业的力量训练与营养教练。根据用户提供的训练、段位、有氧、身体与饮食数据，用简体中文给出综合分析。
-        要求：结构化、具体、可执行；分为「总体评价」「力量结构与短板」「身体成分与体重趋势」「饮食与恢复」「未来 4 周建议」五部分，每部分 2–4 条要点。
-        引用具体日期、动作或数值支持主要判断。「身体成分与体重趋势」只描述实际测量值、日期和数据缺口，不解释体重变化原因。体脂记录不足时直接写无法判断体脂趋势。若饮食有效记录只有 0–2 天，「饮食与恢复」只写缺了哪些记录和怎么补记，不推断当前饮食质量、恢复状态、蛋白质或热量。即使条目较多也不能断定全天饮食不足或解释体重变化。力量段位与肌群组数反映记录表现，不等同于肌肉量。指出缺的数据，不做医疗诊断。使用 Markdown 的粗体与列表，不要使用标题符号 #。
-        """
+        let planAtStart = combined
+        let history = CoachHistory.context(from: conversation)
         Task {
+            defer { loading = false }
             do {
-                let text = try await AIService.complete(system: system, messages: [AIChatMessage(role: .user, text: data)], config: config, maxTokens: 4096)
+                let (text, program) = try await AIProgram.generate(scope: .combined, request: data, history: history,
+                                                                 profile: profile, exercises: exercises, config: config)
+                let encoded = try program.encoded()
+                guard combined == planAtStart else {
+                    self.error = "小段已更新四周方案，请重新分析以继续调整。"
+                    return
+                }
                 let previous = (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt)
                 profile.lastBodyAnalysis = text
                 profile.lastBodyAnalysisAt = Date()
                 do {
                     try context.save()
+                    combined = encoded
                 } catch {
                     (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt) = previous
                     throw error
@@ -149,7 +166,6 @@ struct BodyAnalysisView: View {
             } catch {
                 self.error = error.localizedDescription
             }
-            loading = false
         }
     }
 }

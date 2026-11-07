@@ -9,6 +9,8 @@ struct WorkoutHomeView: View {
     @Query(sort: \WorkoutTemplate.createdAt, order: .reverse) private var templates: [WorkoutTemplate]
     @Query private var exercises: [Exercise]
     @Query private var plans: [DailyPlan]
+    @AppStorage(AIProgram.combinedKey) private var combined = Data()
+    @AppStorage(AIProgram.strengthKey) private var strength = Data()
     @State private var mode = 0
     @State private var activeWorkout: Workout?
     @State private var showGenerator = false
@@ -114,6 +116,18 @@ struct WorkoutHomeView: View {
                 if unpublished != nil { Text("先完成或放弃进行中的训练，再开始新的训练。") }
             }
 
+            Section("AI 训练方案") {
+                NavigationLink {
+                    AIStrengthPlanView(profile: profile)
+                } label: { Label("AI 单独生成力量计划", systemImage: "sparkles") }
+                if let program = AIProgram.load(strength) {
+                    NavigationLink("独立力量 · \(program.title)") { strengthSchedule(program) }
+                }
+                if let program = AIProgram.load(combined) {
+                    NavigationLink("综合方案 · 力量安排") { strengthSchedule(program) }
+                }
+            }
+
             Section("设置训练") {
                 Button { setup = SetupTarget.newTemplate() } label: { Label("新建训练计划", systemImage: "plus.circle") }
                 Button { showGenerator = true } label: { Label("按目标生成训练 / 多周计划", systemImage: "wand.and.stars") }
@@ -152,6 +166,14 @@ struct WorkoutHomeView: View {
                 }
             }
         }
+    }
+
+    private func strengthSchedule(_ program: AIProgram) -> some View {
+        AIProgramView(program: program, focus: .strength, exercises: exercises,
+                      onStrength: unpublished == nil ? { day in
+                          let items = day.resolved(using: exercises)
+                          if items.count == day.items.count { start(title: day.title, items: items) }
+                      } : nil)
     }
 
     private func startToday() {

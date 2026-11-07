@@ -10,7 +10,9 @@ struct CardioView: View {
     @Query private var exercises: [Exercise]
     @Query private var claims: [QuestClaim]
     @AppStorage("cardio.writeToHealth") private var writeToHealth = false
+    @AppStorage(AIProgram.combinedKey) private var combined = Data()
     @State private var showEditor = false
+    @State private var scheduled: AIProgram.Cardio?
     @State private var editing: CardioSession?
     @State private var healthStatus: String?
     @State private var importing = false
@@ -30,6 +32,13 @@ struct CardioView: View {
 
     var body: some View {
         List {
+            if let program = AIProgram.load(combined) {
+                Section("AI 有氧安排") {
+                    NavigationLink("查看四周有氧计划") {
+                        AIProgramView(program: program, focus: .cardio, onCardio: { scheduled = $0 })
+                    }
+                }
+            }
             Section {
                 HStack(spacing: 10) {
                     StatTile(title: "本周时长", value: "\(week.reduce(0) { $0 + $1.durationMinutes }.fmt(0)) 分")
@@ -76,6 +85,9 @@ struct CardioView: View {
             }
         }
         .sheet(isPresented: $showEditor) { CardioEditor(profile: profile, session: nil) { s in saved(s) } }
+        .sheet(item: $scheduled) { day in
+            CardioEditor(profile: profile, session: nil, suggested: day) { saved($0) }
+        }
         .sheet(item: $editing) { s in CardioEditor(profile: profile, session: s) { _ in try? context.save() } }
     }
 
@@ -138,6 +150,7 @@ struct CardioView: View {
 struct CardioEditor: View {
     let profile: UserProfile
     let session: CardioSession?
+    var suggested: AIProgram.Cardio? = nil
     let onSave: (CardioSession) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var type: CardioType = .running
@@ -186,7 +199,14 @@ struct CardioEditor: View {
                 }
             }
             .onAppear {
-                guard let s = session else { return }
+                guard let s = session else {
+                    if let suggested {
+                        type = suggested.type
+                        minutes = String(suggested.minutes)
+                        notes = suggested.effort
+                    }
+                    return
+                }
                 type = s.type; date = s.date; minutes = s.durationMinutes.fmt(0)
                 distance = s.distanceKm > 0 ? s.distanceKm.fmt(2) : ""
                 calories = s.calories > 0 ? s.calories.fmt(0) : ""

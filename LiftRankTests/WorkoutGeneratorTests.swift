@@ -86,3 +86,47 @@ final class WorkoutGeneratorTests: XCTestCase {
         }
     }
 }
+
+final class AIProgramTests: XCTestCase {
+    func testCombinedPlanPersistsAllThreePartsAndResolvesExercises() throws {
+        let plan = try AIProgram.validated(combinedProposal(), exercises: ExerciseSeed.all, equipment: .bodyweight)
+        let restored = try XCTUnwrap(AIProgram.load(plan.encoded()))
+        XCTAssertEqual(restored.weeks.map(\.week), [1, 2, 3, 4])
+        let first = try XCTUnwrap(restored.weeks.first)
+        XCTAssertEqual(first.strength.first?.resolved(using: ExerciseSeed.all).first?.exerciseKey, "pushup")
+        XCTAssertEqual(first.cardio.first?.type, .walking)
+        XCTAssertEqual(first.nutrition?.meals, ["早餐：燕麦和酸奶"])
+    }
+
+    func testCombinedPlanRejectsMissingNutritionAndUnavailableEquipment() {
+        XCTAssertThrowsError(try AIProgram.validated(combinedProposal(includeNutrition: false),
+                                                     exercises: ExerciseSeed.all, equipment: .bodyweight))
+        XCTAssertThrowsError(try AIProgram.validated(combinedProposal(exercise: "bench_press"),
+                                                     exercises: ExerciseSeed.all, equipment: .bodyweight))
+    }
+
+    func testChangingWeekOneCardioKeepsStartDateAndOtherSections() throws {
+        let original = try AIProgram.validated(combinedProposal(), exercises: ExerciseSeed.all, equipment: .bodyweight)
+        let patch: [String: Any] = [
+            "scope": "combined",
+            "weeks": [["week": 1, "cardio": [["day": 2, "type": "walking", "minutes": 25, "effort": "轻松"]]]]
+        ]
+        let edited = try AIProgram.applying(patch, to: original, exercises: ExerciseSeed.all, equipment: .bodyweight)
+        XCTAssertEqual(edited.startDate, original.startDate)
+        XCTAssertEqual(edited.weeks.map { $0.cardio.first?.minutes }, [25, 20, 20, 20])
+        XCTAssertEqual(edited.weeks.first?.strength.first?.items.first?.key, "pushup")
+        XCTAssertEqual(edited.weeks.first?.nutrition?.meals, original.weeks.first?.nutrition?.meals)
+    }
+
+    private func combinedProposal(exercise: String = "pushup", includeNutrition: Bool = true) -> [String: Any] {
+        let weeks: [[String: Any]] = (1...4).map { number in
+            [
+                "week": number,
+                "strength": [["day": 1, "title": "力量", "items": [["key": exercise, "sets": 2, "reps": 10]]]],
+                "cardio": [["day": 2, "type": "walking", "minutes": 20, "effort": "轻松"]],
+                "nutrition": includeNutrition ? ["focus": "记录完整餐食", "meals": ["早餐：燕麦和酸奶"]] as Any : NSNull()
+            ]
+        }
+        return ["title": "四周综合方案", "scope": "combined", "weeks": weeks]
+    }
+}

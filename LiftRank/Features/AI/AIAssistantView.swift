@@ -12,7 +12,7 @@ struct AIAssistantView: View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    AvatarFigureView(spec: profile.coachAvatar, bust: true).frame(width: 76, height: 76).clipShape(RoundedRectangle(cornerRadius: 16))
+                    CoachFace(spec: profile.coachAvatar, size: 76).clipShape(RoundedRectangle(cornerRadius: 16))
                     VStack(alignment: .leading, spacing: 4) {
                         Text(profile.coachName).font(.headline)
                         Text(profile.coachIntro.isEmpty ? "用一句话描述，就能定义助手的样子。" : profile.coachIntro)

@@ -14,6 +14,16 @@ struct CoachAvatarView: View {
     @State private var generating = false
     @State private var note: String?
     @State private var front = true
+    @State private var portraitDraft: Data?
+    @State private var savedPortrait: UIImage?
+    @State private var usePortrait = true
+    @AppStorage(CoachPortraitFile.enabledKey) private var portraitEnabled = true
+    @AppStorage(CoachPortraitFile.revisionKey) private var portraitRevision = 0
+
+    private var preview: UIImage? {
+        guard usePortrait else { return nil }
+        return portraitDraft.flatMap { UIImage(data: $0) } ?? savedPortrait
+    }
 
     private var spec: AvatarSpec { AvatarSpec(ids: ids) }
     private let examples = ["粉色长发、戴墨镜、穿黑色连帽衫的女生，叫小粉", "寸头、小麦肤色、穿红色背心的教练，表情坚定", "蓝色卷发，戴王冠，穿金色长袍，站在星空下", "银白马尾、戴眼镜、灰色 T 恤，背景是健身房"]
@@ -23,11 +33,20 @@ struct CoachAvatarView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     VStack(spacing: 8) {
-                        AvatarFigureView(spec: spec, front: front)
-                            .frame(height: 240).frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                            .onTapGesture { withAnimation { front.toggle() } }
-                        Text(front ? "点击小人查看背面" : "点击小人查看正面").font(.caption2).foregroundStyle(.secondary)
+                        if let preview {
+                            Image(uiImage: preview).resizable().scaledToFit().frame(height: 240)
+                            Button("使用可编辑的小人") { usePortrait = false }
+                                .font(.caption)
+                        } else {
+                            AvatarFigureView(spec: spec, front: front)
+                                .frame(height: 240).frame(maxWidth: .infinity)
+                                .contentShape(Rectangle())
+                                .onTapGesture { withAnimation { front.toggle() } }
+                            Text(front ? "点击小人查看背面" : "点击小人查看正面").font(.caption2).foregroundStyle(.secondary)
+                            if portraitDraft != nil || savedPortrait != nil {
+                                Button("使用 AI 肖像") { usePortrait = true }.font(.caption)
+                            }
+                        }
                         TextField("助手名字", text: $name).multilineTextAlignment(.center).font(.headline)
                             .padding(8).background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10)).frame(maxWidth: 200)
                     }.card()
@@ -46,6 +65,12 @@ struct CoachAvatarView: View {
                             Label(generating ? "生成中…" : "生成形象", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent).disabled(generating || text.trimmingCharacters(in: .whitespaces).isEmpty)
+                        Button { generatePortrait() } label: {
+                            Label("生成 AI 肖像", systemImage: "photo").frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered).disabled(generating || AIBackend.portraitConfig == nil ||
+                            text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Text("每次生成一张。保存后会用在小段聊天和助手资料。").font(.caption2).foregroundStyle(.secondary)
                         if let note { Text(note).font(.caption).foregroundStyle(.secondary) }
                         if let e = speech.error { Text(e).font(.caption).foregroundStyle(.red) }
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -82,14 +107,17 @@ struct CoachAvatarView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { speech.stop(); dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.bold() }
+                ToolbarItem(placement: .confirmationAction) { Button("保存") { save() }.bold().disabled(generating) }
             }
             .onAppear {
                 ids = profile.coachAvatarIDs.isEmpty ? AvatarSpec.defaultCoachIDs : profile.coachAvatarIDs
                 name = profile.coachName
                 intro = profile.coachIntro
+                savedPortrait = CoachPortraitFile.image()
+                usePortrait = portraitEnabled
             }
-            .onChange(of: speech.transcript) { _, t in if speech.isRecording { text = t } }
+            .onChange(of: speech.transcript) { _, t in if !t.isEmpty { text = t } }
+            .onDisappear { speech.stop() }
         }
     }
 
@@ -124,13 +152,82 @@ struct CoachAvatarView: View {
         }
     }
 
+    private func generatePortrait() {
+        guard !generating, let config = AIBackend.portraitConfig else { return }
+        let description = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(600))
+        guard !description.isEmpty else { return }
+        speech.stop()
+        generating = true
+        note = nil
+        Task {
+            defer { generating = false }
+            do {
+                let data = try await AIService.generatePortrait(description: description, config: config, subject: "virtual fitness coach")
+                guard UIImage(data: data) != nil else { throw AIError.badResponse }
+                portraitDraft = data
+                usePortrait = true
+                note = "已生成肖像，点「保存」应用。"
+            } catch { note = error.localizedDescription }
+        }
+    }
+
     private func save() {
         speech.stop()
         profile.coachAvatarIDs = ids
         let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
         profile.coachName = n.isEmpty ? "小段" : n
         profile.coachIntro = intro
-        try? context.save()
-        dismiss()
+        do {
+            try context.save()
+            if let portraitDraft {
+                try CoachPortraitFile.save(portraitDraft)
+                portraitRevision += 1
+            }
+            portraitEnabled = usePortrait
+            dismiss()
+        } catch { note = error.localizedDescription }
+    }
+}
+
+
+enum CoachPortraitFile {
+    static let revisionKey = "ai.coach.portraitRevision"
+    static let enabledKey = "ai.coach.portraitEnabled"
+
+    private static func url() throws -> URL {
+        try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                    appropriateFor: nil, create: true).appendingPathComponent("coach-portrait.jpg")
+    }
+
+    static func image() -> UIImage? {
+        guard let url = try? url() else { return nil }
+        return UIImage(contentsOfFile: url.path)
+    }
+
+    static func save(_ data: Data) throws {
+        try data.write(to: url(), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+
+}
+
+struct CoachFace: View {
+    let spec: AvatarSpec
+    let size: CGFloat
+    var showBackdrop = true
+    @AppStorage(CoachPortraitFile.revisionKey) private var portraitRevision = 0
+    @State private var portrait: UIImage?
+    @AppStorage(CoachPortraitFile.enabledKey) private var portraitEnabled = true
+
+    var body: some View {
+        Group {
+            if portraitEnabled, let portrait {
+                Image(uiImage: portrait).resizable().scaledToFill()
+            } else {
+                AvatarFigureView(spec: spec, bust: true, showBackdrop: showBackdrop)
+            }
+        }
+        .frame(width: size, height: size).clipped()
+        .task(id: portraitRevision) { portrait = CoachPortraitFile.image() }
     }
 }

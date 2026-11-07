@@ -8,7 +8,9 @@ struct NutritionView: View {
     @Query private var customMeals: [CustomMeal]
     @State private var mode = 0
     @State private var day = Date()
+    @AppStorage(AIProgram.combinedKey) private var combined = Data()
     @State private var editor: MealType?
+    @State private var showPhoto = false
     @State private var alert: String?
 
     private var targets: MacroTargets {
@@ -50,16 +52,17 @@ struct NutritionView: View {
                     Label("目标：\(profile.nutritionGoal.name) · \(t.kcal.fmt(0)) kcal", systemImage: "target")
                 }
             }
-            Section("分析") {
+            Section("分析与计划") {
+                if let program = AIProgram.load(combined) {
+                    NavigationLink("查看四周饮食计划") { AIProgramView(program: program, focus: .nutrition) }
+                }
                 NavigationLink { BodyAnalysisView(profile: profile) } label: {
                     Label("AI 饮食与身体分析", systemImage: "sparkles")
                 }
             }
             Section("添加") {
                 Button { alert = "条码录入需要相机与食品数据库服务，当前版本未接入。可先用手动录入或自定义餐食。" } label: { Label("扫描条码", systemImage: "barcode.viewfinder") }
-                Button { alert = profile.isPro ? "AI 拍照记餐需要联网的识别服务，当前版本未接入后端。" : "AI 拍照记餐属于 Pro 功能，且需要联网。" } label: {
-                    HStack { Label("AI 拍照记餐", systemImage: "camera.fill"); Spacer(); Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary) }
-                }
+                Button { showPhoto = true } label: { Label("AI 拍照记餐", systemImage: "camera.fill") }
             }
             ForEach(MealType.allCases) { meal in
                 Section {
@@ -81,6 +84,7 @@ struct NutritionView: View {
                 }
             }
         }
+        .sheet(isPresented: $showPhoto) { MealPhotoView(date: day) }
         .sheet(item: $editor) { meal in FoodEntryEditor(meal: meal, date: day, customMeals: customMeals) }
         .alert("提示", isPresented: Binding(get: { alert != nil }, set: { if !$0 { alert = nil } })) { Button("好") {} } message: { Text(alert ?? "") }
     }
