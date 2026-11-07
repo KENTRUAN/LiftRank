@@ -9,7 +9,8 @@ struct LiftRankApp: App {
     init() {
         _store = StateObject(wrappedValue: StoreLoader {
             let schema = Schema([UserProfile.self, Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self,
-                                 BodyMeasurement.self, FoodEntry.self, CustomMeal.self, QuestClaim.self, RewardEvent.self, WorkoutTemplate.self])
+                                 BodyMeasurement.self, FoodEntry.self, CustomMeal.self, QuestClaim.self, RewardEvent.self, WorkoutTemplate.self,
+                                 CardioSession.self, DailyPlan.self, Friend.self])
             let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema)])
             let context = container.mainContext
             ExerciseSeed.seed(into: context)

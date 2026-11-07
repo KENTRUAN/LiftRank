@@ -27,7 +27,7 @@ struct BodyLogView: View {
                     Text("记录两次以上体重后显示趋势。").font(.footnote).foregroundStyle(.secondary)
                 }
                 NavigationLink { BodyFatCalculatorView(profile: profile) } label: { Label("体脂计算器（美国海军围度法）", systemImage: "percent") }
-                Label("Apple Health 同步（读取步数、热量、身体测量；写入训练）尚未接入。", systemImage: "heart.fill").font(.footnote).foregroundStyle(.secondary)
+                NavigationLink { BodyAnalysisView(profile: profile) } label: { Label("AI 身体综合分析", systemImage: "waveform.path.ecg") }
             }
             Section("17 项身体指标") {
                 ForEach(BodyMetric.allCases) { m in

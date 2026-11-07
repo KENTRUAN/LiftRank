@@ -255,3 +255,55 @@ struct ProLockedNote: View {
             .font(.footnote).foregroundStyle(.secondary)
     }
 }
+
+/// Avatar with the equipped frame cosmetic.
+struct AvatarBadge: View {
+    let name: String
+    let frame: Cosmetic
+    var size: CGFloat = 56
+    var body: some View {
+        ZStack {
+            Circle().fill(frame.gradient).frame(width: size, height: size)
+            Circle().fill(Color(.secondarySystemGroupedBackground)).frame(width: size - 8, height: size - 8)
+            Text(String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
+                .font(.system(size: size * 0.4, weight: .bold, design: .rounded))
+                .foregroundStyle(frame.primaryColor)
+            if frame.icon != "circle" {
+                Image(systemName: frame.icon).font(.system(size: size * 0.24)).foregroundStyle(frame.primaryColor)
+                    .offset(x: size * 0.34, y: -size * 0.34)
+            }
+        }
+    }
+}
+
+struct TitleTag: View {
+    let cosmetic: Cosmetic
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: cosmetic.icon)
+            Text(cosmetic.name)
+        }
+        .font(.caption2.bold())
+        .padding(.horizontal, 7).padding(.vertical, 3)
+        .background(cosmetic.primaryColor.opacity(0.16), in: Capsule())
+        .foregroundStyle(cosmetic.primaryColor)
+    }
+}
+
+struct Toast: ViewModifier {
+    @Binding var text: String?
+    func body(content: Content) -> some View {
+        content.overlay(alignment: .top) {
+            if let text {
+                Text(text).font(.subheadline.bold()).padding(12).background(.regularMaterial, in: Capsule()).padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.default, value: text)
+        .onChange(of: text) { _, value in
+            guard let value else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { if text == value { text = nil } }
+        }
+    }
+}
+extension View { func toast(_ text: Binding<String?>) -> some View { modifier(Toast(text: text)) } }

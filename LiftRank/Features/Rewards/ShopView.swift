@@ -1,0 +1,117 @@
+import SwiftUI
+import SwiftData
+
+struct ShopView: View {
+    @Bindable var profile: UserProfile
+    let gsr: Int
+    @Environment(\.modelContext) private var context
+    @State private var slot: CosmeticSlot = .frame
+    @State private var toast: String?
+
+    private var tier: RankTier { RankTier.tier(for: gsr) }
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                HStack(spacing: 14) {
+                    AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
+                        HStack(spacing: 6) { TierBadge(tier: tier, compact: true); Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary) }
+                        HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
+                    }
+                    Spacer()
+                }.card()
+
+                Picker("类型", selection: $slot) { ForEach(CosmeticSlot.allCases) { Text($0.name).tag($0) } }.pickerStyle(.segmented)
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(CosmeticCatalog.items(for: slot)) { item in cosmeticCell(item) }
+                }
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("连续记录道具").font(.headline)
+                    itemRow("Super Restore", price: 100, desc: "恢复最长 30 天的连续记录", owned: profile.superRestore) { profile.superRestore += 1 }
+                    itemRow("Mega Restore", price: 200, desc: "恢复最长 60 天的连续记录", owned: profile.megaRestore) { profile.megaRestore += 1 }
+                    itemRow("Streak Revive", price: 400, desc: "恢复任意长度的连续记录", owned: profile.streakRevive) { profile.streakRevive += 1 }
+                    Text("Eggs 通过每日训练、本周奖励与赛季里程碑获得。虚拟物品不可兑换现金。").font(.caption2).foregroundStyle(.secondary)
+                }.card()
+            }.padding()
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("商店")
+        .navigationBarTitleDisplayMode(.inline)
+        .toast($toast)
+    }
+
+    private func cosmeticCell(_ item: Cosmetic) -> some View {
+        let owned = profile.owns(item)
+        let equipped = profile.equipped(item.slot) == item
+        let locked = item.requiredTier.map { tier < $0 } ?? false
+        return VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12).fill(item.gradient).frame(height: 70)
+                if item.slot == .frame {
+                    AvatarBadge(name: profile.name, frame: item, size: 48)
+                } else if item.slot == .title {
+                    TitleTag(cosmetic: item).padding(4).background(.regularMaterial, in: Capsule())
+                } else if item.slot == .card {
+                    VStack(spacing: 2) {
+                        Text("GSR \(gsr)").font(.caption.bold())
+                        TierBadge(tier: tier, compact: true)
+                    }.padding(6).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                } else {
+                    Image(systemName: "paintbrush.fill").font(.title2).foregroundStyle(.white)
+                }
+                if locked {
+                    RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.35)).frame(height: 70)
+                    Image(systemName: "lock.fill").foregroundStyle(.white)
+                }
+            }
+            VStack(spacing: 2) {
+                Text(item.name).font(.subheadline.bold())
+                Text(item.requiredTier.map { "需 \($0.name) 段位" } ?? item.detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+            }
+            if equipped {
+                Button("已装备") { profile.unequip(item.slot) }.buttonStyle(.bordered).controlSize(.small).tint(.green)
+            } else if owned {
+                Button("装备") { profile.equip(item); try? context.save() }.buttonStyle(.borderedProminent).controlSize(.small).disabled(locked)
+            } else {
+                Button { buy(item) } label: { EggAmount(amount: item.price) }
+                    .buttonStyle(.bordered).controlSize(.small)
+                    .disabled(locked || profile.eggs < item.price)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(equipped ? Color.green : .clear, lineWidth: 2))
+    }
+
+    private func buy(_ item: Cosmetic) {
+        if let t = item.requiredTier, tier < t { toast = "需要达到 \(t.name) 段位"; return }
+        guard profile.eggs >= item.price else { toast = "Eggs 不足"; return }
+        profile.eggs -= item.price
+        profile.ownedCosmetics.append(item.id)
+        profile.equip(item)
+        context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -item.price, note: "购买外观：\(item.name)"))
+        try? context.save()
+        toast = "已购买并装备「\(item.name)」"
+    }
+
+    private func itemRow(_ name: String, price: Int, desc: String, owned: Int, buy: @escaping () -> Void) -> some View {
+        HStack {
+            VStack(alignment: .leading) { Text("\(name) ×\(owned)").font(.subheadline.bold()); Text(desc).font(.caption).foregroundStyle(.secondary) }
+            Spacer()
+            Button {
+                guard profile.eggs >= price else { toast = "Eggs 不足"; return }
+                profile.eggs -= price
+                buy()
+                context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -price, note: "购买 \(name)"))
+                try? context.save()
+                toast = "已购买 \(name)"
+            } label: { EggAmount(amount: price) }.buttonStyle(.bordered).controlSize(.small).disabled(profile.eggs < price)
+        }
+    }
+}

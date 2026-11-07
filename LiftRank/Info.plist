@@ -24,6 +24,14 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍照记餐与扫描食品条码。</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>读取 Apple Watch 与健康 App 中的运动、心率与距离，导入有氧记录。</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>把手动记录的有氧运动写入健康 App，在 Fitness 中显示。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>用于语音输入训练指令。</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>把语音转换为文字，交给 AI 训练助手。</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

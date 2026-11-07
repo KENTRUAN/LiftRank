@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 struct StreakInfo {
     var currentDays: Int
@@ -49,6 +50,18 @@ enum StreakEngine {
         }
         return out
     }
+
+    /// Days on which training was posted (strength workouts and cardio both count).
+    static func trainingDays(workouts: [Workout], cardio: [CardioSession]) -> Set<Date> {
+        var days = Set(workouts.filter { $0.isPublished }.map { ($0.publishedAt ?? $0.startedAt).startOfDay })
+        for c in cardio where c.durationMinutes >= DailyTrainingEngine.minCardioMinutes { days.insert(c.date.startOfDay) }
+        return days
+    }
+
+    static func current(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], today: Date = Date()) -> StreakInfo {
+        let bridge = Set(profile.streakBridgeDays.compactMap { WorkoutPublisher.dayKeyToDate($0) })
+        return compute(postDays: trainingDays(workouts: workouts, cardio: cardio), bridgeDays: bridge, today: today)
+    }
 }
 
 struct Season {
@@ -58,8 +71,9 @@ struct Season {
     let end: Date
     var name: String { "\(year) 年第 \(index) 赛季" }
     var daysLeft: Int { max(0, end.daysSince(Date())) }
-    static let milestones: [(xp: Int, eggs: Int, title: String)] = [
-        (300, 20, "赛季新秀"), (800, 40, "稳定输出"), (1500, 80, "赛季主力"), (2500, 150, "赛季王者")
+    /// Milestones are counted in training days within the season.
+    static let milestones: [(days: Int, eggs: Int, title: String)] = [
+        (5, 30, "赛季新秀"), (12, 60, "稳定输出"), (24, 120, "赛季主力"), (40, 200, "赛季王者")
     ]
 }
 
@@ -76,58 +90,73 @@ enum SeasonEngine {
     }
 }
 
-enum XPEngine {
-    static func xpToNext(level: Int) -> Int { 100 + 50 * (level - 1) }
+struct DailyTrainingStatus {
+    var dayKey: String
+    var strengthWorkouts: Int
+    var cardioMinutes: Double
+    var isComplete: Bool
+    var reward: Int
+    var claimed: Bool
+}
 
-    static func level(totalXP: Int) -> (level: Int, progress: Int, needed: Int) {
-        var level = 1
-        var remaining = totalXP
-        while remaining >= xpToNext(level: level) {
-            remaining -= xpToNext(level: level)
-            level += 1
-        }
-        return (level, remaining, xpToNext(level: level))
+/// The daily training reward: one Egg payout per day for training, scaled by rank tier and streak.
+enum DailyTrainingEngine {
+    static let questID = "daily.training"
+    static let minCardioMinutes = 10.0
+
+    static func reward(tier: RankTier, streakDays: Int) -> Int {
+        // Higher tiers earn more, so the shop stays tied to the rank system.
+        10 + tier.rawValue * 3 + min(streakDays, 30) / 3
     }
 
-    static func workoutXP(sets: Int) -> Int { 50 + 2 * sets }
-    static let firstOfDayXP = 50
-    /// Eggs for the first published workout of the day; longer streaks pay more.
-    static func firstOfDayEggs(streakDays: Int) -> Int { 5 + min(streakDays, 30) / 3 }
+    static func status(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], claims: [QuestClaim], gsr: Int, today: Date = Date()) -> DailyTrainingStatus {
+        let key = today.dayKey
+        let strength = workouts.filter { $0.isPublished && ($0.publishedAt ?? $0.startedAt).dayKey == key }.count
+        let minutes = cardio.filter { $0.date.dayKey == key }.reduce(0) { $0 + $1.durationMinutes }
+        let streak = StreakEngine.current(profile: profile, workouts: workouts, cardio: cardio, today: today)
+        let complete = strength > 0 || minutes >= minCardioMinutes
+        return DailyTrainingStatus(dayKey: key, strengthWorkouts: strength, cardioMinutes: minutes, isComplete: complete,
+                                   reward: reward(tier: RankTier.tier(for: gsr), streakDays: max(streak.currentDays, 1)),
+                                   claimed: claims.contains { $0.questID == questID && $0.periodKey == key })
+    }
+
+    /// Pays the daily reward once per day. Returns the Eggs granted (0 when nothing new).
+    @discardableResult
+    static func claimIfEarned(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], claims: [QuestClaim], gsr: Int, context: ModelContext, today: Date = Date()) -> Int {
+        let s = status(profile: profile, workouts: workouts, cardio: cardio, claims: claims, gsr: gsr, today: today)
+        guard s.isComplete, !s.claimed else { return 0 }
+        context.insert(QuestClaim(questID: questID, periodKey: s.dayKey))
+        context.insert(RewardEvent(date: today, kind: .dailyTraining, xp: 0, eggs: s.reward, note: "完成今日训练（\(RankTier.tier(for: gsr).name) 段位加成）"))
+        profile.eggs += s.reward
+        try? context.save()
+        return s.reward
+    }
 }
 
 struct Quest: Identifiable {
-    enum Period { case daily, weekly }
     let id: String
     let title: String
-    let period: Period
     let target: Int
     let progress: Int
-    let rewardXP: Int
     let rewardEggs: Int
     var isComplete: Bool { progress >= target }
 }
 
+/// Weekly bonus quests. Eggs only; the level system was removed in favour of rank-linked rewards.
 enum QuestEngine {
-    static func quests(workouts: [Workout], measurements: [BodyMeasurement], foods: [FoodEntry], today: Date = Date()) -> [Quest] {
-        let todayKey = today.dayKey
+    static func weeklyQuests(workouts: [Workout], cardio: [CardioSession], today: Date = Date()) -> [Quest] {
         let weekKey = today.weekKey
-        let published = workouts.filter { $0.isPublished }
-        let todays = published.filter { ($0.publishedAt ?? $0.startedAt).dayKey == todayKey }
-        let weeks = published.filter { ($0.publishedAt ?? $0.startedAt).weekKey == weekKey }
-        let todaySets = todays.reduce(0) { $0 + $1.completedSets.count }
+        let weeks = workouts.filter { $0.isPublished && ($0.publishedAt ?? $0.startedAt).weekKey == weekKey }
+        let cardioWeek = cardio.filter { $0.date.weekKey == weekKey }
         let weekVolume = Int(weeks.reduce(0) { $0 + $1.totalVolumeKg })
-        let loggedBody = measurements.contains { $0.date.dayKey == todayKey }
-        let loggedFood = foods.contains { $0.date.dayKey == todayKey }
+        let trainingDays = Set(weeks.map { ($0.publishedAt ?? $0.startedAt).dayKey } + cardioWeek.filter { $0.durationMinutes >= DailyTrainingEngine.minCardioMinutes }.map { $0.date.dayKey }).count
         return [
-            Quest(id: "d.workout", title: "发布一次训练", period: .daily, target: 1, progress: todays.count, rewardXP: 30, rewardEggs: 3),
-            Quest(id: "d.sets", title: "完成 12 组", period: .daily, target: 12, progress: todaySets, rewardXP: 20, rewardEggs: 2),
-            Quest(id: "d.body", title: "记录一项身体数据", period: .daily, target: 1, progress: loggedBody ? 1 : 0, rewardXP: 10, rewardEggs: 1),
-            Quest(id: "d.food", title: "记录一餐饮食", period: .daily, target: 1, progress: loggedFood ? 1 : 0, rewardXP: 10, rewardEggs: 1),
-            Quest(id: "w.workouts", title: "本周训练 3 次", period: .weekly, target: 3, progress: weeks.count, rewardXP: 120, rewardEggs: 15),
-            Quest(id: "w.volume", title: "本周训练量 10,000 kg", period: .weekly, target: 10000, progress: weekVolume, rewardXP: 100, rewardEggs: 10),
-            Quest(id: "w.sets", title: "本周完成 60 组", period: .weekly, target: 60, progress: weeks.reduce(0) { $0 + $1.completedSets.count }, rewardXP: 80, rewardEggs: 8),
+            Quest(id: "w.days", title: "本周训练 3 天", target: 3, progress: trainingDays, rewardEggs: 25),
+            Quest(id: "w.volume", title: "本周训练量 10,000 kg", target: 10000, progress: weekVolume, rewardEggs: 20),
+            Quest(id: "w.sets", title: "本周完成 60 组", target: 60, progress: weeks.reduce(0) { $0 + $1.completedSets.count }, rewardEggs: 15),
+            Quest(id: "w.cardio", title: "本周有氧 90 分钟", target: 90, progress: Int(cardioWeek.reduce(0) { $0 + $1.durationMinutes }), rewardEggs: 20),
         ]
     }
 
-    static func periodKey(_ q: Quest, today: Date = Date()) -> String { q.period == .daily ? today.dayKey : today.weekKey }
+    static func periodKey(_ q: Quest, today: Date = Date()) -> String { today.weekKey }
 }

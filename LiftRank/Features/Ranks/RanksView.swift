@@ -75,7 +75,8 @@ struct RanksView: View {
                                  exercises: exercises, profile: profile)
             }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    NavigationLink { SocialView(profile: profile) } label: { Label("分享与好友", systemImage: "person.2.fill") }
                     NavigationLink { RankCalculatorView(profile: profile) } label: { Label("评分计算器", systemImage: "function") }
                 }
             }

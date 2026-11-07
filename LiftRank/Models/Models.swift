@@ -22,6 +22,23 @@ final class UserProfile {
     var defaultRestSeconds: Int = 90
     private(set) var hasOnboarded: Bool = false
     var createdAt: Date = Date()
+    // Cosmetics bought in the shop ("外观") and the ones currently equipped, stored as "slot:id".
+    var ownedCosmetics: [String] = []
+    var equippedCosmetics: [String] = []
+    // Preferences used to auto-publish the daily training item.
+    var planGoalRaw: String = WorkoutGoal.hypertrophy.rawValue
+    var planDaysPerWeek: Int = 3
+    var planEquipmentRaw: String = EquipmentAccess.fullGym.rawValue
+    var planExperienceRaw: String = ExperienceLevel.beginner.rawValue
+    var autoPublishDailyPlan: Bool = true
+    // AI assistant configuration (the API key itself lives in the Keychain).
+    var aiProviderRaw: String = AIProvider.anthropic.rawValue
+    var aiModel: String = ""
+    var aiBaseURL: String = ""
+    var lastBodyAnalysis: String = ""
+    var lastBodyAnalysisAt: Date?
+    /// Stable identifier embedded in the rank code shared with friends.
+    var friendCode: String = ""
 
     init() {}
 
@@ -41,6 +58,10 @@ final class UserProfile {
     var unit: WeightUnit { get { WeightUnit(rawValue: unitRaw) ?? .kg } set { unitRaw = newValue.rawValue } }
     var activityLevel: ActivityLevel { get { ActivityLevel(rawValue: activityLevelRaw) ?? .moderate } set { activityLevelRaw = newValue.rawValue } }
     var nutritionGoal: NutritionGoal { get { NutritionGoal(rawValue: nutritionGoalRaw) ?? .maintain } set { nutritionGoalRaw = newValue.rawValue } }
+    var planGoal: WorkoutGoal { get { WorkoutGoal(rawValue: planGoalRaw) ?? .hypertrophy } set { planGoalRaw = newValue.rawValue } }
+    var planEquipment: EquipmentAccess { get { EquipmentAccess(rawValue: planEquipmentRaw) ?? .fullGym } set { planEquipmentRaw = newValue.rawValue } }
+    var planExperience: ExperienceLevel { get { ExperienceLevel(rawValue: planExperienceRaw) ?? .beginner } set { planExperienceRaw = newValue.rawValue } }
+    var aiProvider: AIProvider { get { AIProvider(rawValue: aiProviderRaw) ?? .anthropic } set { aiProviderRaw = newValue.rawValue } }
 
     static var birthdayCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -256,7 +277,135 @@ final class RewardEvent {
 }
 
 enum RewardKind: String, Codable {
-    case workout, firstOfDay, quest, season, purchase, shop, streakRestore
+    case workout, firstOfDay, quest, season, purchase, shop, streakRestore, cardio, dailyTraining
+}
+
+/// A cardio session (run, ride, swim...). Imported from Apple Health or logged by hand.
+@Model
+final class CardioSession {
+    var id: UUID = UUID()
+    var date: Date = Date()
+    var typeRaw: String = CardioType.running.rawValue
+    var durationMinutes: Double = 0
+    var distanceKm: Double = 0
+    var calories: Double = 0
+    var avgHeartRate: Double = 0
+    var notes: String = ""
+    var sourceRaw: String = "manual"
+    /// HealthKit workout UUID when imported, used to avoid duplicates.
+    var externalID: String = ""
+    var writtenToHealth: Bool = false
+
+    init(date: Date, type: CardioType, durationMinutes: Double, distanceKm: Double = 0, calories: Double = 0, avgHeartRate: Double = 0, source: String = "manual", externalID: String = "") {
+        self.date = date
+        self.typeRaw = type.rawValue
+        self.durationMinutes = durationMinutes
+        self.distanceKm = distanceKm
+        self.calories = calories
+        self.avgHeartRate = avgHeartRate
+        self.sourceRaw = source
+        self.externalID = externalID
+    }
+
+    var type: CardioType { get { CardioType(rawValue: typeRaw) ?? .other } set { typeRaw = newValue.rawValue } }
+    var isFromHealth: Bool { sourceRaw == "health" }
+}
+
+enum CardioType: String, Codable, CaseIterable, Identifiable {
+    case running, walking, hiking, cycling, swimming, rowing, elliptical, stairs, jumpRope, hiit, other
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .running: "跑步"
+        case .walking: "步行"
+        case .hiking: "徒步"
+        case .cycling: "骑行"
+        case .swimming: "游泳"
+        case .rowing: "划船机"
+        case .elliptical: "椭圆机"
+        case .stairs: "爬楼"
+        case .jumpRope: "跳绳"
+        case .hiit: "HIIT"
+        case .other: "其他"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .running: "figure.run"
+        case .walking: "figure.walk"
+        case .hiking: "figure.hiking"
+        case .cycling: "figure.outdoor.cycle"
+        case .swimming: "figure.pool.swim"
+        case .rowing: "figure.rower"
+        case .elliptical: "figure.elliptical"
+        case .stairs: "figure.stairs"
+        case .jumpRope: "figure.jumprope"
+        case .hiit: "figure.highintensity.intervaltraining"
+        case .other: "heart.circle"
+        }
+    }
+    var usesDistance: Bool { [.running, .walking, .hiking, .cycling, .swimming, .rowing].contains(self) }
+    /// Rough kcal per minute per kg of bodyweight (MET-based) for estimates when no device data exists.
+    var metValue: Double {
+        switch self {
+        case .running: 9.8
+        case .walking: 3.5
+        case .hiking: 6
+        case .cycling: 7.5
+        case .swimming: 8
+        case .rowing: 7
+        case .elliptical: 5
+        case .stairs: 8.8
+        case .jumpRope: 11
+        case .hiit: 10
+        case .other: 5
+        }
+    }
+}
+
+/// The training item auto-published for a given day. Edited by hand or through the AI coach.
+@Model
+final class DailyPlan {
+    var dayKey: String = ""
+    var title: String = ""
+    var items: [TemplateExercise] = []
+    var sourceRaw: String = "auto"
+    var createdAt: Date = Date()
+    var workoutID: UUID?
+    init(dayKey: String, title: String, items: [TemplateExercise], source: String = "auto") {
+        self.dayKey = dayKey
+        self.title = title
+        self.items = items
+        self.sourceRaw = source
+    }
+}
+
+/// A friend added through a shared rank code (offline, no account needed).
+@Model
+final class Friend {
+    var code: String = ""
+    var name: String = ""
+    var gsr: Int = 0
+    var muscleScoresJSON: String = "{}"
+    var cosmetics: [String] = []
+    var streakDays: Int = 0
+    var updatedAt: Date = Date()
+    var addedAt: Date = Date()
+    init(code: String, name: String, gsr: Int, muscleScoresJSON: String, cosmetics: [String], streakDays: Int, updatedAt: Date) {
+        self.code = code
+        self.name = name
+        self.gsr = gsr
+        self.muscleScoresJSON = muscleScoresJSON
+        self.cosmetics = cosmetics
+        self.streakDays = streakDays
+        self.updatedAt = updatedAt
+    }
+    var muscleScores: [MuscleGroup: Int] {
+        guard let data = muscleScoresJSON.data(using: .utf8), let dict = try? JSONDecoder().decode([String: Int].self, from: data) else { return [:] }
+        var out: [MuscleGroup: Int] = [:]
+        for (k, v) in dict { if let g = MuscleGroup(rawValue: k) { out[g] = v } }
+        return out
+    }
 }
 
 struct TemplateExercise: Codable, Hashable, Identifiable {

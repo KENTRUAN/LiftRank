@@ -49,6 +49,16 @@ enum DemoData {
             context.insert(BodyMeasurement(date: Date().adding(days: -d), metric: .weight, value: v))
         }
         context.insert(BodyMeasurement(date: Date(), metric: .waist, value: 82))
+        for (d, type, min, km) in [(11, CardioType.running, 32.0, 5.2), (6, .cycling, 45.0, 18.0), (3, .running, 28.0, 4.8), (1, .walking, 40.0, 3.5)] {
+            let c = CardioSession(date: Date().adding(days: -d).addingTimeInterval(-3600 * 10), type: type, durationMinutes: min, distanceKm: km,
+                                  calories: (type.metValue * 75 * min / 60).rounded(), avgHeartRate: type == .walking ? 105 : 148)
+            context.insert(c)
+        }
+        profile.eggs += 320
+        profile.ownedCosmetics = ["frame.bronze", "title.iron", "theme.blue"]
+        let friendMuscles = ["chest": 540, "back": 610, "quads": 580, "shoulders": 470, "biceps": 420]
+        let json = (try? JSONEncoder().encode(friendMuscles)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        context.insert(Friend(code: "demo1234", name: "阿力", gsr: 572, muscleScoresJSON: json, cosmetics: ["frame.gold", "title.squat"], streakDays: 12, updatedAt: Date().adding(days: -1)))
         if autoOpenActive, let bench = byKey["bench_press"], let row = byKey["barbell_row"] {
             let w = Workout(title: "推拉日（进行中）", bodyweightKg: 75)
             w.startedAt = Date().addingTimeInterval(-25 * 60)

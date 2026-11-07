@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct WorkoutGeneratorView: View {
-    let profile: UserProfile
+    @Bindable var profile: UserProfile
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @Query private var exercises: [Exercise]
@@ -25,10 +25,13 @@ struct WorkoutGeneratorView: View {
                     Stepper(weeks == 1 ? "单次训练" : "\(weeks) 周计划", value: $weeks, in: 1...12)
                 }
                 Section {
-                    Button { preview = WorkoutGenerator.generate(goal: goal, daysPerWeek: days, equipment: equipment, experience: experience, weeks: weeks, exercises: exercises); saved = false } label: {
+                    Button {
+                        preview = WorkoutGenerator.generate(goal: goal, daysPerWeek: days, equipment: equipment, experience: experience, weeks: weeks, exercises: exercises); saved = false
+                        profile.planGoal = goal; profile.planDaysPerWeek = days; profile.planEquipment = equipment; profile.planExperience = experience
+                    } label: {
                         Label("生成", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
                     }
-                } footer: { Text("生成采用确定性规则：按训练天数选择分化，按器械筛选动作，按目标决定组数、次数与休息；多周计划每周按比例加重。") }
+                } footer: { Text("生成采用确定性规则：按训练天数选择分化，按器械筛选动作，按目标决定组数、次数与休息；多周计划每周按比例加重。这里的条件也会作为每日自动发布训练的偏好。") }
 
                 ForEach(preview) { t in
                     Section(t.name) {
@@ -49,7 +52,7 @@ struct WorkoutGeneratorView: View {
                             try? context.save()
                             saved = true
                         }.disabled(saved)
-                    } footer: { Text("保存后可在训练页「预设」中直接开始、编辑或重复使用。") }
+                    } footer: { Text("保存后可在训练页「设置训练」中编辑或直接开始；每日训练会按计划顺序自动轮换发布。") }
                 }
             }
             .navigationTitle("训练生成器")

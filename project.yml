@@ -24,7 +24,16 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         NSCameraUsageDescription: 用于拍照记餐与扫描食品条码。
+        NSHealthShareUsageDescription: 读取 Apple Watch 与健康 App 中的运动、心率与距离，导入有氧记录。
+        NSHealthUpdateUsageDescription: 把手动记录的有氧运动写入健康 App，在 Fitness 中显示。
+        NSMicrophoneUsageDescription: 用于语音输入训练指令。
+        NSSpeechRecognitionUsageDescription: 把语音转换为文字，交给 AI 训练助手。
         ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: LiftRank/LiftRank.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.liftrank.app

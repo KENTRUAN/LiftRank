@@ -36,6 +36,17 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack(spacing: 14) {
+                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
+                            HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
+                        }
+                        Spacer()
+                        NavigationLink { SocialView(profile: profile) } label: { Label("段位卡", systemImage: "square.and.arrow.up").font(.caption.bold()) }.fixedSize()
+                    }
+                }
                 Section("个人资料") {
                     nicknameRow
                     Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
@@ -57,6 +68,23 @@ struct ProfileView: View {
                     Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
                     Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
                 }
+                Section("AI 助手") {
+                    NavigationLink { AISettingsView(profile: profile) } label: {
+                        HStack { Label("模型与 API Key", systemImage: "key.fill"); Spacer(); Text(profile.isAIConfigured ? profile.aiProvider.name : "未配置").font(.caption).foregroundStyle(.secondary) }
+                    }
+                    NavigationLink { BodyAnalysisView(profile: profile) } label: { Label("AI 身体综合分析", systemImage: "waveform.path.ecg") }
+                    Button { AppState.shared.perform(.openCoach) } label: { Label("AI 训练助手 / 语音指令", systemImage: "sparkles") }
+                    Text("Siri 快捷指令：「在段位健身开始训练」「用段位健身记录体重」。").font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("训练与总结") {
+                    NavigationLink { SummaryView(profile: profile) } label: { Label("周 / 月 / 季度 / 年总结", systemImage: "chart.xyaxis.line") }
+                    NavigationLink { SocialView(profile: profile) } label: { Label("好友与段位卡", systemImage: "person.2.fill") }
+                    Toggle(isOn: $profile.autoPublishDailyPlan) { Label("每日自动发布训练", systemImage: "calendar.badge.clock") }
+                    Picker("每日训练目标", selection: $profile.planGoal) { ForEach(WorkoutGoal.allCases) { Text($0.name).tag($0) } }
+                    Stepper("每周 \(profile.planDaysPerWeek) 天", value: $profile.planDaysPerWeek, in: 1...6)
+                    Picker("可用器械", selection: $profile.planEquipment) { ForEach(EquipmentAccess.allCases) { Text($0.name).tag($0) } }
+                    Picker("经验", selection: $profile.planExperience) { ForEach(ExperienceLevel.allCases) { Text($0.name).tag($0) } }
+                }
                 Section("Pro") {
                     Toggle("Pro 会员（本地模拟）", isOn: $profile.isPro)
                     Text("Pro 包含 AI 拍照记餐、更丰富的段位分析与更长时间范围图表、肌肉恢复追踪。实际订阅需接入 App Store 内购；此开关仅用于开发预览。").font(.footnote).foregroundStyle(.secondary)
@@ -69,15 +97,14 @@ struct ProfileView: View {
                     NavigationLink("体脂计算器") { BodyFatCalculatorView(profile: profile) }
                 }
                 Section("连接与数据") {
-                    Button { info = "Apple Health 集成（读取步数、热量、身体测量，写入训练）将在下一版本接入 HealthKit。" } label: { Label("Apple Health", systemImage: "heart.fill") }
+                    Button { AppState.shared.perform(.openCardio) } label: { Label("Apple Health / Apple Watch（有氧页）", systemImage: "heart.fill") }
                     Button { info = "Strava 授权需通过 Strava 的 OAuth 权限页完成；发布为单向（本软件 → Strava），不导入跑步/骑行记录。当前版本尚未接入。" } label: { Label("连接 Strava 账号", systemImage: "figure.run") }
                     Button { info = "从 Strong / Hevy 导出的 CSV 导入训练历史与个人纪录，将在下一版本提供。" } label: { Label("从 Strong / Hevy 导入", systemImage: "square.and.arrow.down") }
-                    Button { info = "好友动态、发现页、点赞评论与好友/全球/地区排行榜需要账号与云端服务，当前为本地离线版本。" } label: { Label("好友与排行榜", systemImage: "person.2.fill") }
                 }
                 Section("统计") {
                     LabeledContent("已发布训练", value: "\(workouts.filter { $0.isPublished }.count)")
                     LabeledContent("累计训练量", value: "\(profile.unit.fromKg(workouts.filter { $0.isPublished }.reduce(0) { $0 + $1.totalVolumeKg }).fmt(0)) \(profile.unit.label)")
-                    LabeledContent("累计 XP / Eggs", value: "\(profile.totalXP) / \(profile.eggs)")
+                    LabeledContent("Eggs 余额") { EggAmount(amount: profile.eggs) }
                 }
                 Section("关于评分") {
                     Text("估算 1RM = 重量 × (1 + 次数 ÷ 30)，次数上限 30；填写 RPE 时按剩余次数（RIR）调整；自重动作使用等效负重模型。评分结合体重与男/女曲线，范围 1–1000，对应 Wood 到 Olympian 九个段位。肌群段位由该肌群动作的最佳评分加权得到，总体评分 GSR 中更强的肌群占更高权重。")

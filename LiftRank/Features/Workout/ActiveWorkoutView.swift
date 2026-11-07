@@ -15,6 +15,9 @@ struct ActiveWorkoutView: View {
     @State private var restEndsAt: Date?
     @State private var restTotal: Int = 90
     @State private var plateWeight: PlateTarget?
+    @State private var showChecklist = true
+    @State private var prep: Set<String> = []
+    private let prepItems = ["热身 5–10 分钟", "补水与装备就绪", "确认今日体重"]
 
     private var exerciseByKey: [String: Exercise] { Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) }) }
 
@@ -34,6 +37,8 @@ struct ActiveWorkoutView: View {
                     }
                     TextField("备注", text: $workout.notes, axis: .vertical)
                 }
+
+                checklistSection
 
                 ForEach(workout.sortedExercises) { we in
                     ExerciseSection(we: we, exercise: exerciseByKey[we.exerciseKey], profile: profile,
@@ -76,6 +81,48 @@ struct ActiveWorkoutView: View {
                     dismiss()
                 }
             }
+        }
+    }
+
+    private var checklistSection: some View {
+        let exercises = workout.sortedExercises
+        let total = exercises.reduce(0) { $0 + $1.sets.count }
+        let done = workout.completedSets.count
+        return Section {
+            if showChecklist {
+                ForEach(prepItems, id: \.self) { item in
+                    Button {
+                        if prep.contains(item) { prep.remove(item) } else { prep.insert(item) }
+                    } label: {
+                        HStack {
+                            Image(systemName: prep.contains(item) ? "checkmark.circle.fill" : "circle").foregroundStyle(prep.contains(item) ? .green : .secondary)
+                            Text(item).foregroundStyle(.primary).strikethrough(prep.contains(item), color: .secondary)
+                        }.font(.subheadline)
+                    }
+                    .buttonStyle(.plain)
+                }
+                ForEach(exercises) { we in
+                    let finished = we.sets.filter { $0.isCompleted }.count
+                    let all = !we.sets.isEmpty && finished == we.sets.count
+                    HStack {
+                        Image(systemName: all ? "checkmark.circle.fill" : finished > 0 ? "circle.lefthalf.filled" : "circle")
+                            .foregroundStyle(all ? .green : finished > 0 ? Color.accentColor : .secondary)
+                        Text(we.exerciseName).strikethrough(all, color: .secondary)
+                        Spacer()
+                        Text("\(finished)/\(we.sets.count) 组").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }.font(.subheadline)
+                }
+                if exercises.isEmpty { Text("还没有动作，点下方「添加动作」。").font(.caption).foregroundStyle(.secondary) }
+            }
+        } header: {
+            Button { withAnimation { showChecklist.toggle() } } label: {
+                HStack {
+                    Label("训练清单 \(done)/\(total) 组", systemImage: "checklist").font(.subheadline.bold()).textCase(nil)
+                    Spacer()
+                    ProgressView(value: total > 0 ? Double(done) / Double(total) : 0).frame(width: 80)
+                    Image(systemName: showChecklist ? "chevron.up" : "chevron.down").font(.caption)
+                }
+            }.buttonStyle(.plain)
         }
     }
 
@@ -307,6 +354,8 @@ struct FinishWorkoutSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var exercises: [Exercise]
     @Query private var workouts: [Workout]
+    @Query private var cardio: [CardioSession]
+    @Query private var claims: [QuestClaim]
     @State private var bodyweightText = ""
     @State private var summary: PublishSummary?
 
@@ -321,9 +370,13 @@ struct FinishWorkoutSheet: View {
                         }.frame(maxWidth: .infinity)
                     }
                     Section("奖励") {
-                        LabeledContent("经验值", value: "+\(s.xp) XP")
-                        if s.firstOfDay { LabeledContent("今日首训 Eggs") { EggAmount(amount: s.eggs, signed: true) } }
-                        LabeledContent("连续记录", value: "\(s.streakDays) 天")
+                        if s.firstOfDay {
+                            LabeledContent("今日训练奖励") { EggAmount(amount: s.eggs, signed: true) }
+                        } else {
+                            LabeledContent("今日训练奖励", value: "今天已领取")
+                        }
+                        LabeledContent("总体评分 GSR") { HStack { Text("\(s.overallScore)"); TierBadge(tier: RankTier.tier(for: s.overallScore), compact: true) } }
+                        LabeledContent("连续训练", value: "\(s.streakDays) 天")
                     }
                     if !s.prs.isEmpty {
                         Section("个人纪录 PR") { ForEach(s.prs, id: \.self) { Label($0, systemImage: "trophy.fill").foregroundStyle(.orange) } }
@@ -358,7 +411,7 @@ struct FinishWorkoutSheet: View {
                                 context.insert(BodyMeasurement(date: Date(), metric: .weight, value: workout.bodyweightKg))
                             }
                             workout.endedAt = Date()
-                            summary = WorkoutPublisher.publish(workout, profile: profile, exercises: exercises, workouts: workouts, context: context)
+                            summary = WorkoutPublisher.publish(workout, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
                         } label: { Text("发布训练").frame(maxWidth: .infinity).bold() }
                     }
                 }

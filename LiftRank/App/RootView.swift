@@ -19,20 +19,53 @@ struct RootView: View {
 
 struct RootTabView: View {
     @Bindable var profile: UserProfile
-    @State private var tab = DemoData.initialTab
+    @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
+    @Query private var templates: [WorkoutTemplate]
+    @Query private var exercises: [Exercise]
+    @Query private var workouts: [Workout]
+    @Query private var plans: [DailyPlan]
+    @State private var app = AppState.shared
 
     var body: some View {
-        TabView(selection: $tab) {
+        @Bindable var app = app
+        TabView(selection: $app.tab) {
             WorkoutHomeView(profile: profile)
                 .tabItem { Label("训练", systemImage: "dumbbell.fill") }.tag(0)
             RanksView(profile: profile)
                 .tabItem { Label("段位", systemImage: "chart.bar.fill") }.tag(1)
-            QuestsView(profile: profile)
-                .tabItem { Label("任务", systemImage: "flame.fill") }.tag(2)
+            RewardsView(profile: profile)
+                .tabItem { Label("奖励", systemImage: "gift.fill") }.tag(2)
             NutritionView(profile: profile)
                 .tabItem { Label("饮食", systemImage: "fork.knife") }.tag(3)
             ProfileView(profile: profile)
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }.tag(4)
+        }
+        .tint(profile.accentColor)
+        .environment(app)
+        .toast($app.toast)
+        .onAppear(perform: refreshDailyPlan)
+        .onChange(of: scenePhase) { _, phase in if phase == .active { refreshDailyPlan(); handlePending() } }
+        .onChange(of: app.pending) { _, _ in handlePending() }
+    }
+
+    private func refreshDailyPlan() {
+        if profile.friendCode.isEmpty { profile.friendCode = String(UUID().uuidString.prefix(8)) }
+        DailyPlanEngine.ensureToday(profile: profile, templates: templates, exercises: exercises, workouts: workouts, plans: plans, context: context)
+    }
+
+    private func handlePending() {
+        guard let action = app.pending else { return }
+        switch action {
+        case .logBodyweight(let kg):
+            guard kg > 20, kg < 400 else { break }
+            context.insert(BodyMeasurement(date: Date(), metric: .weight, value: kg))
+            profile.bodyweightKg = kg
+            try? context.save()
+            app.pending = nil
+            app.flash("已记录体重 \(profile.unit.fromKg(kg).fmt(1)) \(profile.unit.label)")
+        default:
+            break
         }
     }
 }
@@ -88,7 +121,7 @@ struct OnboardingView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                Section("基础信息") {
+                Section {
                     LabeledContent("昵称") {
                         TextField("昵称", text: $nickname)
                             .focused($focusedField, equals: .nickname)
@@ -103,15 +136,23 @@ struct OnboardingView: View {
                             .focused($focusedField, equals: .height)
                             .formInputStyle()
                     }
-                    LabeledContent("体重 (\(profile.unit.label))") {
+                    HStack {
+                        Text("体重")
+                        Spacer()
                         TextField("体重", text: $weightText)
                             .keyboardType(.decimalPad)
                             .focused($focusedField, equals: .weight)
                             .formInputStyle()
+                            .frame(maxWidth: 110)
+                        Picker("单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                            .pickerStyle(.segmented)
+                            .frame(width: 96)
+                            .labelsHidden()
                     }
-                }
-                Section("单位") {
-                    Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                } header: {
+                    Text("基础信息")
+                } footer: {
+                    Text("重量单位可随时在「我的」中切换；输入会自动换算。")
                 }
                 Section {
                     Button {
