@@ -5,6 +5,7 @@ struct ProfileView: View {
     private enum Field { case height, weight }
 
     @Bindable var profile: UserProfile
+    @Environment(\.modelContext) private var context
     @Query private var workouts: [Workout]
     @State private var nicknameDraft = ""
     @State private var showNicknameEditor = false
@@ -17,10 +18,18 @@ struct ProfileView: View {
         Binding {
             profile.unit
         } set: { unit in
+            let previousUnit = profile.unit
+            guard unit != previousUnit else { return }
             saveMeasurement(focusedField)
             focusedField = nil
             profile.unit = unit
-            weightText = unit.inputText(kg: profile.bodyweightKg)
+            do {
+                try context.save()
+            } catch {
+                profile.unit = previousUnit
+                info = "无法保存重量单位，请重试。"
+            }
+            weightText = profile.unit.inputText(kg: profile.bodyweightKg)
         }
     }
 
