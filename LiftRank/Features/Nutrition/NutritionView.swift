@@ -171,7 +171,7 @@ struct NutritionGoalsView: View {
         Form {
             Section("输入（来自个人资料）") {
                 LabeledContent("性别 / 年龄", value: "\(profile.sex.label) / \(profile.age)")
-                LabeledContent("身高 / 体重", value: "\(profile.heightCm.fmt(0)) cm / \(profile.bodyweightKg.fmt(1)) kg")
+                LabeledContent("身高 / 体重", value: "\(profile.heightCm.fmt(0)) cm / \(profile.unit.fromKg(profile.bodyweightKg).fmt(1)) \(profile.unit.label)")
                 Picker("活动水平", selection: $profile.activityLevel) { ForEach(ActivityLevel.allCases) { Text($0.name).tag($0) } }
                 Picker("目标", selection: $profile.nutritionGoal) { ForEach(NutritionGoal.allCases) { Text($0.name).tag($0) } }.pickerStyle(.segmented)
             }

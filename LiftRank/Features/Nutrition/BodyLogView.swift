@@ -16,9 +16,13 @@ struct BodyLogView: View {
                 let weights = measurements.filter { $0.metric == .weight }.sorted { $0.date < $1.date }
                 if weights.count >= 2 {
                     Chart(weights) { m in
-                        LineMark(x: .value("日期", m.date), y: .value("kg", m.value)).interpolationMethod(.monotone)
-                        PointMark(x: .value("日期", m.date), y: .value("kg", m.value))
-                    }.frame(height: 150).chartYScale(domain: .automatic(includesZero: false))
+                        let value = profile.unit.fromKg(m.value)
+                        LineMark(x: .value("日期", m.date), y: .value(profile.unit.label, value)).interpolationMethod(.monotone)
+                        PointMark(x: .value("日期", m.date), y: .value(profile.unit.label, value))
+                    }
+                    .frame(height: 150)
+                    .chartYScale(domain: .automatic(includesZero: false))
+                    .chartYAxisLabel(profile.unit.label)
                 } else {
                     Text("记录两次以上体重后显示趋势。").font(.footnote).foregroundStyle(.secondary)
                 }
@@ -32,7 +36,7 @@ struct BodyLogView: View {
                             Text(m.name).foregroundStyle(.primary)
                             Spacer()
                             if let l = latest(m) {
-                                Text("\(l.value.fmt(1)) \(m.unit)").monospacedDigit()
+                                Text(displayValue(l)).monospacedDigit()
                                 Text(l.date.shortString).font(.caption2).foregroundStyle(.secondary)
                             } else { Text("—").foregroundStyle(.secondary) }
                         }
@@ -41,13 +45,13 @@ struct BodyLogView: View {
             }
             Section("最近记录") {
                 ForEach(measurements.prefix(20)) { m in
-                    HStack { Text(m.metric.name); Spacer(); Text("\(m.value.fmt(1)) \(m.metric.unit)"); Text(m.date.shortString).font(.caption).foregroundStyle(.secondary) }
+                    HStack { Text(m.metric.name); Spacer(); Text(displayValue(m)); Text(m.date.shortString).font(.caption).foregroundStyle(.secondary) }
                 }
                 .onDelete { idx in idx.map { Array(measurements.prefix(20))[$0] }.forEach(context.delete); try? context.save() }
             }
         }
         .sheet(item: $editing) { m in
-            MeasurementEditor(metric: m, initial: latest(m)?.value) { value in
+            MeasurementEditor(metric: m, initial: latest(m)?.value, weightUnit: profile.unit) { value in
                 context.insert(BodyMeasurement(date: Date(), metric: m, value: value))
                 if m == .weight { profile.bodyweightKg = value }
                 if m == .height { profile.heightCm = value }
@@ -55,26 +59,59 @@ struct BodyLogView: View {
             }
         }
     }
+
+    private func displayValue(_ measurement: BodyMeasurement) -> String {
+        if measurement.metric == .weight {
+            return "\(profile.unit.fromKg(measurement.value).fmt(1)) \(profile.unit.label)"
+        }
+        return "\(measurement.value.fmt(1)) \(measurement.metric.unit)"
+    }
 }
 
 struct MeasurementEditor: View {
     let metric: BodyMetric
     let initial: Double?
+    let weightUnit: WeightUnit
     let onSave: (Double) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
+
+    private var initialText: String {
+        guard let initial else { return "" }
+        if metric == .weight { return weightUnit.inputText(kg: initial) }
+        return initial.formatted(.number.precision(.fractionLength(0...1)))
+    }
+
+    private var enteredValue: Double? {
+        if text == initialText { return initial }
+        guard let value = try? Double(text, format: .number), value.isFinite, value > 0 else { return nil }
+        return metric == .weight ? weightUnit.toKg(value) : value
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                HStack { Text(metric.name); Spacer(); TextField("0", text: $text).keyboardType(.decimalPad).multilineTextAlignment(.trailing); Text(metric.unit).foregroundStyle(.secondary) }
+                HStack {
+                    Text(metric.name)
+                    Spacer()
+                    TextField("0", text: $text).keyboardType(.decimalPad).multilineTextAlignment(.trailing)
+                    Text(metric == .weight ? weightUnit.label : metric.unit).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("记录\(metric.name)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("保存") { if let v = Double(text), v > 0 { onSave(v) }; dismiss() }.disabled(Double(text) == nil) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        guard let enteredValue else { return }
+                        onSave(enteredValue)
+                        dismiss()
+                    }
+                    .disabled(enteredValue == nil)
+                }
             }
-            .onAppear { text = initial.map { $0.fmt(1) } ?? "" }
+            .onAppear { text = initialText }
         }
         .presentationDetents([.height(220)])
     }

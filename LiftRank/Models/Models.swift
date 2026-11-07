@@ -27,9 +27,14 @@ final class UserProfile {
 
     func completeOnboarding(name: String) {
         guard !hasOnboarded else { return }
-        let nickname = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !nickname.isEmpty { self.name = nickname }
+        updateNickname(name)
         hasOnboarded = true
+    }
+
+    func updateNickname(_ value: String) {
+        let nickname = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !nickname.isEmpty else { return }
+        name = nickname
     }
 
     var sex: Sex { get { Sex(rawValue: sexRaw) ?? .male } set { sexRaw = newValue.rawValue } }

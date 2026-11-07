@@ -7,6 +7,9 @@ enum WeightUnit: String, Codable, CaseIterable, Identifiable {
     var label: String { rawValue }
     func fromKg(_ kg: Double) -> Double { self == .kg ? kg : kg * 2.20462 }
     func toKg(_ value: Double) -> Double { self == .kg ? value : value / 2.20462 }
+    func inputText(kg: Double) -> String {
+        fromKg(kg).formatted(.number.precision(.fractionLength(0...2)))
+    }
 }
 
 enum Sex: String, Codable, CaseIterable, Identifiable {

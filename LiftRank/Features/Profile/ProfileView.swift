@@ -6,6 +6,8 @@ struct ProfileView: View {
 
     @Bindable var profile: UserProfile
     @Query private var workouts: [Workout]
+    @State private var nicknameDraft = ""
+    @State private var showNicknameEditor = false
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var info: String?
@@ -18,7 +20,7 @@ struct ProfileView: View {
             saveMeasurement(focusedField)
             focusedField = nil
             profile.unit = unit
-            weightText = unit.fromKg(profile.bodyweightKg).formatted(.number)
+            weightText = unit.inputText(kg: profile.bodyweightKg)
         }
     }
 
@@ -26,7 +28,7 @@ struct ProfileView: View {
         NavigationStack {
             Form {
                 Section("个人资料") {
-                    LabeledContent("昵称", value: profile.name)
+                    nicknameRow
                     Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
                     BirthdayField(profile: profile) { focusedField = nil }
                     LabeledContent("身高 (cm)") {
@@ -78,7 +80,7 @@ struct ProfileView: View {
             .onSubmit { focusedField = nil }
             .onChange(of: focusedField) { previous, _ in saveMeasurement(previous) }
             .onAppear {
-                weightText = profile.unit.fromKg(profile.bodyweightKg).formatted(.number)
+                weightText = profile.unit.inputText(kg: profile.bodyweightKg)
                 heightText = profile.heightCm.formatted(.number)
             }
             .toolbar {
@@ -91,6 +93,31 @@ struct ProfileView: View {
         }
     }
 
+    private var nicknameRow: some View {
+        let nickname = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let displayName = nickname.isEmpty ? "设置昵称" : nickname
+        return Button {
+            focusedField = nil
+            nicknameDraft = nickname
+            showNicknameEditor = true
+        } label: {
+            LabeledContent("昵称") {
+                Text(displayName).foregroundStyle(Color.accentColor)
+            }
+            .foregroundStyle(.primary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("昵称")
+        .accessibilityValue(displayName)
+        .alert("编辑昵称", isPresented: $showNicknameEditor) {
+            TextField("输入昵称", text: $nicknameDraft)
+            Button("取消", role: .cancel) {}
+            Button("保存") { profile.updateNickname(nicknameDraft) }
+                .disabled(nicknameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
     private func saveMeasurement(_ field: Field?) {
         switch field {
         case .height:
@@ -100,10 +127,12 @@ struct ProfileView: View {
                 heightText = profile.heightCm.formatted(.number)
             }
         case .weight:
+            let savedText = profile.unit.inputText(kg: profile.bodyweightKg)
+            guard weightText != savedText else { return }
             if let value = try? Double(weightText, format: .number), value.isFinite, value > 0 {
                 profile.bodyweightKg = profile.unit.toKg(value)
             } else {
-                weightText = profile.unit.fromKg(profile.bodyweightKg).formatted(.number)
+                weightText = savedText
             }
         case nil:
             break

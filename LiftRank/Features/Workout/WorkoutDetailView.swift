@@ -36,7 +36,9 @@ struct WorkoutDetailView: View {
                             Spacer()
                             if let ex = byKey[we.exerciseKey], ex.isRanked, s.type != .warmup {
                                 let score = StrengthScoring.score(set: s, exercise: ex, bodyweightKg: workout.bodyweightKg, sex: profile.sex)
-                                Text("e1RM \(StrengthScoring.e1RM(set: s, exercise: ex, bodyweightKg: workout.bodyweightKg).fmt(1))").font(.caption2).foregroundStyle(.secondary)
+                                let e1RM = StrengthScoring.e1RM(set: s, exercise: ex, bodyweightKg: workout.bodyweightKg)
+                                Text("e1RM \(profile.unit.fromKg(e1RM).fmt(1)) \(profile.unit.label)")
+                                    .font(.caption2).foregroundStyle(.secondary)
                                 Text("\(score)").font(.caption.bold().monospacedDigit()).foregroundStyle(RankTier.tier(for: score).color)
                             }
                         }

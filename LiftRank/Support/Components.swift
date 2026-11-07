@@ -39,7 +39,8 @@ struct KeyboardDismissal: UIViewRepresentable {
             inputAtTouchStart = nil
             var target = touch.view
             while let view = target {
-                if view is UITextInput { return false }
+                // Let alerts handle their own buttons before the keyboard moves their layout.
+                if view is UITextInput || view.next is UIAlertController { return false }
                 target = view.superview
             }
 

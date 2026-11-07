@@ -43,14 +43,38 @@ struct OnboardingView: View {
     @Bindable var profile: UserProfile
     @State private var nickname: String
     @State private var weightText: String
+    @State private var draftWeightKg: Double
     @State private var heightText: String
     @FocusState private var focusedField: Field?
 
     init(profile: UserProfile) {
         self.profile = profile
         _nickname = State(initialValue: profile.name)
-        _weightText = State(initialValue: profile.bodyweightKg.formatted(.number))
+        _weightText = State(initialValue: profile.unit.inputText(kg: profile.bodyweightKg))
+        _draftWeightKg = State(initialValue: profile.bodyweightKg)
         _heightText = State(initialValue: profile.heightCm.formatted(.number))
+    }
+
+    private var enteredWeightKg: Double {
+        let unit = profile.unit
+        guard weightText != unit.inputText(kg: draftWeightKg),
+              let value = try? Double(weightText, format: .number), value.isFinite,
+              unit.toKg(value) > 30 else {
+            return draftWeightKg
+        }
+        return unit.toKg(value)
+    }
+
+    private var unitSelection: Binding<WeightUnit> {
+        Binding {
+            profile.unit
+        } set: { unit in
+            guard unit != profile.unit else { return }
+            draftWeightKg = enteredWeightKg
+            focusedField = nil
+            profile.unit = unit
+            weightText = unit.inputText(kg: draftWeightKg)
+        }
     }
 
     var body: some View {
@@ -79,7 +103,7 @@ struct OnboardingView: View {
                             .focused($focusedField, equals: .height)
                             .formInputStyle()
                     }
-                    LabeledContent("体重 (kg)") {
+                    LabeledContent("体重 (\(profile.unit.label))") {
                         TextField("体重", text: $weightText)
                             .keyboardType(.decimalPad)
                             .focused($focusedField, equals: .weight)
@@ -87,13 +111,13 @@ struct OnboardingView: View {
                     }
                 }
                 Section("单位") {
-                    Picker("重量单位", selection: $profile.unit) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
+                    Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
                 }
                 Section {
                     Button {
                         focusedField = nil
                         if let h = try? Double(heightText, format: .number), h.isFinite, h > 100 { profile.heightCm = h }
-                        if let w = try? Double(weightText, format: .number), w.isFinite, w > 30 { profile.bodyweightKg = w }
+                        profile.bodyweightKg = enteredWeightKg
                         profile.completeOnboarding(name: nickname)
                     } label: { Text("开始训练").frame(maxWidth: .infinity).bold() }
                 }

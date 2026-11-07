@@ -193,6 +193,10 @@ struct SetRowView: View {
 
     private var unit: WeightUnit { profile.unit }
     private var isCardio: Bool { exercise?.isCardio ?? false }
+    private var displayedWeight: String {
+        if set.weightKg == 0 { return "" }
+        return isCardio ? set.weightKg.fmt(2) : unit.fromKg(set.weightKg).fmt(1)
+    }
 
     var body: some View {
         HStack(spacing: 6) {
@@ -213,6 +217,7 @@ struct SetRowView: View {
                 .keyboardType(.decimalPad).multilineTextAlignment(.center).focused($focus, equals: .weight)
                 .padding(6).background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
                 .onChange(of: weightText) { _, v in
+                    guard v != displayedWeight else { return }
                     let raw = Double(v.replacingOccurrences(of: ",", with: ".")) ?? 0
                     set.weightKg = isCardio ? raw : unit.toKg(raw)
                 }
@@ -242,15 +247,16 @@ struct SetRowView: View {
         }
         .listRowBackground(set.isCompleted ? Color.green.opacity(0.08) : nil)
         .onAppear {
-            weightText = set.weightKg == 0 ? "" : (isCardio ? set.weightKg : unit.fromKg(set.weightKg)).fmt(isCardio ? 2 : 1)
+            weightText = displayedWeight
             repsText = set.reps == 0 ? "" : "\(set.reps)"
         }
         .onChange(of: set.weightKg) { _, v in
             // Keep text in sync when the model changes from elsewhere (e.g. a template prefill).
             let shown = Double(weightText) ?? -1
             let model = isCardio ? v : unit.fromKg(v)
-            if abs(shown - model) > 0.051 && !(v == 0 && weightText.isEmpty) { weightText = v == 0 ? "" : model.fmt(isCardio ? 2 : 1) }
+            if abs(shown - model) > 0.051 && !(v == 0 && weightText.isEmpty) { weightText = displayedWeight }
         }
+        .onChange(of: unit) { _, _ in weightText = displayedWeight }
         .overlay(alignment: .bottomTrailing) {
             if let ex = exercise, ex.isRanked, set.reps > 0, set.weightKg > 0 || ex.bodyweightFactor > 0 {
                 let score = StrengthScoring.score(set: set, exercise: ex, bodyweightKg: bodyweightKg, sex: profile.sex)
@@ -343,8 +349,11 @@ struct FinishWorkoutSheet: View {
                     } footer: { Text("Strava 连接需要在设置中授权，当前版本尚未接入。") }
                     Section {
                         Button {
-                            if let bw = Double(bodyweightText), bw > 30 {
-                                workout.bodyweightKg = profile.unit.toKg(bw)
+                            let unit = profile.unit
+                            if let bw = try? Double(bodyweightText, format: .number), bw.isFinite, unit.toKg(bw) > 30 {
+                                if bodyweightText != unit.inputText(kg: workout.bodyweightKg) {
+                                    workout.bodyweightKg = unit.toKg(bw)
+                                }
                                 profile.bodyweightKg = workout.bodyweightKg
                                 context.insert(BodyMeasurement(date: Date(), metric: .weight, value: workout.bodyweightKg))
                             }
@@ -357,7 +366,7 @@ struct FinishWorkoutSheet: View {
             .navigationTitle(summary == nil ? "完成训练" : "训练已发布")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { if summary == nil { ToolbarItem(placement: .cancellationAction) { Button("返回") { dismiss() } } } }
-            .onAppear { bodyweightText = profile.unit.fromKg(workout.bodyweightKg).fmt(1) }
+            .onAppear { bodyweightText = profile.unit.inputText(kg: workout.bodyweightKg) }
             .interactiveDismissDisabled(summary != nil)
         }
     }
