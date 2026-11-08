@@ -13,7 +13,8 @@ struct GymSceneView: UIViewRepresentable {
     let scene: GymScene
     func makeCoordinator() -> Coordinator { Coordinator(scene: scene) }
     func makeUIView(context: Context) -> SKView {
-        let view = SKView()
+        let view = AccessibleGymView()
+        view.isAccessibilityElement = false
         view.isMultipleTouchEnabled = true
         view.presentScene(scene)
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
@@ -48,4 +49,31 @@ struct GymSceneView: UIViewRepresentable {
                 || (gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPinchGestureRecognizer)
         }
     }
+}
+
+private final class AccessibleGymView: SKView {
+    private var equipmentElements: [String: GymEquipmentElement] = [:]
+    override var accessibilityElements: [Any]? {
+        get {
+            guard let scene = scene as? GymScene else { return nil }
+            return scene.equipmentFrames().compactMap { station, frame in
+                let visible = frame.intersection(bounds)
+                guard !visible.isNull, !visible.isEmpty else { return nil }
+                let element = equipmentElements[station] ?? GymEquipmentElement(accessibilityContainer: self)
+                equipmentElements[station] = element
+                element.accessibilityLabel = GymEquipment.title(station)
+                element.accessibilityIdentifier = "gymEquipment.\(station)"
+                element.accessibilityTraits = .button
+                element.accessibilityFrameInContainerSpace = visible
+                element.activate = { [weak scene] in scene?.onStation?(station) }
+                return element
+            }
+        }
+        set { }
+    }
+}
+
+private final class GymEquipmentElement: UIAccessibilityElement {
+    var activate: (() -> Void)?
+    override func accessibilityActivate() -> Bool { activate?(); return activate != nil }
 }

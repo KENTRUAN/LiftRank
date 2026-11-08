@@ -57,7 +57,7 @@ final class GymAPI {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        request.timeoutInterval = path.contains("generate") ? 120 : (path == "trainer" ? 135 : 55)
+        request.timeoutInterval = path.contains("generate") ? 120 : (path == "trainer" ? 330 : (path == "trainer/greeting" ? 100 : 55))
         let data: Data
         let response: URLResponse
         do { (data, response) = try await session.data(for: request) }

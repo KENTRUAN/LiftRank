@@ -49,7 +49,7 @@ struct GymRoomView: View {
                 }.padding(12).background(.teal.opacity(0.08))
                 GymSceneView(scene: scene).frame(height: expanded ? 560 : 360)
                     .accessibilityIdentifier("walkableGymScene")
-                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to start a set, or use the station picker below.")
+                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.")
                 HStack(spacing: 18) {
                     Text("Pinch to zoom · Two fingers to move").font(.caption2).foregroundStyle(.secondary)
                     Spacer(minLength: 0)
@@ -63,15 +63,7 @@ struct GymRoomView: View {
                     workoutCard
                     if plain {
                         if let active, active.isOutdoor { OutdoorWorkoutMap(workout: active) }
-                    } else { HStack {
-                        Picker("Station", selection: Binding(get: { store.station }, set: { useEquipment($0) })) {
-                            ForEach(GymLayout.stations, id: \.self) { Text(L($0.capitalized)).tag($0) }
-                        }.accessibilityIdentifier("gymStation")
-                        Spacer()
-                        if store.station != "lounge" {
-                            Button("Release equipment") { releaseEquipment() }.font(.caption).disabled(active?.hasPendingSet == true || active?.cardioTimerStartedAt != nil).accessibilityIdentifier("releaseEquipment")
-                        }
-                    } }
+                    }
                     if let active, !store.offlineSample { TrainingHealthStatusView(workout: active) }
                     if let lastLogged { Label(lastLogged, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.teal).accessibilityIdentifier("gymSetSaved") }
                     HStack {
@@ -98,14 +90,29 @@ struct GymRoomView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) { socialBanner }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if let active, !store.offlineSample {
-                Group {
-                    if active.activity != .strength {
-                        CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded"); if plain { store.suspend() } }
-                    } else {
-                        WorkoutSetControl(workout: active, profile: profile, onStart: {
-                            if plain { sheet = .equipment("all") } else { useEquipment(store.station == "lounge" ? "bench" : store.station) }
-                        }, onLog: { sheet = .equipment(plain ? "all" : store.station) }, onCardio: plain ? { sheet = .cardioStart } : nil)
+            if !store.offlineSample {
+                VStack(spacing: 10) {
+                    if !plain {
+                        HStack {
+                            Label(store.station == "lounge" ? L("Tap equipment in the gym to choose a station") : GymEquipment.title(store.station), systemImage: "dumbbell.fill")
+                                .font(.caption).accessibilityIdentifier("gymCurrentStation")
+                            Spacer()
+                            if store.station != "lounge" {
+                                Button("Release equipment") { releaseEquipment() }.font(.caption.bold())
+                                    .disabled(store.busy || active?.hasPendingSet == true || active?.cardioTimerStartedAt != nil).accessibilityIdentifier("releaseEquipment")
+                            }
+                        }
+                    }
+                    if let active {
+                        if active.activity != .strength {
+                            CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded"); if plain { store.suspend() } }
+                        } else {
+                            WorkoutSetControl(workout: active, profile: profile, onStart: {
+                                if plain { sheet = .equipment("all") }
+                                else if store.ownsStation(store.station) { sheet = .equipment(store.station) }
+                                else { store.error = L("Tap equipment in the gym to choose a station first.") }
+                            }, onLog: { sheet = .equipment(plain ? "all" : store.station) }, onCardio: plain ? { sheet = .cardioStart } : nil)
+                        }
                     }
                 }.padding(.horizontal, 16).padding(.vertical, 10).background(.regularMaterial)
             }

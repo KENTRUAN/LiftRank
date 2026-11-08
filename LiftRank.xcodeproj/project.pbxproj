@@ -44,6 +44,7 @@
 		5D5B2B505057EBBC2984B4AD /* Calculators.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8361E8092BE0A0F08B394EC7 /* Calculators.swift */; };
 		5E533FC587FD0F36553FA098 /* CardioClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86090DE4C6748841662DC26E /* CardioClock.swift */; };
 		61E3D50785D73715E008A38B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = F53A6DD7ED3A1733D12BCDEB /* Localizable.xcstrings */; };
+		625694C777BD4D9205BBFE06 /* EquipmentRehearsal.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA9415CF48A4236C87778D53 /* EquipmentRehearsal.swift */; };
 		6362FD690AD71CD19906CADB /* WorkoutSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1343DACD63C982B542D194AE /* WorkoutSetupView.swift */; };
 		63A133E9FDA041F1702B7DA7 /* ExercisePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D775A8046FCC845376230D9C /* ExercisePickerView.swift */; };
 		6519C67AA607D601DBEC918E /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC2BDFE6025FB3CFE3BA54E /* Localization.swift */; };
@@ -261,6 +262,7 @@
 		F10B87E030270C68FD8B99E0 /* BodyAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BodyAnalysisView.swift; sourceTree = "<group>"; };
 		F53A6DD7ED3A1733D12BCDEB /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		F707D42C16DFCCE8AECB7DCB /* GymRoomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GymRoomView.swift; sourceTree = "<group>"; };
+		FA9415CF48A4236C87778D53 /* EquipmentRehearsal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EquipmentRehearsal.swift; sourceTree = "<group>"; };
 		FB10CD68116DA6C54DCEFAA9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		FCEA9F85A017611879B7B39E /* LiftRank.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiftRank.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -555,6 +557,7 @@
 		EFBF3208DFFD0F3C71497E73 /* LiftRankSocialUITests */ = {
 			isa = PBXGroup;
 			children = (
+				FA9415CF48A4236C87778D53 /* EquipmentRehearsal.swift */,
 				955B3F2DD6BF17A145616D8C /* SocialGymRehearsal.swift */,
 				C955F1B27D4C152E3855C375 /* TodayTrainingRehearsal.swift */,
 				C374413F5BBD6512C278479D /* WorkoutSpaceRehearsal.swift */,
@@ -897,6 +900,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				625694C777BD4D9205BBFE06 /* EquipmentRehearsal.swift in Sources */,
 				76BE5C585C5357D2FD9817F9 /* SocialGymRehearsal.swift in Sources */,
 				AF150929534D20387B494F47 /* TodayTrainingRehearsal.swift in Sources */,
 				7D21AAA1C53764219B193E90 /* WorkoutSpaceRehearsal.swift in Sources */,

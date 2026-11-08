@@ -1,14 +1,15 @@
 # LiftRank AI APIs and workout fine-tuning
 
-Tinker is reserved for the workout trainer: exercise guidance, remaining-set edits, and requested daily/weekly schedules. Generic social drafts and avatar images use a separate Gemini credential. There is no fallback between the two providers. A system prompt alone is not fine-tuning; a trained model is identified by a saved `tinker://.../sampler_weights/...` checkpoint.
+Tinker is reserved for workout features. The full `thinkingmachines/Inkling` model handles natural coaching and daily/multi-week planning; the fine-tuned checkpoint handles focused edits to the current remaining workout list. Generic social drafts and avatar images use a separate Gemini credential. There is no fallback between the two providers. A system prompt alone is not fine-tuning; a trained model is identified by a saved `tinker://.../sampler_weights/...` checkpoint.
 
 ## APIs and credentials
 
 | Feature | API / location in code | Required configuration | Where the credential lives |
 | --- | --- | --- | --- |
-| Trainer chat and workout edits | Tinker Anthropic-compatible Messages API; `backend/src/providers.ts`, authenticated `POST /trainer` | `TINKER_API_KEY`, `TINKER_TRAINER_MODEL` | Backend environment / private Secret Manager secret |
-| Home trainer welcome | Same workout model; authenticated, read-only `POST /trainer/greeting` | Same trainer key/model; `GREETING_GLOBAL_LIMIT` (200/day default) | Backend only; 20 greetings/guest/day, also counted against the 30/day trainer budget |
-| Older workout-context companion route | Same Tinker API; `POST /companion` without `targetID` | Same trainer configuration | Backend only |
+| Trainer conversation and schedules | Tinker Anthropic-compatible Messages API; `backend/src/coach.ts`, authenticated `POST /trainer` | `TINKER_API_KEY`, `TINKER_COACH_MODEL`, `TINKER_COACH_EFFORT` | Backend environment / private Secret Manager secret |
+| Current-workout list editor | Same endpoint; `backend/src/providers.ts`, called only when the coach routes an explicit current-list change | Same `TINKER_API_KEY`, `TINKER_TRAINER_MODEL` | Backend only; existing fine-tuned checkpoint |
+| Home trainer welcome | Full coaching model; authenticated, read-only `POST /trainer/greeting` | Same trainer key/model; `GREETING_GLOBAL_LIMIT` (200/day default) | Backend only; 20 greetings/guest/day, also counted against the 30/day trainer budget |
+| Older workout-context companion route | Full Tinker coaching model; `POST /companion` without `targetID` | Same trainer configuration | Backend only |
 | Editable social introduction | Gemini Developer API `generateContent`; `POST /companion` with authorized `targetID` | **Your own `GEMINI_API_KEY`**, `GENERAL_AI_MODEL` | Backend only; add later |
 | Selfie/text avatar preview | Gemini Developer API image generation; `POST /avatars/generate` | **Your own `GEMINI_API_KEY`**, `AVATAR_MODEL` with image-generation access | Backend only; add later |
 | Body analysis, nutrition guidance, meal photos, summaries and local avatar tools | Developer-configured provider in `LiftRank/Features/AI/AIService.swift` | `LIFTRANK_AI_PROVIDER`, `LIFTRANK_AI_MODEL`, `LIFTRANK_AI_BASE_URL`, `LIFTRANK_AI_KEY` in ignored `Config/AI.local.xcconfig` | Use a server relay for provider secrets in distributed builds; these settings do not configure Tinker |
@@ -36,6 +37,8 @@ Copy `backend/.env.example` to the ignored `backend/.env` for local use. Do not 
 TINKER_API_KEY=<private workout credential>
 TINKER_TRAINER_MODEL=tinker://<run>:train:0/sampler_weights/<checkpoint>
 TINKER_REQUIRE_FINE_TUNED=true
+TINKER_COACH_MODEL=thinkingmachines/Inkling
+TINKER_COACH_EFFORT=medium
 GEMINI_API_KEY=<your separate Gemini Developer API credential>
 GENERAL_AI_MODEL=gemini-2.5-flash
 AVATAR_MODEL=gemini-3.1-flash-image
@@ -46,7 +49,9 @@ AVATAR_GLOBAL_LIMIT=30
 
 Leave `GEMINI_API_KEY` absent until you choose to enable generic AI. Introduction drafts then explain the missing configuration and users can type their own messages. Image generation explains that presets are available; a failed preview never replaces an approved avatar. Multiplayer is independent of AI availability. Gemini no longer implicitly uses the Cloud Run Vertex AI service account.
 
-`TINKER_TRAINER_MODEL` takes precedence over the legacy `TINKER_MODEL`. Without either, the default is the base `thinkingmachines/Inkling`; set `TINKER_REQUIRE_FINE_TUNED=true` when deploying an evaluated checkpoint to reject a missing/base-model configuration. An expired or unavailable checkpoint returns an explicit error and preserves the workout; it does not silently switch providers/models.
+The coaching model defaults to `thinkingmachines/Inkling`, with medium reasoning effort. It uses the same Tinker key; no extra provider key is needed. Chat is ordinary text; explicit plans use validated tools. Multi-week programs use complete session templates and bounded weekly sets/rep adjustments, expanded into every calendar day including rest days. A schedule request does not edit current-workout todos. See [trainer and equipment changes](TRAINER_AND_EQUIPMENT.md).
+
+`TINKER_TRAINER_MODEL` configures only the focused workout editor and takes precedence over the legacy `TINKER_MODEL`. Without either, the default is the base `thinkingmachines/Inkling`; set `TINKER_REQUIRE_FINE_TUNED=true` when deploying an evaluated checkpoint to reject a missing/base-model configuration. An expired or unavailable checkpoint returns an explicit error and preserves the workout; it does not silently switch providers/models.
 
 For Cloud Run, create a private Gemini secret when the team supplies its key, grant the runtime service account access to that secret, and bind `GEMINI_API_KEY` using `gcloud run services update --update-secrets`. Do not use `--set-env-vars` to transfer a secret. Existing Tinker/Places secrets and Firebase permissions remain separate. Use `--update-env-vars` for the model URI so other configuration is retained.
 
@@ -56,9 +61,9 @@ Trainer sends the catalog, remaining sets, completed exercise counts, requested 
 
 Social introductions send only the two public names and shared interests; caller text, workout context and health data are excluded. The draft is returned for user editing and is never automatically sent. Selfies stay in request memory; only an approved generated avatar is stored.
 
-Runtime daily quotas are separate: 30 trainer attempts per guest, 30 generic text attempts per guest, and 3 avatar attempts per guest. Project defaults are 300 trainer, 300 generic text and 30 image attempts. Trainer validation permits one repair request, and both attempts count. Quotas limit request counts, not exact dollar spend. Fine-tuning runs use their own conservative dollar budget and do not use these app quotas.
+Runtime daily quotas are separate: 30 trainer attempts per guest, 30 generic text attempts per guest, and 3 avatar attempts per guest. Project defaults are 300 trainer, 300 generic text and 30 image attempts. The full coach permits one format repair; a requested current-list edit then permits one specialist repair. Every model attempt counts against the same trainer quota (at most four attempts for a mixed request). Invalid or partial output applies no changes. The coach has a 12,000-token output cap; greetings 700; the specialist 6,000. The client allows enough time for bounded repairs. Quotas limit request counts, not exact dollar spend. Fine-tuning runs use their own conservative dollar budget and do not use these app quotas.
 
-Tinker's specific HTTP 422 “missing required tool call” failure also uses that single repair allowance. On repair, previous chat turns are retained as untrusted context and the latest user message stays the current instruction. This avoids older plain-text replies causing another unstructured response. Other provider errors are not automatically retried, and no model output bypasses workout validation.
+The specialist's specific HTTP 422 “missing required tool call” failure also uses its single repair allowance. The full coach retains chat history as untrusted context and treats the latest user message as the current instruction; the specialist receives only the focused edit instruction. Other provider errors are not automatically retried, and no model output bypasses workout validation.
 
 ## Reproducible workout pilot
 

@@ -9,6 +9,7 @@ Implemented on `codex/nearby-workout-spaces`; main is unchanged.
 - Select a registered gym within 500 meters, create a public/private space, join an approved nearby space, or start a private solo workout offline. Entering starts or resumes the same local workout. Choosing a preset remains a separate optional step.
 - Custom spaces are open floors with avatars and a private trainer. **Start set** selects any strength exercise. The **Cardio** shortcut beside the set controls retains automatic timing, pause/resume, the outdoor map and Apple Health/Watch handling. Recorded sets remain locked.
 - Pinch to zoom from 0.8× to 3×; drag with two fingers to pan. There are also zoom/reset buttons and an option for a taller viewport. One-finger taps still walk or open profiles/equipment. Camera changes never send movement.
+- In preset gyms, select a station by tapping the rendered equipment. The station label is read-only; **Release equipment** remains available when no set/cardio is running. Start set never silently selects a bench. Both scene and Review use station-compatible exercises, including direct set completion checks. Open custom spaces remain unrestricted.
 - Registered gyms are always public. Public custom spaces require a join request. Any current member may approve or decline. The host manages visibility and invitations to accepted friends. If the host leaves, the longest-present remaining member becomes host.
 - Private spaces are hidden from discovery. Invited friends must still pass proximity validation. Going private cancels pending public requests and unused public approvals; current members stay.
 - Invitations appear in the gym lobby and Community Messages, with a tab badge. In-room requests appear above the scene. Invitations expire after five minutes; requests and approvals after two minutes.
@@ -49,7 +50,7 @@ Location must be no older than 60 seconds, report accuracy within 100 meters, an
 
 ## AI keys and limits
 
-Home welcomes use the existing **`TINKER_API_KEY`** and configurable **`TINKER_TRAINER_MODEL`**, including the fine-tuned workout checkpoint. The supplied context contains local date/language, activity/state/completed-set count, and the explicitly requested plan's title/count. The trainer response is validated, and only reply text returns to the client. It cannot silently add a plan or change a workout.
+Home welcomes use the existing **`TINKER_API_KEY`** and full **`TINKER_COACH_MODEL`**. The fine-tuned **`TINKER_TRAINER_MODEL`** handles current-list edits only. The supplied context contains local date/language, activity/state/completed-set count, and the explicitly requested plan's title/count. The trainer response is validated, and only reply text returns to the client. It cannot silently add a plan or change a workout.
 
 Home refreshes on appearance/foreground, coalesced within ten seconds. The limit is 20 greetings per guest/day and **`GREETING_GLOBAL_LIMIT=200`** project-wide; calls also count against the existing 30/day trainer budget. Errors preserve the last welcome (or a built-in message) with a retry control. AI never blocks starting a workout. Generic images and introduction tools still use their separate Gemini key.
 

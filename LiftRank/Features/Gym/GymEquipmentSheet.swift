@@ -19,16 +19,17 @@ struct GymEquipmentSheet: View {
     @State private var saved = false
     @FocusState private var inputFocused: Bool
     private var logging: Bool { workout.setEndedAt != nil }
+    private var effectiveStation: String { gym.requiresEquipmentForSets ? gym.station : station }
     private var choices: [Exercise] {
         if workout.hasPendingSet { return exercises.filter { $0.key == workout.currentExerciseKey } }
-        if station == "all" || station == "lounge" {
+        if !gym.requiresEquipmentForSets && (station == "all" || station == "lounge") {
             return exercises.filter { !$0.isCardio }.sorted { a, b in
                 let aPlanned = workout.exercises.contains { $0.exerciseKey == a.key }
                 let bPlanned = workout.exercises.contains { $0.exerciseKey == b.key }
                 return aPlanned != bPlanned ? aPlanned : a.nameEn < b.nameEn
             }
         }
-        return GymEquipment.exerciseKeys(at: station).compactMap { key in exercises.first { $0.key == key } }
+        return GymEquipment.exerciseKeys(at: effectiveStation).compactMap { key in exercises.first { $0.key == key } }.filter { !$0.isCardio }
     }
     private var exercise: Exercise? { choices.first { $0.key == selectedKey } }
     private var enteredWeight: Double? { try? Double(weight, format: .number) }
@@ -42,7 +43,7 @@ struct GymEquipmentSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Label(station == "all" ? "Your workout" : GymEquipment.title(station), systemImage: station == "cardio" ? "figure.run" : "dumbbell.fill").font(.title2.bold())
+                    Label(effectiveStation == "all" ? "Your workout" : GymEquipment.title(effectiveStation), systemImage: "dumbbell.fill").font(.title2.bold())
                     Text(logging ? "Set ended. Rest has started. Confirm your reps and weight to save it." : "Choose your exercise, then start the set. Tap End set when you finish.").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Section("Exercise") {
@@ -75,11 +76,14 @@ struct GymEquipmentSheet: View {
                 } else if let exercise {
                     Button {
                         guard !requiresEquipment || gym.ownsStation(station) else { error = L("This equipment is no longer reserved for you."); return }
-                        do { try WorkoutSession.beginSet(workout, exerciseKey: exercise.key, context: context); dismiss() }
+                        do {
+                            try gym.validateExerciseAtStation(exercise.key)
+                            try WorkoutSession.beginSet(workout, exerciseKey: exercise.key, context: context); dismiss()
+                        }
                         catch { self.error = error.localizedDescription }
                     } label: { Label("Start set", systemImage: "play.fill").frame(maxWidth: .infinity) }
                         .disabled(workout.hasPendingSet).accessibilityIdentifier("confirmStartSet")
-                } else { Text("No matching exercise is available in your catalogue.") }
+                } else { Text(gym.requiresEquipmentForSets ? "Close this sheet and tap suitable equipment in the gym to start a set." : "No matching exercise is available in your catalogue.") }
                 if workout.hasPendingSet {
                     Button("Discard this set", role: .destructive) {
                         do { try WorkoutSession.discardSet(workout, context: context); dismiss() }
@@ -99,6 +103,7 @@ struct GymEquipmentSheet: View {
                 prefill()
             }
             .onChange(of: selectedKey) { _, _ in prefill() }
+            .onChange(of: effectiveStation) { _, _ in selectedKey = choices.first?.key ?? ""; prefill() }
         }
     }
     private func prefill() {

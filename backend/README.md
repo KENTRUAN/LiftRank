@@ -71,7 +71,7 @@ gcloud run deploy liftrank-social \
   --allow-unauthenticated \
   --max-instances 2 \
   --memory 512Mi \
-  --timeout 180 \
+  --timeout 300 \
   --set-env-vars 'GOOGLE_CLOUD_PROJECT=liftrank-514018,FIREBASE_DATABASE_URL=YOUR_DATABASE_URL,FIREBASE_STORAGE_BUCKET=YOUR_BUCKET,AVATAR_GLOBAL_LIMIT=30,COMPANION_GLOBAL_LIMIT=300,SEARCH_GLOBAL_LIMIT=2000' \
   --set-secrets 'GOOGLE_PLACES_API_KEY=liftrank-places-key:latest,TINKER_API_KEY=liftrank-tinker-key:latest'
 ```
@@ -95,7 +95,7 @@ The Cloud Run endpoint accepts public HTTPS connections, but every route except 
 - Outdoor cardio has a private MapKit minimap with a local route. Location updates run only while the app is in the foreground; background/locked-screen route recording and HealthKit route export are not implemented. Location denial leaves workout timing usable. These route coordinates are never included in social snapshots or trainer context.
 - Image previews are returned to the device; only approval writes an avatar to Storage. Selfies are processed in request memory. Replacing an approved image deletes its prior asset. Image assets are readable to authenticated app members; request photos are not.
 - Daily limits: 3 image generations / guest, 30 trainer attempts / guest and 30 generic-text attempts / guest. Project-wide defaults: 30 images, 300 trainer calls, 300 generic text calls and 2,000 Places requests. Failed provider attempts consume quota to prevent retry storms. Server limits reject requests; billing alerts alone are not hard caps. Guest identities can be recreated, so project-wide limits remain necessary.
-- Tinker and Gemini model IDs are separate server environment settings. Workout inference supports an evaluated `tinker://.../sampler_weights/...` checkpoint through the Anthropic-compatible API. Generic introduction drafts and avatar previews use your separate Gemini Developer API key; see [AI setup](../docs/AI_SETUP.md).
+- Tinker and Gemini model IDs are separate server environment settings. `TINKER_COACH_MODEL` (full Inkling) handles conversation/programming; `TINKER_TRAINER_MODEL` is the specialized remaining-list editor. Workout inference supports an evaluated `tinker://.../sampler_weights/...` checkpoint through the Anthropic-compatible API. Generic introduction drafts and avatar previews use your separate Gemini Developer API key; see [AI setup](../docs/AI_SETUP.md).
 - Persist only Google Place IDs. Names, addresses and locations are fetched live and displayed with Google Maps and returned provider attribution. The room drawing is LiftRank's own design.
 
 ## Validation

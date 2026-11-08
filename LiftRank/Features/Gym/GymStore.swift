@@ -71,6 +71,15 @@ final class GymStore: ObservableObject {
         (equipment[station]?.members ?? [:]).filter { id, session in members.contains { $0.uid == id && $0.sessionId == session && $0.isFresh() } }.keys.sorted()
     }
     func ownsStation(_ station: String) -> Bool { occupants(station).contains(roomIdentity) }
+    /// Review sheets use the same station restriction as the scene itself.
+    var requiresEquipmentForSets: Bool { room != nil && room?.isPlainSpace != true && !offlineSample }
+    func validateExerciseAtStation(_ key: String) throws {
+        guard requiresEquipmentForSets else { return }
+        guard ownsStation(station) else { throw GymFailure.message(L("Tap equipment in the gym to choose a station first.")) }
+        guard GymEquipment.exerciseKeys(at: station).contains(key) else {
+            throw GymFailure.message(L("This exercise cannot be performed at the selected equipment. Choose the correct station in the gym."))
+        }
+    }
     func recordSetCompletion(_ date: Date) {
         let time = date.timeIntervalSince1970 * 1000
         guard time > setCompletedAt else { return }

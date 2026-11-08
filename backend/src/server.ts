@@ -1,8 +1,7 @@
 import { spaceRoutes } from './spaceRoutes.js';
 import { accessState, admit, joinSpace, reconcileSpaces } from './spaces.js';
 import { registeredGyms } from './registeredGyms.js';
-import { validatedTrainerReply } from './trainer.js';
-import { trainerPlanReply } from './providers.js';
+import { coachReply } from './coach.js';
 import { equipmentAction, cleanEquipment } from './equipment.js';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
@@ -263,11 +262,10 @@ app.post('/trainer', async (req, res) => {
   const input = messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', text: text(m.text, 3000) }));
   // Workout context is supplied only on an explicit message send and never saved on the server.
   const context = { catalog: entries, localDate: text(req.body.localDate, 10), activeWorkout: req.body.activeWorkout ?? null,
-    schedule: req.body.schedule ?? [], goals: typeof req.body.goals === 'string' ? req.body.goals.slice(0, 500) : '' };
+    schedule: req.body.schedule ?? [], language: text(req.body.language ?? 'en', 40), goals: typeof req.body.goals === 'string' ? req.body.goals.slice(0, 500) : '' };
   if (JSON.stringify(context).length > 60000) throw new APIError(400, 'Training context is too large.');
-  res.json(await validatedTrainerReply(new Set(entries.map((e: any) => e.key)), repair => trainerPlanReply(input, context, repair),
-    () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300)),
-    { allowsTodoEditing: context.activeWorkout != null && context.activeWorkout.allowsTodoEditing !== false }));
+  res.json(await coachReply(input, context,
+    () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300))));
 });
 app.post('/trainer/greeting', async (req, res) => {
   const context = {
@@ -275,10 +273,10 @@ app.post('/trainer/greeting', async (req, res) => {
     workout: text(req.body.status, 300), requestedPlan: text(req.body.plan, 300),
   };
   await quota(res.locals.uid, 'greeting', 20, Number(process.env.GREETING_GLOBAL_LIMIT ?? 200));
-  const message = [{ role: 'user', text: 'Welcome me back in one or two short sentences in my supplied language. Use the supplied workout status and requested plan, if any. Offer a useful training encouragement. Do not invent a schedule or claim to change anything. Return keep, todos:null and schedule:[].' }];
-  const result = await validatedTrainerReply(new Set(), repair => trainerPlanReply(message,
-    { ...context, catalog: [], activeWorkout: { allowsTodoEditing: false, status: context.workout }, schedule: [] }, repair),
-    () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300)), { allowsTodoEditing: false });
+  const message = [{ role: 'user', text: 'Welcome me back in one or two short sentences in my supplied language. Use the supplied workout status and requested plan, if any. Offer a useful training encouragement. Do not invent a schedule or claim to change anything.' }];
+  const result = await coachReply(message,
+    { ...context, catalog: [], activeWorkout: null, schedule: [] },
+    () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300)), true);
   res.json({ reply: result.reply.slice(0, 600) });
 });
 app.post('/companion', async (req, res) => {

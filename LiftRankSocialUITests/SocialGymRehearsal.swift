@@ -112,15 +112,16 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["gymChatDone"].tap()
         if app.buttons["gymMemberDone"].exists { app.buttons["gymMemberDone"].tap() }
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10))
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons[station].tap()
+        tapEquipment(station.lowercased())
         if app.buttons["Close"].waitForExistence(timeout: 10) { app.buttons["Close"].tap() }
     }
+    private func tapEquipment(_ station: String) {
+        let machine = app.buttons["gymEquipment.\(station)"]
+        for _ in 0..<3 where !machine.isHittable { app.swipeDown() }
+        XCTAssertTrue(machine.waitForExistence(timeout: 10)); machine.tap()
+    }
     private func requestBenchPartner() {
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons["Bench"].tap()
+        tapEquipment("bench")
         let request = app.buttons["Ask to work in"]
         XCTAssertTrue(request.waitForExistence(timeout: 10)); request.tap()
         waitForStation("Bench", member: "QA Taylor")
@@ -397,9 +398,7 @@ final class SocialGymRehearsal: XCTestCase {
     }
     func testGymCardioTimer() {
         enter(as: "QA Jordan")
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons["Cardio"].tap()
+        tapEquipment("cardio")
         XCTAssertTrue(app.buttons["startCardioTimer"].waitForExistence(timeout: 10))
         app.buttons["startCardioTimer"].tap()
         if app.buttons["Finish workout & start cardio"].waitForExistence(timeout: 2) { app.buttons["Finish workout & start cardio"].tap() }

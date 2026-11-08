@@ -242,6 +242,17 @@ final class GymScene: SKScene {
         let start = GymLayout.Cell(x: Int(localPosition.x.rounded()), y: Int(localPosition.y.rounded()))
         route = GymLayout.path(from: start, to: cell, plain: plainSpace)
     }
+    /// Equipment accessibility targets follow the same camera as the rendered machines.
+    func equipmentFrames() -> [(String, CGRect)] {
+        guard !plainSpace, view != nil else { return [] }
+        return GymLayout.stations.compactMap { station in
+            guard let node = world.childNode(withName: "station:\(station)"), !node.isHidden else { return nil }
+            let frame = node.calculateAccumulatedFrame()
+            let a = convertPoint(toView: world.convert(CGPoint(x: frame.minX, y: frame.minY), to: self))
+            let b = convertPoint(toView: world.convert(CGPoint(x: frame.maxX, y: frame.maxY), to: self))
+            return (station, CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(a.x - b.x), height: abs(a.y - b.y)))
+        }
+    }
     func select(at scenePoint: CGPoint) {
         let p = world.convert(scenePoint, from: self)
         for hit in world.nodes(at: p) {

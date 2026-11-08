@@ -91,7 +91,7 @@ struct TrainerConversationView: View {
                 let schedule = plans.filter { $0.dayKey >= today.dayKey && ($0.requestedByUser || $0.sourceRaw == "ai") }.prefix(28).map { p in
                     ["date": p.dayKey, "title": p.title, "items": p.items.map { ["exerciseKey": $0.exerciseKey, "sets": $0.sets, "repsLow": $0.repsLow, "repsHigh": $0.repsHigh, "restSeconds": $0.restSeconds] }] as [String: Any]
                 }
-                let reply: TrainerReply = try await api.post("trainer", body: ["messages": history, "localDate": today.dayKey,
+                let reply: TrainerReply = try await api.post("trainer", body: ["messages": history, "localDate": today.dayKey, "language": AppLanguage.current.locale.identifier,
                     "catalog": exercises.map { ["key": $0.key, "name": $0.nameEn, "cardio": $0.isCardio] }, "activeWorkout": current as Any? ?? NSNull(),
                     "schedule": schedule, "goals": profile.planGoal.name])
                 let result = try TrainerPlanEditor.apply(reply, workout: workout, expectedRevision: revision, exercises: exercises, plans: plans, context: context, today: today)

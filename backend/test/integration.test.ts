@@ -132,7 +132,7 @@ test('authenticated AI routes separate provider quotas and block social drafts b
     }
     if(host==='tinker.thinkingmachines.dev'){
       trainerCalls++;assert.equal(new Headers(init?.headers).get('x-api-key'),'integration-training-key');
-      return Response.json({content:[{type:'tool_use',name:'reply_to_lifter',input:{reply:'Hello lifter.',todoAction:'keep',todos:null,schedule:[]}}]});
+      return Response.json({content:[{type:'text',text:'Hello lifter.'}]});
     }
     return oldFetch(input,init);
   };
@@ -255,9 +255,8 @@ test('home greeting uses the workout model without changing workouts or generati
   globalThis.fetch = async (input, init) => {
     if (new URL(String(input)).hostname === 'tinker.thinkingmachines.dev') {
       calls++; const body = JSON.parse(String(init?.body)); assert.ok(body.system.includes('3 sets completed'));
-      return Response.json({ content: [{ type: 'tool_use', name: 'reply_to_lifter', input: {
-        reply: 'Three sets down. Take a steady rest before the next one.', todoAction: 'keep', todos: null, schedule: []
-      } }] });
+      assert.equal(body.model, 'thinkingmachines/Inkling'); assert.equal(body.tools, undefined);
+      return Response.json({ content: [{ type: 'text', text: 'Three sets down. Take a steady rest before the next one.' }] });
     }
     return oldFetch(input, init);
   };

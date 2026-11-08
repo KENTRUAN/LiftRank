@@ -2,6 +2,25 @@ import XCTest
 @testable import LiftRank
 
 final class GymTests: XCTestCase {
+    @MainActor func testEquipmentRulesApplyToSceneAndReviewButNotOpenSpaces() throws {
+        let store = GymStore()
+        store.uid = "lifter"; store.room = .demo; store.station = "bench"
+        store.members = [RoomPresence(uid: "lifter", sessionId: "session", x: 4, y: 3, station: "bench", status: "Ready", updatedAt: Date().timeIntervalSince1970 * 1000)]
+        store.equipment["bench"] = try JSONDecoder().decode(GymEquipmentOccupancy.self, from: Data(#"{"ownerID":"lifter","members":{"lifter":"session"}}"#.utf8))
+        XCTAssertTrue(store.requiresEquipmentForSets)
+        XCTAssertNoThrow(try store.validateExerciseAtStation("bench_press"))
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"))
+        XCTAssertThrowsError(try store.validateExerciseAtStation("squat"))
+        store.station = "rack"
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"), "Must reserve the rack by tapping it first")
+        store.equipment["rack"] = store.equipment["bench"]
+        XCTAssertNoThrow(try store.validateExerciseAtStation("pullup"))
+        store.members = []
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"), "Expired/disconnected ownership cannot start a new set")
+        store.startPrivateSpace(name: "Solo", gsr: 0, cosmetics: [])
+        XCTAssertFalse(store.requiresEquipmentForSets)
+        XCTAssertNoThrow(try store.validateExerciseAtStation("pullup"))
+    }
     func testPlainSpaceHasNoInvisibleEquipmentObstacles() {
         let start = GymLayout.Cell(x: 2, y: 7), target = GymLayout.Cell(x: 4, y: 2)
         XCTAssertTrue(GymLayout.path(from: start, to: target).isEmpty)
