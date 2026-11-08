@@ -38,85 +38,7 @@ struct GymRoomView: View {
     private var active: Workout? { session.flatMap { $0.isPublished ? nil : $0 } }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                HStack {
-                    Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
-                    Text(gym.isLocal == true ? "PRIVATE · ONLY ON THIS DEVICE" : store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
-                        .font(.caption.bold())
-                    Spacer()
-                    Text(plain ? (gym.visibility == "public" ? "Public space" : "Private space") : "Public gym").font(.caption2).foregroundStyle(.secondary)
-                }.padding(12).background(.teal.opacity(0.08))
-                GymSceneView(scene: scene).frame(height: expanded ? 560 : 360)
-                    .accessibilityIdentifier("walkableGymScene")
-                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.")
-                HStack(spacing: 18) {
-                    Text("Pinch to zoom · Two fingers to move").font(.caption2).foregroundStyle(.secondary)
-                    Spacer(minLength: 0)
-                    Button { scene.zoom(by: 0.8) } label: { Image(systemName: "minus.magnifyingglass") }.accessibilityLabel("Zoom out")
-                    Button { scene.zoom(by: 1.25) } label: { Image(systemName: "plus.magnifyingglass") }.accessibilityLabel("Zoom in")
-                    Button { scene.resetCamera() } label: { Image(systemName: "viewfinder") }.accessibilityLabel("Reset gym view")
-                    Button { expanded.toggle() } label: { Image(systemName: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") }
-                        .accessibilityLabel(expanded ? "Shrink gym" : "Enlarge gym")
-                }.padding(12).background(.background)
-                VStack(spacing: 12) {
-                    workoutCard
-                    if plain {
-                        if let active, active.isOutdoor { OutdoorWorkoutMap(workout: active) }
-                    }
-                    if let active, !store.offlineSample { TrainingHealthStatusView(workout: active) }
-                    if let lastLogged { Label(lastLogged, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.teal).accessibilityIdentifier("gymSetSaved") }
-                    HStack {
-                        Button { sheet = .trainer } label: { Label("AI trainer", systemImage: "sparkles") }
-                        Spacer()
-                        Button { sheet = .roomChat } label: { Label("Room chat", systemImage: "bubble.left.and.bubble.right") }.disabled(!online)
-                    }.buttonStyle(.bordered)
-                    memberList
-                    if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange).accessibilityIdentifier("gymError") }
-                }.padding(14)
-            }
-        }
-        .accessibilityIdentifier("gymRoomScroll")
-        .background(Color(.systemGroupedBackground))
-        .navigationTitle(gym.name).navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Leave") { store.suspend() } }
-            if plain { ToolbarItem(placement: .primaryAction) { Button { sheet = .spaceSettings } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("Workout space settings") } }
-            ToolbarItem(placement: .primaryAction) {
-                Button { sheet = .inbox } label: {
-                    Label(store.inboxCount > 0 ? "Inbox (\(store.inboxCount))" : "Inbox", systemImage: "tray.fill")
-                }.disabled(store.offlineSample).accessibilityIdentifier("gymInbox")
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) { socialBanner }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !store.offlineSample {
-                VStack(spacing: 10) {
-                    if !plain {
-                        HStack {
-                            Label(store.station == "lounge" ? L("Tap equipment in the gym to choose a station") : GymEquipment.title(store.station), systemImage: "dumbbell.fill")
-                                .font(.caption).accessibilityIdentifier("gymCurrentStation")
-                            Spacer()
-                            if store.station != "lounge" {
-                                Button("Release equipment") { releaseEquipment() }.font(.caption.bold())
-                                    .disabled(store.busy || active?.hasPendingSet == true || active?.cardioTimerStartedAt != nil).accessibilityIdentifier("releaseEquipment")
-                            }
-                        }
-                    }
-                    if let active {
-                        if active.activity != .strength {
-                            CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded"); if plain { store.suspend() } }
-                        } else {
-                            WorkoutSetControl(workout: active, profile: profile, onStart: {
-                                if plain { sheet = .equipment("all") }
-                                else if store.ownsStation(store.station) { sheet = .equipment(store.station) }
-                                else { store.error = L("Tap equipment in the gym to choose a station first.") }
-                            }, onLog: { sheet = .equipment(plain ? "all" : store.station) }, onCardio: plain ? { sheet = .cardioStart } : nil)
-                        }
-                    }
-                }.padding(.horizontal, 16).padding(.vertical, 10).background(.regularMaterial)
-            }
-        }
+        roomPresentation
         .onAppear { scene.configure(plain: plain); wireScene(); syncScene() }
         .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
         .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
@@ -152,6 +74,107 @@ struct GymRoomView: View {
             sheetContent(route).presentationDetents(detents(for: route)).presentationDragIndicator(.visible)
         }
     }
+    private var roomPresentation: some View {
+        roomContent
+            .accessibilityIdentifier("gymRoomScroll")
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(gym.name).navigationBarTitleDisplayMode(.inline)
+            .toolbar { roomToolbar }
+            .safeAreaInset(edge: .top, spacing: 0) { socialBanner }
+            .safeAreaInset(edge: .bottom, spacing: 0) { workoutControls }
+    }
+    private var roomContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                roomStatus
+                GymSceneView(scene: scene).frame(height: expanded ? 560 : 360)
+                    .accessibilityIdentifier("walkableGymScene")
+                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.")
+                sceneControls
+                sessionDetails
+            }
+        }
+    }
+    private var roomStatus: some View {
+        HStack {
+            Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
+            Text(gym.isLocal == true ? "PRIVATE · ONLY ON THIS DEVICE" : store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
+                .font(.caption.bold())
+            Spacer()
+            Text(plain ? (gym.visibility == "public" ? "Public space" : "Private space") : "Public gym").font(.caption2).foregroundStyle(.secondary)
+        }.padding(12).background(.teal.opacity(0.08))
+    }
+    private var sceneControls: some View {
+        HStack(spacing: 18) {
+            Text("Pinch to zoom · Two fingers to move").font(.caption2).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+            Button { scene.zoom(by: 0.8) } label: { Image(systemName: "minus.magnifyingglass") }.accessibilityLabel("Zoom out")
+            Button { scene.zoom(by: 1.25) } label: { Image(systemName: "plus.magnifyingglass") }.accessibilityLabel("Zoom in")
+            Button { scene.resetCamera() } label: { Image(systemName: "viewfinder") }.accessibilityLabel("Reset gym view")
+            Button { expanded.toggle() } label: { Image(systemName: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") }
+                .accessibilityLabel(expanded ? "Shrink gym" : "Enlarge gym")
+        }.padding(12).background(.background)
+    }
+    private var sessionDetails: some View {
+        VStack(spacing: 12) {
+            workoutCard
+            if plain {
+                if let active, active.isOutdoor { OutdoorWorkoutMap(workout: active) }
+            }
+            if let active, !store.offlineSample { TrainingHealthStatusView(workout: active) }
+            if let lastLogged { Label(lastLogged, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.teal).accessibilityIdentifier("gymSetSaved") }
+            HStack {
+                Button { sheet = .trainer } label: { Label("AI trainer", systemImage: "sparkles") }
+                Spacer()
+                Button { sheet = .roomChat } label: { Label("Room chat", systemImage: "bubble.left.and.bubble.right") }.disabled(!online)
+            }.buttonStyle(.bordered)
+            memberList
+            if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange).accessibilityIdentifier("gymError") }
+        }.padding(14)
+    }
+    @ToolbarContentBuilder private var roomToolbar: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) { Button("Leave") { store.suspend() } }
+        if plain { ToolbarItem(placement: .primaryAction) { Button { sheet = .spaceSettings } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("Workout space settings") } }
+        ToolbarItem(placement: .primaryAction) {
+            Button { sheet = .inbox } label: {
+                Label(store.inboxCount > 0 ? "Inbox (\(store.inboxCount))" : "Inbox", systemImage: "tray.fill")
+            }.disabled(store.offlineSample).accessibilityIdentifier("gymInbox")
+        }
+    }
+    @ViewBuilder private var workoutControls: some View {
+        if !store.offlineSample {
+            VStack(spacing: 10) {
+                if !plain { equipmentControls }
+                if let active { activeWorkoutControls(active) }
+            }.padding(.horizontal, 16).padding(.vertical, 10).background(.regularMaterial)
+        }
+    }
+    private var equipmentControls: some View {
+        HStack {
+            Label(store.station == "lounge" ? L("Tap equipment in the gym to choose a station") : GymEquipment.title(store.station), systemImage: "dumbbell.fill")
+                .font(.caption).accessibilityIdentifier("gymCurrentStation")
+            Spacer()
+            if store.station != "lounge" {
+                Button("Release equipment") { releaseEquipment() }.font(.caption.bold())
+                    .disabled(store.busy || active?.hasPendingSet == true || active?.cardioTimerStartedAt != nil).accessibilityIdentifier("releaseEquipment")
+            }
+        }
+    }
+    @ViewBuilder private func activeWorkoutControls(_ workout: Workout) -> some View {
+        if workout.activity != .strength {
+            CardioTimerControls(workout: workout, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded"); if plain { store.suspend() } }
+        } else {
+            WorkoutSetControl(workout: workout, profile: profile, onStart: startSet,
+                              onLog: { sheet = .equipment(plain ? "all" : store.station) },
+                              onCardio: plain ? openCardio : nil)
+        }
+    }
+    private func startSet() {
+        if plain { sheet = .equipment("all") }
+        else if store.ownsStation(store.station) { sheet = .equipment(store.station) }
+        else { store.error = L("Tap equipment in the gym to choose a station first.") }
+    }
+    private func openCardio() { sheet = .cardioStart }
     private func detents(for route: GymRoomSheet) -> Set<PresentationDetent> {
         switch route {
         case .chat, .inbox, .trainer, .roomChat: [.medium, .large]
