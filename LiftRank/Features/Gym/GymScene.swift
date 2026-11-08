@@ -108,12 +108,17 @@ final class GymScene: SKScene {
         let body = SKShapeNode(rectOf: CGSize(width: 23, height: 23), cornerRadius: 7); body.fillColor = color; body.strokeColor = .clear; body.position.y = 23; node.addChild(body)
         let emblem = label(profile.visibility == "anonymous" ? "?" : profile.avatar.preset == "star" ? "★" : profile.avatar.preset == "leaf" ? "✦" : "ϟ", size: 14, color: .white); emblem.position.y = 24; node.addChild(emblem)
         let head = SKShapeNode(circleOfRadius: 13); head.name = "head"; head.position.y = 43; head.fillColor = profile.visibility == "anonymous" ? .lightGray : UIColor(red: 0.94, green: 0.74, blue: 0.56, alpha: 1); head.strokeColor = UIColor(RankTier.tier(for: profile.gsr).color); head.lineWidth = 2.5; node.addChild(head)
+        let crop = SKCropNode()
+        let mask = SKShapeNode(circleOfRadius: 13 - head.lineWidth / 2)
+        mask.fillColor = .white
+        mask.strokeColor = .clear
+        crop.maskNode = mask
+        head.addChild(crop)
         if let portrait, profile.visibility != "anonymous" {
-            let crop = SKCropNode(); let mask = SKShapeNode(circleOfRadius: 12); mask.fillColor = .white; mask.strokeColor = .clear; crop.maskNode = mask
-            let sprite = SKSpriteNode(texture: SKTexture(image: portrait)); sprite.size = CGSize(width: 26, height: 26); crop.addChild(sprite); head.addChild(crop)
+            let sprite = SKSpriteNode(texture: SKTexture(image: portrait)); sprite.size = CGSize(width: 26, height: 26); crop.addChild(sprite)
         } else {
-            for x in [-4.0, 4.0] { let eye = SKShapeNode(circleOfRadius: 1.5); eye.fillColor = .black; eye.strokeColor = .clear; eye.position = CGPoint(x: x, y: 1); head.addChild(eye) }
-            let hair = SKShapeNode(ellipseOf: CGSize(width: 24, height: 9)); hair.fillColor = .brown; hair.strokeColor = .clear; hair.position.y = 9; head.addChild(hair)
+            for x in [-4.0, 4.0] { let eye = SKShapeNode(circleOfRadius: 1.5); eye.fillColor = .black; eye.strokeColor = .clear; eye.position = CGPoint(x: x, y: 1); crop.addChild(eye) }
+            let hair = SKShapeNode(ellipseOf: CGSize(width: 24, height: 9)); hair.fillColor = .brown; hair.strokeColor = .clear; hair.position.y = 9; crop.addChild(hair)
         }
         let halo = SKShapeNode(ellipseOf: CGSize(width: 48, height: 22))
         halo.name = "activityHalo"; halo.strokeColor = .systemMint; halo.fillColor = .clear; halo.lineWidth = 3.5; halo.position.y = 1; node.addChild(halo)

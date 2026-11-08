@@ -11,10 +11,15 @@ struct RanksView: View {
         let bests = RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)
         let muscleScores = RankAggregator.muscleScores(bests: bests)
         let overall = RankAggregator.overall(muscleScores: muscleScores)
-        let history = RankAggregator.muscleHistory(workouts: workouts, exercises: exercises, sex: profile.sex)
+        let history = DemoData.showsMascotDemo
+            ? DemoData.mascotHistory
+            : RankAggregator.muscleHistory(workouts: workouts, exercises: exercises, sex: profile.sex)
+        let trainingAvatar = TrainingAvatarCard(profile: profile, overall: overall, history: history)
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    if DemoData.showsMascotDemo { trainingAvatar }
+
                     VStack(spacing: 12) {
                         HStack(spacing: 20) {
                             ScoreGauge(score: overall, size: 130)
@@ -28,7 +33,7 @@ struct RanksView: View {
                         LPBar(score: overall)
                     }.card()
 
-                    TrainingAvatarCard(profile: profile, overall: overall, history: history)
+                    if !DemoData.showsMascotDemo { trainingAvatar }
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -355,7 +360,8 @@ private struct TrainingAvatarCard: View {
     let overall: Int
     let history: [MuscleRankSnapshot]
 
-    @State private var position = 1.0
+    @AppStorage("trainingAvatar.mascotStyle") private var mascotStyle: RankMascotStyle = .nailong
+    @State private var position = DemoData.showsMascotDemo ? 0.0 : 1.0
 
     private var dates: [Date] { history.map(\.date) }
 
@@ -365,7 +371,13 @@ private struct TrainingAvatarCard: View {
         let tier = RankTier.tier(for: frame.score)
         VStack(alignment: .leading, spacing: 12) {
             heading
-            RankMascotView(tier: tier, spec: profile.avatar, allowsAccessoryPlacement: true)
+            Picker("化身系列", selection: $mascotStyle) {
+                ForEach(RankMascotStyle.allCases, id: \.self) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .pickerStyle(.segmented)
+            RankMascotView(tier: tier, spec: profile.avatar, style: mascotStyle, allowsAccessoryPlacement: true)
                 .frame(height: 230)
                 .frame(maxWidth: .infinity)
                 .background(Color(.tertiarySystemGroupedBackground).gradient)
@@ -393,6 +405,7 @@ private struct TrainingAvatarCard: View {
                     }
                     .accessibilityLabel("训练日期")
                     .accessibilityValue(frame.caption)
+                    .accessibilityIdentifier("rankMascotTimeline")
                     .accessibilityAdjustableAction { direction in
                         switch direction {
                         case .increment: position = points.first { $0 > position + 0.00001 } ?? 1
@@ -429,13 +442,13 @@ private struct TrainingAvatarCard: View {
             }
             HStack(spacing: 12) {
                 NavigationLink {
-                    ShopView(profile: profile, gsr: overall, previewsRankMascot: true)
+                    ShopView(profile: profile, gsr: overall, mascotStyle: mascotStyle)
                 } label: {
                     Label("商店", systemImage: "cart.fill")
                 }
                 NavigationLink {
                     ShopView(profile: profile, gsr: overall, slots: [.accessory, .backdrop],
-                             title: L("形象工坊"), previewsRankMascot: true)
+                             title: L("形象工坊"), mascotStyle: mascotStyle)
                 } label: {
                     Label("修改形象", systemImage: "wand.and.stars")
                 }
@@ -444,12 +457,20 @@ private struct TrainingAvatarCard: View {
             .buttonStyle(.bordered)
         }
         .card()
-        .onChange(of: dates) { _, _ in position = 1 }
+        .onChange(of: dates) { _, _ in position = DemoData.showsMascotDemo ? 0 : 1 }
     }
 
     private var heading: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text("训练化身").font(.headline)
+            HStack {
+                Text("训练化身").font(.headline)
+                if DemoData.showsMascotDemo {
+                    Text("全段位演示")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.15), in: Capsule())
+                }
+            }
             Text("拖动回看训练成长").font(.caption).foregroundStyle(.secondary)
         }
     }

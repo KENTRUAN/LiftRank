@@ -14,6 +14,25 @@ enum DemoData {
     static var initialTab: Int { Int(ProcessInfo.processInfo.environment["LIFTRANK_TAB"] ?? "") ?? 0 }
     static var autoOpenActive: Bool { ProcessInfo.processInfo.environment["LIFTRANK_ACTIVE"] == "1" }
 
+    static var showsMascotDemo: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["LIFTRANK_MASCOT_DEMO"] == "1"
+        #else
+        false
+        #endif
+    }
+
+    static var mascotHistory: [MuscleRankSnapshot] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return RankTier.allCases.compactMap { tier in
+            let daysAgo = RankTier.allCases.count - 1 - tier.rawValue
+            guard let date = calendar.date(byAdding: .day, value: -daysAgo, to: today) else { return nil }
+            let score = tier == .wood ? 150 : tier.minScore + 50
+            return MuscleRankSnapshot(date: date, scores: [.chest: score])
+        }
+    }
+
     @MainActor
     static func seedIfNeeded(context: ModelContext, profile: UserProfile) {
         guard isEnabled else { return }

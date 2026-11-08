@@ -1,12 +1,124 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    "旋转配饰": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rotate accessory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旋转配饰"
+          }
+        }
+      }
+    },
+    "调整配饰大小": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resize accessory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调整配饰大小"
+          }
+        }
+      }
+    },
+    "全段位演示": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All ranks demo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全段位演示"
+          }
+        }
+      }
+    },
+    "%@ 豆包": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Doubao"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 豆包"
+          }
+        }
+      }
+    },
+    "奶龙": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nailong"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "奶龙"
+          }
+        }
+      }
+    },
+    "豆包": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doubao"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "豆包"
+          }
+        }
+      }
+    },
+    "化身系列": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avatar style"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "化身系列"
+          }
+        }
+      }
+    },
     "%@ 奶龙": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ rank mascot"
+            "value": "%@ Nailong"
           }
         },
         "zh-Hans": {
@@ -17,34 +129,34 @@
         }
       }
     },
-    "装备后会显示在段位奶龙上。": {
+    "装备后会显示在当前训练化身上。": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Equipped items appear on your rank mascot."
+            "value": "Equipped items appear on your selected avatar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "装备后会显示在段位奶龙上。"
+            "value": "装备后会显示在当前训练化身上。"
           }
         }
       }
     },
-    "重置饰品位置": {
+    "重置配饰": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reset accessory position"
+            "value": "Reset accessory"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重置饰品位置"
+            "value": "重置配饰"
           }
         }
       }
