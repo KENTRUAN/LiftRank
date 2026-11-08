@@ -70,25 +70,59 @@ struct ShopView: View {
         .toast($toast)
     }
 
-    @ViewBuilder
     private var header: some View {
-        HStack(spacing: 14) {
-            if let style = mascotPreviewStyle(for: slot) {
+        let style = mascotPreviewStyle(for: slot)
+        let previewHeight: CGFloat = style == nil ? 64 : 126
+        return HStack(alignment: .top, spacing: 12) {
+            if let style {
                 RankMascotView(tier: tier, spec: profile.avatar, style: style)
-                    .frame(width: 110, height: 130)
+                    .frame(width: 92, height: previewHeight)
+                    .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
             }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
-                HStack(spacing: 6) { TierBadge(tier: tier, compact: true); Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary) }
-                HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
-                if mascotPreviewStyle(for: slot) != nil {
-                    Text("装备后会显示在当前训练化身上。").font(.caption2).foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 0) {
+                TitleTag(cosmetic: profile.equipped(.title))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 6)
+                HStack(spacing: 6) {
+                    Text(profile.name).font(.headline).lineLimit(1)
+                    shopRank
+                }
+                Spacer(minLength: 6)
+                shopBalance
+                if style != nil {
+                    Spacer(minLength: 6)
+                    Text("买一次，奶龙和豆包都能用。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
-            Spacer()
-        }.card()
+            .frame(maxWidth: .infinity, minHeight: previewHeight, alignment: .topLeading)
+        }
+        .card()
+    }
+
+    private var shopRank: some View {
+        HStack(spacing: 4) {
+            Text("GSR \(gsr)").font(.caption.bold()).monospacedDigit()
+            TierBadge(tier: tier, compact: true)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var shopBalance: some View {
+        HStack(spacing: 4) {
+            Text("余额").font(.caption2).foregroundStyle(.secondary)
+            EggAmount(amount: profile.eggs).font(.caption.bold())
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("余额")
+        .accessibilityValue(String(profile.eggs))
+        .accessibilityIdentifier("shopBalance")
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func cosmeticCell(_ item: Cosmetic) -> some View {
@@ -136,21 +170,24 @@ struct ShopView: View {
             }
             VStack(spacing: 2) {
                 Text(item.name).font(.subheadline.bold())
-                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail)
+                Text(item.requiredTier.map { L("需 %@ 段位", $0.displayName) } ?? item.detail)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            if equipped {
-                Button("已装备") { if item.price > 0 { profile.unequip(item.slot); try? context.save() } }
-                    .buttonStyle(.bordered).controlSize(.small).tint(.green).disabled(item.price == 0)
-            } else if owned {
-                Button("装备") { profile.equip(item); try? context.save() }.buttonStyle(.borderedProminent).controlSize(.small).disabled(locked)
-            } else {
-                Button { buy(item) } label: { EggAmount(amount: item.price) }
-                    .buttonStyle(.bordered).controlSize(.small)
-                    .disabled(locked || profile.eggs < item.price)
+            Group {
+                if equipped {
+                    Button("已装备") { if item.price > 0 { profile.unequip(item.slot); try? context.save() } }
+                        .buttonStyle(.bordered).controlSize(.small).tint(.green).disabled(item.price == 0)
+                } else if owned {
+                    Button("装备") { profile.equip(item); try? context.save() }.buttonStyle(.borderedProminent).controlSize(.small).disabled(locked)
+                } else {
+                    Button { buy(item) } label: { EggAmount(amount: item.price) }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        .disabled(locked || profile.eggs < item.price)
+                }
             }
+            .accessibilityIdentifier("shopItem.\(item.id)")
         }
         .padding(10)
         .frame(maxWidth: .infinity)
@@ -159,14 +196,27 @@ struct ShopView: View {
     }
 
     private func buy(_ item: Cosmetic) {
-        if let t = item.requiredTier, tier < t { toast = L("需要达到 %@ 段位", t.name); return }
+        guard !profile.owns(item) else { return }
+        if let t = item.requiredTier, tier < t { toast = L("需要达到 %@ 段位", t.displayName); return }
         guard profile.eggs >= item.price else { toast = L("Eggs 不足"); return }
+        let previousBalance = profile.eggs
+        let previousOwned = profile.ownedCosmetics
+        let previousEquipped = profile.equippedCosmetics
         profile.eggs -= item.price
         profile.ownedCosmetics.append(item.id)
         profile.equip(item)
-        context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -item.price, note: L("购买外观：%@", item.name)))
-        try? context.save()
-        toast = L("已购买并装备「%@」", item.name)
+        let event = RewardEvent(kind: .shop, xp: 0, eggs: -item.price, note: L("购买外观：%@", item.name))
+        context.insert(event)
+        do {
+            try context.save()
+            toast = L("已购买并装备「%@」", item.name)
+        } catch {
+            context.delete(event)
+            profile.eggs = previousBalance
+            profile.ownedCosmetics = previousOwned
+            profile.equippedCosmetics = previousEquipped
+            toast = L("保存失败，请重试。")
+        }
     }
 
     private func itemRow(_ name: String, price: Int, desc: String, owned: Int, buy: @escaping () -> Void) -> some View {

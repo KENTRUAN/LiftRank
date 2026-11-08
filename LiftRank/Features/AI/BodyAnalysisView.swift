@@ -6,66 +6,67 @@ enum FitnessDataSummary {
     static func build(profile: UserProfile, workouts: [Workout], exercises: [Exercise], cardio: [CardioSession],
                       measurements: [BodyMeasurement], foods: [FoodEntry], days: Int = 28) -> String {
         let since = Date().adding(days: -days)
+        let separator = AppLanguage.current.isEnglish ? ", " : "，"
         var out: [String] = []
-        out.append("## 用户")
-        out.append("\(profile.sex.label)，\(profile.age) 岁，身高 \(profile.heightCm.fmt(0)) cm，体重 \(profile.bodyweightKg.fmt(1)) kg，活动水平 \(profile.activityLevel.name)，饮食目标 \(profile.nutritionGoal.name)。")
+        out.append(L("## 用户"))
+        out.append(L("%@，%lld 岁，身高 %@ cm，体重 %@ kg，活动水平 %@，饮食目标 %@。", profile.sex.label, profile.age, profile.heightCm.fmt(0), profile.bodyweightKg.fmt(1), profile.activityLevel.name, profile.nutritionGoal.name))
 
         let bests = RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)
         let muscles = RankAggregator.muscleScores(bests: bests)
         let gsr = RankAggregator.overall(muscleScores: muscles)
-        out.append("## 力量段位")
-        out.append("总体评分 GSR \(gsr)，当前已经是 \(RankTier.tier(for: gsr).name) 段位。评分 1–1000，按 e1RM/体重与性别曲线换算。")
-        let muscleLine = MuscleGroup.rankable.compactMap { g in muscles[g].map { "\(g.name) \($0)" } }.joined(separator: "，")
-        if !muscleLine.isEmpty { out.append("肌群评分：\(muscleLine)。") }
-        if !bests.isEmpty { out.append("动作最佳：" + bests.prefix(10).map { "\($0.name) e1RM \($0.bestE1RM.fmt(1)) kg（\($0.bestScore)）" }.joined(separator: "，")) }
+        out.append(L("## 力量段位"))
+        out.append(L("总体评分 GSR %lld，当前为 %@ 段位。评分 1–1000，按 e1RM/体重与性别曲线换算。", gsr, RankTier.tier(for: gsr).displayName))
+        let muscleLine = MuscleGroup.rankable.compactMap { g in muscles[g].map { "\(g.name) \($0)" } }.joined(separator: separator)
+        if !muscleLine.isEmpty { out.append(L("肌群评分：%@。", muscleLine)) }
+        if !bests.isEmpty { out.append(L("动作最佳：%@", bests.prefix(10).map { "\(ExerciseNames.display($0.name)) e1RM \($0.bestE1RM.fmt(1)) kg (\($0.bestScore))" }.joined(separator: separator))) }
 
-        let recent = workouts.filter { $0.isPublished && ($0.publishedAt ?? $0.startedAt) >= since }
-        out.append("## 最近 \(days) 天力量训练")
-        out.append("共 \(recent.count) 次，总训练量 \(recent.reduce(0) { $0 + $1.totalVolumeKg }.fmt(0)) kg，\(recent.reduce(0) { $0 + $1.completedSets.count }) 组。")
+        let recent = workouts.filter { $0.isPublished && $0.activity == .strength && ($0.publishedAt ?? $0.startedAt) >= since }
+        out.append(L("## 最近 %lld 天力量训练", days))
+        out.append(L("共 %lld 次，总训练量 %@ kg，%lld 组。", recent.count, recent.reduce(0) { $0 + $1.totalVolumeKg }.fmt(0), recent.reduce(0) { $0 + $1.completedSets.count }))
         if let earliest = recent.map({ $0.publishedAt ?? $0.startedAt }).min(),
            let latest = recent.map({ $0.publishedAt ?? $0.startedAt }).max() {
-            out.append("本窗口实际训练记录日期范围：\(earliest.shortString)–\(latest.shortString)。")
+            out.append(L("本窗口实际训练记录日期范围：%@–%@。", earliest.shortString, latest.shortString))
         }
         var setsByGroup: [MuscleGroup: Int] = [:]
         for w in recent { for we in w.exercises { setsByGroup[we.muscleGroup, default: 0] += we.sets.filter { $0.isCompleted }.count } }
-        if !setsByGroup.isEmpty { out.append("各肌群组数：" + setsByGroup.sorted { $0.value > $1.value }.map { "\($0.key.name) \($0.value)" }.joined(separator: "，")) }
+        if !setsByGroup.isEmpty { out.append(L("各肌群组数：%@", setsByGroup.sorted { $0.value > $1.value }.map { "\($0.key.name) \($0.value)" }.joined(separator: separator))) }
         for w in recent.sorted(by: { ($0.publishedAt ?? $0.startedAt) > ($1.publishedAt ?? $1.startedAt) }).prefix(6) {
             let items = w.sortedExercises.map { we in
                 let top = we.sets.filter { $0.isCompleted }.max { $0.weightKg * Double($0.reps) < $1.weightKg * Double($1.reps) }
-                return "\(we.exerciseName) \(we.sets.filter { $0.isCompleted }.count) 组" + (top.map { " 最重 \($0.weightKg.fmt(1))kg×\($0.reps)" } ?? "")
-            }.joined(separator: "；")
-            out.append("- \((w.publishedAt ?? w.startedAt).shortString) \(w.title)：\(items)")
+                return L("%@ · %lld 组", ExerciseNames.display(we.exerciseName), we.sets.filter { $0.isCompleted }.count) + (top.map { L(" · 最重 %@ kg × %lld", $0.weightKg.fmt(1), $0.reps) } ?? "")
+            }.joined(separator: AppLanguage.current.isEnglish ? "; " : "；")
+            out.append("- \((w.publishedAt ?? w.startedAt).shortString) \(WorkoutLabels.title(w.title)): \(items)")
         }
 
         let recentCardio = cardio.filter { $0.date >= since }
-        out.append("## 最近 \(days) 天有氧")
-        if recentCardio.isEmpty { out.append("无记录。") } else {
-            out.append("共 \(recentCardio.count) 次，\(recentCardio.reduce(0) { $0 + $1.durationMinutes }.fmt(0)) 分钟，\(recentCardio.reduce(0) { $0 + $1.distanceKm }.fmt(1)) km，消耗约 \(recentCardio.reduce(0) { $0 + $1.calories }.fmt(0)) kcal。")
-            let byType = Dictionary(grouping: recentCardio, by: { $0.type }).map { "\($0.key.name) \($0.value.count) 次" }.joined(separator: "，")
+        out.append(L("## 最近 %lld 天有氧", days))
+        if recentCardio.isEmpty { out.append(L("无记录。")) } else {
+            out.append(L("共 %lld 次，%@ 分钟，%@ km，消耗约 %@ kcal。", recentCardio.count, recentCardio.reduce(0) { $0 + $1.durationMinutes }.fmt(0), recentCardio.reduce(0) { $0 + $1.distanceKm }.fmt(1), recentCardio.reduce(0) { $0 + $1.calories }.fmt(0)))
+            let byType = Dictionary(grouping: recentCardio, by: { $0.type }).map { L("%@ · %lld 次", $0.key.name, $0.value.count) }.joined(separator: separator)
             out.append(byType)
         }
 
-        out.append("## 身体数据")
+        out.append(L("## 身体数据"))
         for metric in [BodyMetric.weight, .bodyFat, .waist] {
             let values = measurements.filter { $0.metric == metric && $0.date >= since }.sorted { $0.date < $1.date }
             if let first = values.first, let last = values.last, values.count >= 2 {
-                out.append("\(metric.name)：\(first.date.shortString) \(first.value.fmt(1)) \(metric.unit) → \(last.date.shortString) \(last.value.fmt(1)) \(metric.unit)（共 \(values.count) 次记录）。")
+                out.append(L("%@：%@ %@ %@ → %@ %@ %@（共 %lld 次记录）。", metric.name, first.date.shortString, first.value.fmt(1), metric.unit, last.date.shortString, last.value.fmt(1), metric.unit, values.count))
             }
         }
         var latest: [BodyMetric: BodyMeasurement] = [:]
         for m in measurements.sorted(by: { $0.date > $1.date }) where latest[m.metric] == nil && m.metric != .weight { latest[m.metric] = m }
-        if !latest.isEmpty { out.append("最新围度：" + latest.values.sorted { $0.metric.name < $1.metric.name }.map { "\($0.metric.name) \($0.value.fmt(1))\($0.metric.unit)" }.joined(separator: "，")) }
+        if !latest.isEmpty { out.append(L("最新身体测量：%@", latest.values.sorted { $0.metric.name < $1.metric.name }.map { "\($0.metric.name) \($0.value.fmt(1)) \($0.metric.unit)" }.joined(separator: separator))) }
 
         let recentFood = foods.filter { $0.date >= Date().adding(days: -7) }
-        out.append("## 最近 7 天饮食")
-        if recentFood.isEmpty { out.append("无记录。") } else {
+        out.append(L("## 最近 7 天饮食"))
+        if recentFood.isEmpty { out.append(L("无记录。")) } else {
             let daysLogged = Set(recentFood.map { $0.date.dayKey }).count
-            out.append("有餐食记录的天数：\(daysLogged)/7；共 \(recentFood.count) 条。没有全天记录完整性的标记，无法判断是否达到每日摄入目标。")
+            out.append(L("有餐食记录的天数：%lld/7；共 %lld 条。没有全天记录完整性的标记，无法判断是否达到每日摄入目标。", daysLogged, recentFood.count))
             if daysLogged <= 2 {
-                out.append("有效记录太少，不提供摄入估算；建议补记几天完整饮食后再评估。")
+                out.append(L("有效记录太少，暂不估算摄入。请记录几天完整饮食后再评估。"))
             } else {
                 for entry in recentFood.sorted(by: { $0.date > $1.date }).prefix(8) {
-                    out.append("- \(entry.date.shortString) \(entry.meal.name)：\(entry.name)（仅一条记录）。")
+                    out.append(L("- %@ %@：%@（仅一条记录）。", entry.date.shortString, entry.meal.name, entry.name))
                 }
             }
         }

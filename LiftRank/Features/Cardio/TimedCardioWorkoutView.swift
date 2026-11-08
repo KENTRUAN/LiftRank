@@ -99,7 +99,7 @@ struct CardioTimerControls: View {
                 Text(workout.duration.clockString).font(.title.monospacedDigit()).accessibilityIdentifier("cardioSavedDuration")
             } else if workout.cardioTimerStartedAt != nil {
                 HStack {
-                    Label(workout.cardioIsPaused ? "Paused" : workout.activity.name, systemImage: workout.cardioIsPaused ? "pause.circle" : "figure.run")
+                    Label(workout.cardioIsPaused ? L("Paused") : L(workout.activity.name), systemImage: workout.cardioIsPaused ? "pause.circle" : "figure.run")
                     Spacer()
                     CardioElapsedText(workout: workout).accessibilityIdentifier("cardioElapsed")
                 }.font(.title2.bold())
@@ -159,7 +159,7 @@ struct TimedCardioWorkoutView: View {
                     }
                 }.padding(20)
             }.background(Color(.systemGroupedBackground))
-            .navigationTitle(workout.activity.name)
+            .navigationTitle(L(workout.activity.name))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(workout.isPublished ? "Done" : "Minimize") { dismiss() } } }
             .task { if workout.cardioTimerStartedAt != nil { await TrainingHealthManager.shared.start(workout, context: workout.modelContext) } }
         }

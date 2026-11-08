@@ -29,6 +29,8 @@ enum RankTier: Int, CaseIterable, Identifiable, Comparable {
     var nameZh: String {
         ["木", "青铜", "白银", "黄金", "铂金", "钻石", "冠军", "泰坦", "奥林匹亚"][rawValue]
     }
+    var displayName: String { AppLanguage.current.isEnglish ? name : nameZh }
+
     var color: Color {
         switch self {
         case .wood: Color(red: 0.55, green: 0.40, blue: 0.26)

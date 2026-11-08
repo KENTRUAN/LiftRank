@@ -5,7 +5,7 @@ struct WorkoutSpacePicker: View {
     let startLocal: () -> Void
     let entered: () throws -> Void
     @State private var creating = false
-    @State private var name = "My workout space"
+    @State private var name = L("My workout space")
     @State private var visibility = "private"
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -77,7 +77,7 @@ struct WorkoutSpacePicker: View {
             Image(systemName: symbol).font(.title2).foregroundStyle(.teal)
             VStack(alignment: .leading, spacing: 4) {
                 Text(gym.name).font(.headline)
-                Text(gym.kind == "custom" ? action : gym.address).font(.caption).foregroundStyle(.secondary)
+                Text(gym.kind == "custom" ? L(action) : gym.address).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             if let distance = gym.distanceMeters { Text("\(Int(distance)) m").font(.caption.monospacedDigit()) }

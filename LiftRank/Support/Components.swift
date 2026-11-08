@@ -144,7 +144,7 @@ struct TierBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: tier.icon)
-            if !compact { Text(tier.name) }
+            if !compact { Text(tier.displayName) }
         }
         .font(compact ? .caption2.bold() : .caption.bold())
         .padding(.horizontal, compact ? 6 : 8)
@@ -167,7 +167,7 @@ struct ScoreGauge: View {
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 2) {
                 Text("\(score)").font(.system(size: size * 0.28, weight: .heavy, design: .rounded))
-                Text(tier.name).font(.caption.bold()).foregroundStyle(tier.color)
+                Text(tier.displayName).font(.caption.bold()).foregroundStyle(tier.color)
             }
         }
         .frame(width: size, height: size)
@@ -185,7 +185,7 @@ struct LPBar: View {
                 Spacer()
                 if tier != .olympian {
                     let next = RankTier(rawValue: tier.rawValue + 1)!
-                    Text("距 \(next.name) 还差 \(100 - lp) LP").font(.caption).foregroundStyle(.secondary)
+                    Text("距 \(next.displayName) 还差 \(100 - lp) LP").font(.caption).foregroundStyle(.secondary)
                 } else {
                     Text("已达最高段位").font(.caption).foregroundStyle(.secondary)
                 }

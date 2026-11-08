@@ -1,6 +1,1398 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    "## 用户": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Profile"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 用户"
+          }
+        }
+      }
+    },
+    "%@，%lld 岁，身高 %@ cm，体重 %@ kg，活动水平 %@，饮食目标 %@。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %lld years old, %@ cm tall, %@ kg, activity level %@, nutrition goal %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，%lld 岁，身高 %@ cm，体重 %@ kg，活动水平 %@，饮食目标 %@。"
+          }
+        }
+      }
+    },
+    "## 力量段位": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Strength rank"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 力量段位"
+          }
+        }
+      }
+    },
+    "总体评分 GSR %lld，当前为 %@ 段位。评分 1–1000，按 e1RM/体重与性别曲线换算。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global Strength Rating %lld, current tier %@. Scores range from 1 to 1000 and account for e1RM, bodyweight, and sex."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总体评分 GSR %lld，当前为 %@ 段位。评分 1–1000，按 e1RM/体重与性别曲线换算。"
+          }
+        }
+      }
+    },
+    "肌群评分：%@。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muscle group scores: %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "肌群评分：%@。"
+          }
+        }
+      }
+    },
+    "动作最佳：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best lifts: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动作最佳：%@"
+          }
+        }
+      }
+    },
+    "## 最近 %lld 天力量训练": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Strength training over the last %lld days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 最近 %lld 天力量训练"
+          }
+        }
+      }
+    },
+    "共 %lld 次，总训练量 %@ kg，%lld 组。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sessions, %@ kg total training volume, %lld sets."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共 %lld 次，总训练量 %@ kg，%lld 组。"
+          }
+        }
+      }
+    },
+    "本窗口实际训练记录日期范围：%@–%@。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dates with strength training records in this window: %@–%@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本窗口实际训练记录日期范围：%@–%@。"
+          }
+        }
+      }
+    },
+    "各肌群组数：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sets by muscle group: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各肌群组数：%@"
+          }
+        }
+      }
+    },
+    "%@ · %lld 组": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lld sets"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lld 组"
+          }
+        }
+      }
+    },
+    " · 最重 %@ kg × %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · heaviest %@ kg × %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 最重 %@ kg × %lld"
+          }
+        }
+      }
+    },
+    "## 最近 %lld 天有氧": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Cardio over the last %lld days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 最近 %lld 天有氧"
+          }
+        }
+      }
+    },
+    "无记录。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No records."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无记录。"
+          }
+        }
+      }
+    },
+    "共 %lld 次，%@ 分钟，%@ km，消耗约 %@ kcal。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld sessions, %@ minutes, %@ km, about %@ kcal burned."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共 %lld 次，%@ 分钟，%@ km，消耗约 %@ kcal。"
+          }
+        }
+      }
+    },
+    "%@ · %lld 次": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lld sessions"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %lld 次"
+          }
+        }
+      }
+    },
+    "## 身体数据": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Body measurements"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 身体数据"
+          }
+        }
+      }
+    },
+    "%@：%@ %@ %@ → %@ %@ %@（共 %lld 次记录）。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@ %@ %@ → %@ %@ %@ (%lld entries)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：%@ %@ %@ → %@ %@ %@（共 %lld 次记录）。"
+          }
+        }
+      }
+    },
+    "最新身体测量：%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest body measurements: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新身体测量：%@"
+          }
+        }
+      }
+    },
+    "## 最近 7 天饮食": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## Nutrition over the last 7 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "## 最近 7 天饮食"
+          }
+        }
+      }
+    },
+    "有餐食记录的天数：%lld/7；共 %lld 条。没有全天记录完整性的标记，无法判断是否达到每日摄入目标。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meals logged on %lld of 7 days, %lld entries total. Full-day coverage is unknown, so these entries cannot establish whether daily intake goals were met."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有餐食记录的天数：%lld/7；共 %lld 条。没有全天记录完整性的标记，无法判断是否达到每日摄入目标。"
+          }
+        }
+      }
+    },
+    "有效记录太少，暂不估算摄入。请记录几天完整饮食后再评估。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are too few entries to estimate intake. Log a few complete days before reassessing."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效记录太少，暂不估算摄入。请记录几天完整饮食后再评估。"
+          }
+        }
+      }
+    },
+    "- %@ %@：%@（仅一条记录）。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- %@ %@: %@ (one entry)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "- %@ %@：%@（仅一条记录）。"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
+        }
+      }
+    },
+    "Within 500 meters": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Within 500 meters"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "500 米以内"
+          }
+        }
+      }
+    },
+    "Refresh nearby spaces": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh nearby spaces"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新附近训练空间"
+          }
+        }
+      }
+    },
+    "Finding gyms and spaces…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding gyms and spaces…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在查找健身房和训练空间…"
+          }
+        }
+      }
+    },
+    "Ask to join": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask to join"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "申请加入"
+          }
+        }
+      }
+    },
+    "No gyms or public spaces nearby. Make a space of your own.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No gyms or public spaces nearby. Make a space of your own."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附近没有健身房或公开空间。你可以创建自己的训练空间。"
+          }
+        }
+      }
+    },
+    "Create a workout space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a workout space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建训练空间"
+          }
+        }
+      }
+    },
+    "Private solo workout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private solo workout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人单人训练"
+          }
+        }
+      }
+    },
+    "A private solo space works offline. Nothing is shared.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A private solo space works offline. Nothing is shared."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人单人训练可离线使用，训练信息仅保存在本机。"
+          }
+        }
+      }
+    },
+    "Space name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space name"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间名称"
+          }
+        }
+      }
+    },
+    "Visibility": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visibility"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可见范围"
+          }
+        }
+      }
+    },
+    "Private": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密"
+          }
+        }
+      }
+    },
+    "Public": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Public"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公开"
+          }
+        }
+      }
+    },
+    "Your exact location is used for proximity checks and is never shown to members.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your exact location is used for proximity checks and is never shown to members."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精确位置仅用于判断距离，不会展示给成员。"
+          }
+        }
+      }
+    },
+    "Create & start workout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create & start workout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建并开始训练"
+          }
+        }
+      }
+    },
+    "New workout space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New workout space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建训练空间"
+          }
+        }
+      }
+    },
+    "Join nearby space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join nearby space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入附近的训练空间"
+          }
+        }
+      }
+    },
+    "Dismiss": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        }
+      }
+    },
+    "Private · only on this device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private · only on this device"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人训练 · 仅限本机"
+          }
+        }
+      }
+    },
+    "Finish this workout to create a shared nearby space.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish this workout to create a shared nearby space."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束当前训练后，即可创建附近的共享空间。"
+          }
+        }
+      }
+    },
+    "Space visibility": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space visibility"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间可见范围"
+          }
+        }
+      }
+    },
+    "Private spaces are hidden. Existing members stay when visibility changes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private spaces are hidden. Existing members stay when visibility changes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私密空间不会出现在附近列表中。修改可见范围后，现有成员可以继续训练。"
+          }
+        }
+      }
+    },
+    "Invite a nearby friend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite a nearby friend"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请附近的好友"
+          }
+        }
+      }
+    },
+    "Friends receive an invitation in Community and must be within 500 meters to join.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friends receive an invitation in Community and must be within 500 meters to join."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友会在社区收到邀请，距离在 500 米以内即可加入。"
+          }
+        }
+      }
+    },
+    "The host manages visibility and invitations. Any member can approve nearby join requests.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The host manages visibility and invitations. Any member can approve nearby join requests."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "房主管理可见范围和邀请。任何成员都可以同意附近用户的加入申请。"
+          }
+        }
+      }
+    },
+    "Workout space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workout space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练空间"
+          }
+        }
+      }
+    },
+    "Workout space settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workout space settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练空间设置"
+          }
+        }
+      }
+    },
+    "Workout invitations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workout invitations"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练邀请"
+          }
+        }
+      }
+    },
+    "Where are you training?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where are you training?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你想在哪里训练？"
+          }
+        }
+      }
+    },
+    "Choose a gym or make your own space.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a gym or make your own space."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择健身房，或创建自己的训练空间。"
+          }
+        }
+      }
+    },
+    "+30s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+30s"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+30 秒"
+          }
+        }
+      }
+    },
+    "Public space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Public space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公开训练空间"
+          }
+        }
+      }
+    },
+    "Request declined": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request declined"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "申请已被拒绝"
+          }
+        }
+      }
+    },
+    "Waiting for approval": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for approval"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待同意"
+          }
+        }
+      }
+    },
+    "My workout space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My workout space"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的训练空间"
+          }
+        }
+      }
+    },
+    "Your request was accepted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your request was accepted"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的加入申请已获同意"
+          }
+        }
+      }
+    },
+    "A friend invited you to train": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A friend invited you to train"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友邀请你参加训练"
+          }
+        }
+      }
+    },
+    "Invited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invited"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已邀请"
+          }
+        }
+      }
+    },
+    "Invite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invite"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
+          }
+        }
+      }
+    },
+    "People within 500 meters can find this space and ask to join. Any member can approve a request.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "People within 500 meters can find this space and ask to join. Any member can approve a request."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "500 米内的用户可以找到这个空间并申请加入，任何成员都可以同意申请。"
+          }
+        }
+      }
+    },
+    "Hidden from nearby discovery. Invite friends; they must be within 500 meters to join.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden from nearby discovery. Invite friends; they must be within 500 meters to join."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间不会出现在附近列表中。你可以邀请 500 米内的好友加入。"
+          }
+        }
+      }
+    },
+    "Walking": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Walking"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "步行"
+          }
+        }
+      }
+    },
+    "Cycling": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cycling"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "骑行"
+          }
+        }
+      }
+    },
+    "Rowing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rowing"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "划船"
+          }
+        }
+      }
+    },
+    "Elliptical": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elliptical"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "椭圆机"
+          }
+        }
+      }
+    },
+    "Stair climbing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stair climbing"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "爬楼"
+          }
+        }
+      }
+    },
+    "Swimming": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swimming"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "游泳"
+          }
+        }
+      }
+    },
+    "High intensity intervals": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High intensity intervals"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高强度间歇训练"
+          }
+        }
+      }
+    },
+    "Tap equipment in the gym to choose a station first.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap equipment in the gym to choose a station first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先在健身房点选器械。"
+          }
+        }
+      }
+    },
+    "This exercise cannot be performed at the selected equipment. Choose the correct station in the gym.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This exercise cannot be performed at the selected equipment. Choose the correct station in the gym."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前器械不支持这个动作。请在健身房选择适合的器械。"
+          }
+        }
+      }
+    },
+    "Friend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friend"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友"
+          }
+        }
+      }
+    },
+    "Tap equipment in the gym to choose a station": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap equipment in the gym to choose a station"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点选健身房里的器械"
+          }
+        }
+      }
+    },
+    "Complete your profile first.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete your profile first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先完善个人资料。"
+          }
+        }
+      }
+    },
+    "Private workout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private workout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人训练"
+          }
+        }
+      }
+    },
+    "Only on this device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only on this device"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅限本机"
+          }
+        }
+      }
+    },
+    "霓虹耳机": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neon Headphones"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "霓虹耳机"
+          }
+        }
+      }
+    },
+    "闪电奖牌": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lightning Medal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "闪电奖牌"
+          }
+        }
+      }
+    },
+    "脉冲护目镜": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulse Visor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "脉冲护目镜"
+          }
+        }
+      }
+    },
+    "琥珀鹿角": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amber Antlers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "琥珀鹿角"
+          }
+        }
+      }
+    },
+    "霓虹天台": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neon Rooftop"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "霓虹天台"
+          }
+        }
+      }
+    },
+    "极光雪山": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alpine Aurora"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "极光雪山"
+          }
+        }
+      }
+    },
+    "复古街机厅": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retro Arcade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复古街机厅"
+          }
+        }
+      }
+    },
+    "深海观景台": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deep-Sea Observatory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深海观景台"
+          }
+        }
+      }
+    },
+    "买一次，奶龙和豆包都能用。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buy once and use on either mascot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "买一次，奶龙和豆包都能用。"
+          }
+        }
+      }
+    },
     " · 自定义": {
       "localizations": {
         "en": {
@@ -7873,6 +9265,22 @@
         }
       }
     },
+    "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with your first scored workout. Dates without a new score show your previous rank."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。"
+          }
+        }
+      }
+    },
     "休息 %@": {
       "localizations": {
         "en": {
@@ -8673,6 +10081,22 @@
         }
       }
     },
+    "全部历史": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All history"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部历史"
+          }
+        }
+      }
+    },
     "公开": {
       "localizations": {
         "en": {
@@ -8934,7 +10358,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The analysis also draws on recent 小段 chats saved on this device."
+            "value": "The analysis also draws on recent chats with your AI coach saved on this device."
           }
         },
         "zh-Hans": {
@@ -10135,6 +11559,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "器械"
+          }
+        }
+      }
+    },
+    "回看范围": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History range"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回看范围"
           }
         }
       }
@@ -11893,6 +13333,22 @@
         }
       }
     },
+    "所选天数包含今天。没有新评分时，沿用此前的段位。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The range includes today. Dates without a new score show your previous rank."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所选天数包含今天。没有新评分时，沿用此前的段位。"
+          }
+        }
+      }
+    },
     "打开 AI 训练助手": {
       "localizations": {
         "en": {
@@ -11994,7 +13450,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wrist Wraps"
+            "value": "Wrist Wrap"
           }
         },
         "zh-Hans": {
@@ -13045,6 +14501,38 @@
         }
       }
     },
+    "最近 30 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 30 天"
+          }
+        }
+      }
+    },
+    "最近 365 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 365 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 365 天"
+          }
+        }
+      }
+    },
     "最近 8 周": {
       "localizations": {
         "en": {
@@ -13057,6 +14545,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近 8 周"
+          }
+        }
+      }
+    },
+    "最近 90 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 90 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 90 天"
           }
         }
       }
@@ -14442,7 +15946,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Generates one image at a time. Once saved, it's used in 小段 chat and the assistant profile."
+            "value": "Generates one image at a time. Once saved, it's used in the AI coach chat and the assistant profile."
           }
         },
         "zh-Hans": {

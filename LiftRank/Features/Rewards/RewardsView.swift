@@ -72,7 +72,7 @@ struct RewardsView: View {
                 HStack(spacing: 3) {
                     Text("完成可得")
                     EggAmount(amount: s.reward)
-                    Text("· \(tier.name) 段位加成 +\(tier.rawValue * 3)")
+                    Text("· \(tier.displayName) 段位加成 +\(tier.rawValue * 3)")
                     if streak.currentDays > 0 { Text("· 连续 +\(min(streak.currentDays, 30) / 3)") }
                 }.font(.caption).foregroundStyle(.secondary)
                 Button {
