@@ -25,7 +25,7 @@ struct GymProfileHighlightsView: View {
                 HStack {
                     metric("Workouts", highlights.workoutCount, "dumbbell.fill")
                     Spacer()
-                    metric("Day streak", highlights.streakDays, "flame.fill")
+                    metric(L("Day streak"), highlights.streakDays, "flame.fill")
                 }.card()
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Last 7 days · muscle map").font(.headline)
@@ -89,7 +89,7 @@ struct GymProfileHighlightsView: View {
                     DisclosureGroup(routine.name) {
                         ForEach(Array(routine.exercises.enumerated()), id: \.offset) { _, exercise in
                             HStack(alignment: .top) {
-                                Text(exercise.name); Spacer()
+                                Text(ExerciseNames.display(exercise.name)); Spacer()
                                 Text("\(exercise.sets) × \(exercise.repsLow)–\(exercise.repsHigh)").monospacedDigit()
                             }.font(.caption).padding(.vertical, 4)
                         }
@@ -107,12 +107,6 @@ struct GymProfileHighlightsView: View {
 }
 
 extension MuscleGroup {
-    var gymName: String {
-        switch self {
-        case .chest: "Chest"; case .shoulders: "Shoulders"; case .biceps: "Biceps"; case .triceps: "Triceps"
-        case .forearms: "Forearms"; case .abs: "Core"; case .quads: "Quads"; case .calves: "Calves"
-        case .back: "Back"; case .traps: "Traps"; case .glutes: "Glutes"; case .hamstrings: "Hamstrings"
-        case .lowerBack: "Lower back"; case .cardio: "Cardio"; case .fullBody: "Full body"
-        }
-    }
+    /// Kept for the gym screens; `name` already follows the interface language.
+    var gymName: String { name }
 }

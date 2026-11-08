@@ -6,6 +6,7 @@ struct AIAssistantView: View {
     @Bindable var profile: UserProfile
     @State private var status: String?
     @State private var testing = false
+    @State private var testFailed = false
     @State private var showAvatar = false
     @AppStorage(CoachHistory.key) private var previousConversation = Data()
 
@@ -28,9 +29,9 @@ struct AIAssistantView: View {
             }
             Section {
                 LabeledContent("服务", value: AIBackend.displayName)
-                LabeledContent("状态", value: AIBackend.isConfigured ? "已开通" : "未开通")
+                LabeledContent("状态", value: AIBackend.isConfigured ? L("已开通") : L("未开通"))
                 Button(testing ? "测试中…" : "测试连接") { testConnection() }.disabled(testing || !AIBackend.isConfigured)
-                if let status { Text(status).font(.footnote).foregroundStyle(status.contains("失败") ? .red : .secondary) }
+                if let status { Text(status).font(.footnote).foregroundStyle(testFailed ? .red : .secondary) }
             } header: {
                 Text("General AI service")
             } footer: {
@@ -73,9 +74,9 @@ struct AIAssistantView: View {
         Task {
             do {
                 let reply = try await AIService.test(config: config)
-                status = "连接成功：\(reply.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40))"
+                testFailed = false; status = L("连接成功：%@", String(reply.trimmingCharacters(in: .whitespacesAndNewlines).prefix(40)))
             } catch {
-                status = "连接失败：\(error.localizedDescription)"
+                testFailed = true; status = L("连接失败：%@", error.localizedDescription)
             }
             testing = false
         }

@@ -3,7 +3,7 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    private(set) var name: String = "训练者"
+    private(set) var name: String = L("训练者")
     var sexRaw: String = Sex.male.rawValue
     var birthYear: Int = 1995
     var birthday: Date?
@@ -131,7 +131,7 @@ final class Exercise {
 @Model
 final class Workout {
     var id: UUID = UUID()
-    var title: String = "训练"
+    var title: String = L("训练")
     var startedAt: Date = Date()
     var endedAt: Date?
     var notes: String = ""
@@ -159,7 +159,7 @@ final class Workout {
     var healthError: String = ""
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout) var exercises: [WorkoutExercise] = []
 
-    init(title: String = "训练", bodyweightKg: Double) {
+    init(title: String = L("训练"), bodyweightKg: Double) {
         self.title = title
         self.bodyweightKg = bodyweightKg
     }
@@ -349,17 +349,17 @@ enum CardioType: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .running: "跑步"
-        case .walking: "步行"
-        case .hiking: "徒步"
-        case .cycling: "骑行"
-        case .swimming: "游泳"
-        case .rowing: "划船机"
-        case .elliptical: "椭圆机"
-        case .stairs: "爬楼"
-        case .jumpRope: "跳绳"
+        case .running: L("跑步")
+        case .walking: L("步行")
+        case .hiking: L("徒步")
+        case .cycling: L("骑行")
+        case .swimming: L("游泳")
+        case .rowing: L("划船机")
+        case .elliptical: L("椭圆机")
+        case .stairs: L("爬楼")
+        case .jumpRope: L("跳绳")
         case .hiit: "HIIT"
-        case .other: "其他"
+        case .other: L("其他")
         }
     }
     var icon: String {
@@ -477,23 +477,23 @@ enum BodyMetric: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .weight: "体重"
-        case .bodyFat: "体脂率"
-        case .height: "身高"
-        case .neck: "颈围"
-        case .shoulders: "肩围"
-        case .chest: "胸围"
-        case .waist: "腰围"
-        case .abdomen: "腹围"
-        case .hips: "臀围"
-        case .leftUpperArm: "左上臂"
-        case .rightUpperArm: "右上臂"
-        case .leftForearm: "左前臂"
-        case .rightForearm: "右前臂"
-        case .leftThigh: "左大腿"
-        case .rightThigh: "右大腿"
-        case .leftCalf: "左小腿"
-        case .rightCalf: "右小腿"
+        case .weight: L("体重")
+        case .bodyFat: L("体脂率")
+        case .height: L("身高")
+        case .neck: L("颈围")
+        case .shoulders: L("肩围")
+        case .chest: L("胸围")
+        case .waist: L("腰围")
+        case .abdomen: L("腹围")
+        case .hips: L("臀围")
+        case .leftUpperArm: L("左上臂")
+        case .rightUpperArm: L("右上臂")
+        case .leftForearm: L("左前臂")
+        case .rightForearm: L("右前臂")
+        case .leftThigh: L("左大腿")
+        case .rightThigh: L("右大腿")
+        case .leftCalf: L("左小腿")
+        case .rightCalf: L("右小腿")
         }
     }
     var unit: String {
@@ -510,10 +510,10 @@ enum MealType: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .breakfast: "早餐"
-        case .lunch: "午餐"
-        case .dinner: "晚餐"
-        case .snack: "加餐"
+        case .breakfast: L("早餐")
+        case .lunch: L("午餐")
+        case .dinner: L("晚餐")
+        case .snack: L("加餐")
         }
     }
 }
@@ -523,11 +523,11 @@ enum ActivityLevel: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .sedentary: "久坐"
-        case .light: "轻度活动"
-        case .moderate: "中度活动"
-        case .active: "活跃"
-        case .veryActive: "非常活跃"
+        case .sedentary: L("久坐")
+        case .light: L("轻度活动")
+        case .moderate: L("中度活动")
+        case .active: L("活跃")
+        case .veryActive: L("非常活跃")
         }
     }
     var multiplier: Double {
@@ -546,9 +546,9 @@ enum NutritionGoal: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .cut: "减脂"
-        case .maintain: "维持"
-        case .bulk: "增肌"
+        case .cut: L("减脂")
+        case .maintain: L("维持")
+        case .bulk: L("增肌")
         }
     }
     var kcalAdjustment: Double {

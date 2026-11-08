@@ -15,7 +15,7 @@ final class SpeechRecognizer: ObservableObject {
     @Published var error: String?
     @Published private(set) var needsSettings = false
 
-    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN"))
+    private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: AppLanguage.current.isEnglish ? "en-US" : "zh-CN"))
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
@@ -28,7 +28,7 @@ final class SpeechRecognizer: ObservableObject {
             DispatchQueue.main.async {
                 guard status == .authorized else {
                     self?.needsSettings = status == .denied
-                    self?.error = status == .restricted ? "当前设备限制了语音识别。" : "未授权语音识别。"
+                    self?.error = status == .restricted ? L("当前设备限制了语音识别。") : L("未授权语音识别。")
                     return
                 }
                 AVAudioApplication.requestRecordPermission { ok in
@@ -36,7 +36,7 @@ final class SpeechRecognizer: ObservableObject {
                         if ok { self?.begin() }
                         else {
                             self?.needsSettings = true
-                            self?.error = "未授权麦克风。"
+                            self?.error = L("未授权麦克风。")
                         }
                     }
                 }
@@ -45,7 +45,7 @@ final class SpeechRecognizer: ObservableObject {
     }
 
     private func begin() {
-        guard let recognizer, recognizer.isAvailable else { error = "当前设备不支持中文语音识别。"; return }
+        guard let recognizer, recognizer.isAvailable else { error = L("当前设备不支持中文语音识别。"); return }
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.record, mode: .measurement)
@@ -57,7 +57,7 @@ final class SpeechRecognizer: ObservableObject {
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
             guard format.sampleRate > 0, format.channelCount > 0 else {
-                error = "当前没有可用的麦克风输入。"
+                error = L("当前没有可用的麦克风输入。")
                 stop()
                 return
             }
@@ -71,12 +71,12 @@ final class SpeechRecognizer: ObservableObject {
                 DispatchQueue.main.async {
                     guard let self, self.request === req else { return }
                     if let result { self.transcript = result.bestTranscription.formattedString }
-                    if err != nil && self.transcript.isEmpty { self.error = "没听清楚，请再说一次。" }
+                    if err != nil && self.transcript.isEmpty { self.error = L("没听清楚，请再说一次。") }
                     if err != nil || result?.isFinal == true { self.stop() }
                 }
             }
         } catch {
-            self.error = "无法启动录音：\(error.localizedDescription)"
+            self.error = L("无法启动录音：%@", error.localizedDescription)
             stop()
         }
     }

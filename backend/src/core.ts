@@ -101,7 +101,7 @@ export function cleanProfile(uid: string, value: any, existing?: Profile): Profi
   const highlights = shareActivity ? cleanHighlights(value.highlights ?? existing?.highlights) : undefined;
   return {
     uid, visibility: value.visibility === 'anonymous' ? 'anonymous' : value.visibility === 'public' ? 'public' : existing?.visibility ?? 'public', name: text(value.name, 40, 'Nickname'), shareRank, gsr: shareRank ? Math.round(finite(value.gsr ?? 0, 0, 1000)) : 0,
-    cosmetics: shareRank && Array.isArray(value.cosmetics) ? value.cosmetics.slice(0, 4).map((v: unknown) => text(v, 60)) : [],
+    cosmetics: shareRank && Array.isArray(value.cosmetics) ? value.cosmetics.slice(0, 16).map((v: unknown) => text(v, 60)) : [],
     interests: typeof value.interests === 'string' ? value.interests.trim().slice(0, 160) : '',
     avatar: { preset, color, ...(existing?.avatar.assetPath && !value.resetAvatar ? { assetPath: existing.avatar.assetPath } : {}) },
     muscleRanks: shareRank && (value.gsr ?? 0) > 0 ? cleanMuscleRanks(value.muscleRanks ?? existing?.muscleRanks) : {},

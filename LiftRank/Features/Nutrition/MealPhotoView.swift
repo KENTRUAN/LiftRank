@@ -50,10 +50,10 @@ struct MealPhotoView: View {
                     Section("确认后计入饮食记录") {
                         Picker("餐次", selection: $meal) { ForEach(MealType.allCases) { Text($0.name).tag($0) } }
                         TextField("餐食名称", text: estimateBinding.name)
-                        amount("热量（kcal）", estimateBinding.kcal)
-                        amount("蛋白质（g）", estimateBinding.protein)
-                        amount("脂肪（g）", estimateBinding.fat)
-                        amount("碳水（g）", estimateBinding.carbs)
+                        amount(L("热量（kcal）"), estimateBinding.kcal)
+                        amount(L("蛋白质（g）"), estimateBinding.protein)
+                        amount(L("脂肪（g）"), estimateBinding.fat)
+                        amount(L("碳水（g）"), estimateBinding.carbs)
                         Text(estimateBinding.wrappedValue.notes).font(.footnote).foregroundStyle(.secondary)
                         Button("保存这餐") { save(estimateBinding.wrappedValue) }
                             .disabled(loading || !estimateBinding.wrappedValue.isValid)
@@ -73,7 +73,7 @@ struct MealPhotoView: View {
                           let image = UIImage(data: data) else { throw AIError.badResponse }
                     if !Task.isCancelled && selected == item { usePhoto(image) }
                 } catch {
-                    if !Task.isCancelled && selected == item { self.error = "无法打开这张照片。" }
+                    if !Task.isCancelled && selected == item { self.error = L("无法打开这张照片。") }
                 }
             }
         }
@@ -94,18 +94,18 @@ struct MealPhotoView: View {
 
     private func openCamera() {
         guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-            error = "此设备没有可用的相机，请从照片图库选择。"
+            error = L("此设备没有可用的相机，请从照片图库选择。")
             return
         }
         Task {
             if await AVCaptureDevice.requestAccess(for: .video) { takingPhoto = true }
-            else { error = "请在系统设置中允许相机，或从照片图库选择。" }
+            else { error = L("请在系统设置中允许相机，或从照片图库选择。") }
         }
     }
 
     private func analyze() {
         guard !loading, let photo, let config = AIBackend.portraitConfig else { return }
-        guard let jpeg = Self.uploadJPEG(photo) else { error = "无法处理这张照片。"; return }
+        guard let jpeg = Self.uploadJPEG(photo) else { error = L("无法处理这张照片。"); return }
         let description = String(notes.prefix(400))
         loading = true
         error = nil
@@ -139,7 +139,7 @@ struct MealPhotoView: View {
                               protein: result.protein, fat: result.fat, carbs: result.carbs, source: "ai_photo")
         context.insert(entry)
         do { try context.save(); dismiss() }
-        catch { context.delete(entry); self.error = "保存失败，请重试。" }
+        catch { context.delete(entry); self.error = L("保存失败，请重试。") }
     }
 }
 

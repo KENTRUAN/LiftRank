@@ -44,10 +44,10 @@ struct NutritionView: View {
             Section {
                 DatePicker("日期", selection: $day, displayedComponents: .date)
                 HStack(spacing: 16) {
-                    MacroRing(title: "热量", value: kcal, target: t.kcal, unit: "kcal", color: .orange)
-                    MacroRing(title: "蛋白", value: p, target: t.protein, unit: "g", color: .red)
-                    MacroRing(title: "脂肪", value: f, target: t.fat, unit: "g", color: .yellow)
-                    MacroRing(title: "碳水", value: c, target: t.carbs, unit: "g", color: .blue)
+                    MacroRing(title: L("热量"), value: kcal, target: t.kcal, unit: "kcal", color: .orange)
+                    MacroRing(title: L("蛋白"), value: p, target: t.protein, unit: "g", color: .red)
+                    MacroRing(title: L("脂肪"), value: f, target: t.fat, unit: "g", color: .yellow)
+                    MacroRing(title: L("碳水"), value: c, target: t.carbs, unit: "g", color: .blue)
                 }.padding(.vertical, 6)
                 NavigationLink { NutritionGoalsView(profile: profile) } label: {
                     Label("目标：\(profile.nutritionGoal.name) · \(t.kcal.fmt(0)) kcal", systemImage: "target")
@@ -62,7 +62,7 @@ struct NutritionView: View {
                 }
             }
             Section("添加") {
-                Button { alert = "条码录入需要相机与食品数据库服务，当前版本未接入。可先用手动录入或自定义餐食。" } label: { Label("扫描条码", systemImage: "barcode.viewfinder") }
+                Button { alert = L("条码录入需要相机与食品数据库服务，当前版本未接入。可先用手动录入或自定义餐食。") } label: { Label("扫描条码", systemImage: "barcode.viewfinder") }
                 Button { showPhoto = true } label: { Label("AI 拍照记餐", systemImage: "camera.fill") }
             }
             ForEach(MealType.allCases) { meal in
@@ -121,9 +121,9 @@ struct FoodEntryEditor: View {
     @State private var search = ""
 
     private var presets: [(String, Double, Double, Double, Double)] {
-        [("鸡胸肉 100g", 165, 31, 3.6, 0), ("白米饭 1 碗", 230, 4.5, 0.5, 50), ("全蛋 1 个", 72, 6.3, 4.8, 0.4), ("牛奶 250ml", 150, 8, 8, 12),
-         ("燕麦 50g", 190, 6.5, 3.5, 33), ("香蕉 1 根", 105, 1.3, 0.4, 27), ("乳清蛋白 1 勺", 120, 24, 1.5, 3), ("牛肉 100g", 250, 26, 15, 0),
-         ("三文鱼 100g", 208, 20, 13, 0), ("红薯 150g", 130, 2.4, 0.2, 30), ("花生酱 1 勺", 95, 4, 8, 3), ("希腊酸奶 170g", 100, 17, 0.7, 6)]
+        [(L("鸡胸肉 100g"), 165, 31, 3.6, 0), (L("白米饭 1 碗"), 230, 4.5, 0.5, 50), (L("全蛋 1 个"), 72, 6.3, 4.8, 0.4), (L("牛奶 250ml"), 150, 8, 8, 12),
+         (L("燕麦 50g"), 190, 6.5, 3.5, 33), (L("香蕉 1 根"), 105, 1.3, 0.4, 27), (L("乳清蛋白 1 勺"), 120, 24, 1.5, 3), (L("牛肉 100g"), 250, 26, 15, 0),
+         (L("三文鱼 100g"), 208, 20, 13, 0), (L("红薯 150g"), 130, 2.4, 0.2, 30), (L("花生酱 1 勺"), 95, 4, 8, 3), (L("希腊酸奶 170g"), 100, 17, 0.7, 6)]
     }
 
     var body: some View {
@@ -140,7 +140,7 @@ struct FoodEntryEditor: View {
                 }
                 Section("\(meal.name) · 手动录入") {
                     TextField("名称", text: $name)
-                    numField("热量 kcal", $kcal); numField("蛋白质 g", $protein); numField("脂肪 g", $fat); numField("碳水 g", $carbs)
+                    numField(L("热量 kcal"), $kcal); numField(L("蛋白质 g"), $protein); numField(L("脂肪 g"), $fat); numField(L("碳水 g"), $carbs)
                     Toggle("保存为自定义餐食", isOn: $saveAsCustom)
                 }
             }

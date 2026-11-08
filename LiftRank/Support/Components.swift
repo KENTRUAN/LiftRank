@@ -76,7 +76,7 @@ struct BirthdayField: View {
     @State private var draft = Date()
 
     private let calendar = UserProfile.birthdayCalendar
-    private let locale = Locale(identifier: "zh_CN")
+    private var locale: Locale { AppLanguage.current.locale }
 
     private var today: Date {
         let localDay = Calendar(identifier: .gregorian).dateComponents([.year, .month, .day], from: Date())
@@ -88,7 +88,7 @@ struct BirthdayField: View {
             return birthday.formatted(Date.FormatStyle(date: .long, time: .omitted,
                                                        locale: locale, calendar: calendar, timeZone: calendar.timeZone))
         }
-        return profile.hasOnboarded ? "\(String(profile.birthYear)) 年 · 选择日期" : "选择日期"
+        return profile.hasOnboarded ? L("%@ 年 · 选择日期", String(profile.birthYear)) : L("选择日期")
     }
 
     var body: some View {

@@ -47,7 +47,7 @@ struct GymRoomView: View {
                     workoutCard
                     HStack {
                         Picker("Station", selection: Binding(get: { store.station }, set: { useEquipment($0) })) {
-                            ForEach(GymLayout.stations, id: \.self) { Text($0.capitalized).tag($0) }
+                            ForEach(GymLayout.stations, id: \.self) { Text(L($0.capitalized)).tag($0) }
                         }.accessibilityIdentifier("gymStation")
                         Spacer()
                         if store.station != "lounge" {
@@ -82,7 +82,7 @@ struct GymRoomView: View {
             if let active, !store.offlineSample {
                 Group {
                     if active.activity != .strength {
-                        CardioTimerControls(workout: active, profile: profile) { lastLogged = "Cardio saved · elapsed time recorded" }
+                        CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded") }
                     } else {
                         WorkoutSetControl(workout: active, profile: profile, onStart: { useEquipment(store.station == "lounge" ? "bench" : store.station) }, onLog: { sheet = .equipment(store.station) })
                     }
@@ -187,8 +187,8 @@ struct GymRoomView: View {
                             VStack(spacing: 4) {
                                 GymAvatarView(profile: p, image: member.visibility == "anonymous" ? nil : store.portraits[p.uid], size: 38)
                                 Text(p.name).font(.caption).lineLimit(1)
-                                Text(member.station.capitalized).font(.caption2).foregroundStyle(.secondary)
-                                Text(member.status).font(.caption2).foregroundStyle(.teal)
+                                Text(L(member.station.capitalized)).font(.caption2).foregroundStyle(.secondary)
+                                Text(L(member.status)).font(.caption2).foregroundStyle(.teal)
                             }.frame(width: 90)
                         }.buttonStyle(.plain).accessibilityIdentifier("gymMember.\(p.name)")
                     }
@@ -199,39 +199,39 @@ struct GymRoomView: View {
     @ViewBuilder private func sheetContent(_ route: GymRoomSheet) -> some View {
         switch route {
         case .member(let id): GymMemberView(store: store, memberID: id, workout: workoutSummary)
-        case .chat(let id): GymChatView(store: store, target: id, isRoom: false, title: store.profiles[id]?.name ?? "Private chat")
+        case .chat(let id): GymChatView(store: store, target: id, isRoom: false, title: store.profiles[id]?.name ?? L("Private chat"))
         case .inbox: GymFriendsView(store: store, workout: workoutSummary)
         case .trainer: GymCompanionView(store: store, workout: workoutSummary)
-        case .roomChat: GymChatView(store: store, target: gym.id, isRoom: true, title: "Room chat")
+        case .roomChat: GymChatView(store: store, target: gym.id, isRoom: true, title: L("Room chat"))
         case .equipment(let station):
             if station == "cardio" {
                 if let active, active.activity != .strength, active.cardioTimerStartedAt != nil { TimedCardioWorkoutView(workout: active, profile: profile) }
                 else { CardioStartView(profile: profile, requiresEquipment: true) { sheet = .workout($0) } }
             } else if let active {
                 GymEquipmentSheet(workout: active, profile: profile, station: station, requiresEquipment: true) { name, rest in
-                    lastLogged = "\(name) saved to your workout"
+                    lastLogged = L("%@ saved to your workout", name)
                     store.recordSetCompletion(Date())
                 }
             }
         case .workout(let workout): ActiveWorkoutView(workout: workout, profile: profile)
         case .finish(let workout):
-            FinishWorkoutSheet(workout: workout, profile: profile) { sheet = nil; lastLogged = "Workout finished · saved to your history" }
+            FinishWorkoutSheet(workout: workout, profile: profile) { sheet = nil; lastLogged = L("Workout finished · saved to your history") }
         case .setup(let workout): WorkoutStartOptionsView(workout: workout, profile: profile)
         }
     }
     private func openMember(_ id: String) {
-        guard !id.hasPrefix("anon-"), store.members.first(where: { $0.uid == id })?.visibility != "anonymous" else { store.error = "Anonymous lifter · profile hidden"; return }
+        guard !id.hasPrefix("anon-"), store.members.first(where: { $0.uid == id })?.visibility != "anonymous" else { store.error = L("Anonymous lifter · profile hidden"); return }
         sheet = .member(id)
     }
     private func useEquipment(_ station: String) {
         guard !store.offlineSample else { return }
         if let active, active.activity != .strength, active.cardioTimerStartedAt != nil, station != "cardio" {
-            store.error = "End cardio before switching equipment."; return
+            store.error = L("End cardio before switching equipment."); return
         }
-        guard active != nil || station == "cardio" else { store.error = "Start a workout first."; return }
+        guard active != nil || station == "cardio" else { store.error = L("Start a workout first."); return }
         guard station != "lounge" else { releaseEquipment(); return }
         if store.ownsStation(station) { walkToReservedStation(); sheet = .equipment(station); return }
-        if active?.hasPendingSet == true { store.error = "Finish your current set before switching equipment."; return }
+        if active?.hasPendingSet == true { store.error = L("Finish your current set before switching equipment."); return }
         if !store.occupants(station).isEmpty { occupiedStation = station; return }
         store.perform {
             if store.station != "lounge" { try await store.equipmentAction(store.station, "release") }
@@ -244,14 +244,14 @@ struct GymRoomView: View {
         store.perform {
             if store.station != "lounge" { try await store.equipmentAction(store.station, "release") }
             try await store.equipmentAction(station, "request", mode: mode)
-            store.error = "Request sent. Wait for the current lifter to accept."
+            store.error = L("Request sent. Wait for the current lifter to accept.")
         }
     }
     private func walkToReservedStation() {
         scene.walkToStation(store.station, partner: store.equipment[store.station]?.ownerID != store.roomIdentity)
     }
     private func releaseEquipment() {
-        guard active?.hasPendingSet != true, active?.cardioTimerStartedAt == nil else { store.error = "End your current activity first."; return }
+        guard active?.hasPendingSet != true, active?.cardioTimerStartedAt == nil else { store.error = L("End your current activity first."); return }
         if store.station != "lounge" { store.perform { try await store.equipmentAction(store.station, "release") } }
     }
     private func wireScene() {
@@ -261,6 +261,12 @@ struct GymRoomView: View {
         scene.onStation = { useEquipment($0) }
     }
     private func syncScene() {
-        scene.sync(uid: store.roomIdentity, members: store.members.filter { !store.blocked.contains($0.uid) }, profiles: store.roomProfiles, portraits: store.portraits)
+        let profiles = store.roomProfiles
+        // Members without an AI portrait show their character head, like everywhere else in the app.
+        var heads = store.portraits
+        for (id, member) in profiles where heads[id] == nil && member.visibility != "anonymous" && !member.cosmetics.isEmpty {
+            heads[id] = BustRenderer.image(ids: member.cosmetics)
+        }
+        scene.sync(uid: store.roomIdentity, members: store.members.filter { !store.blocked.contains($0.uid) }, profiles: profiles, portraits: heads)
     }
 }

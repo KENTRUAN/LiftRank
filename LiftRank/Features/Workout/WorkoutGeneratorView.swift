@@ -37,7 +37,7 @@ struct WorkoutGeneratorView: View {
                     Section(t.name) {
                         ForEach(t.items) { item in
                             HStack {
-                                Text(item.exerciseName)
+                                Text(ExerciseNames.display(item.exerciseName))
                                 Spacer()
                                 Text("\(item.sets) × \(item.repsLow)–\(item.repsHigh) · 休 \(item.restSeconds)s").font(.caption).foregroundStyle(.secondary)
                             }

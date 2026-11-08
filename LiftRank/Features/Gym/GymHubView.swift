@@ -10,15 +10,17 @@ struct GymHubView: View {
     @Query(sort: \Workout.startedAt, order: .reverse) private var workouts: [Workout]
     @Query private var exercises: [Exercise]
     @Query private var plans: [DailyPlan]
-    @State private var nickname = ""
-    @State private var interests = "Strength training"
-    @State private var shareRank = true
-    @State private var consent = false
+    @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
+    @State private var portrait: UIImage?
     @State private var showSettings = false
     @State private var showFriends = false
     private var session: Workout? { workouts.first { !$0.isPublished } }
     private var gsr: Int {
         RankAggregator.overall(muscleScores: RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)))
+    }
+    /// The player's own look: local nickname, cosmetics and portrait, never a truncated cloud copy.
+    private var mine: SocialProfile {
+        SocialProfile(uid: store.uid, name: profile.name, gsr: gsr, cosmetics: profile.sharedCosmeticIDs, interests: store.me?.interests ?? "", avatar: store.me?.avatar ?? AvatarAppearance())
     }
     private var workoutSummary: String {
         if let active = session, !active.isPublished {
@@ -48,13 +50,13 @@ struct GymHubView: View {
                                         workoutSummary: workoutSummary, startSession: startSession)
                         } else { lobby }
                     }
-                    .sheet(isPresented: $showSettings) { GymProfileSettingsView(store: store, profile: profile) }
+                    .sheet(isPresented: $showSettings) { CommunityProfileView(store: store, profile: profile) }
                     .sheet(isPresented: $showFriends) { GymFriendsView(store: store, workout: workoutSummary) }
                 }
             }
         }
+        .task(id: portraitRevision) { portrait = TrainingPortraitFile.image() }
         .task {
-            if nickname.isEmpty { nickname = profile.name }
             #if DEBUG
             if ProcessInfo.processInfo.environment["LIFTRANK_GYM"] == "sample", store.uid.isEmpty {
                 store.sample(name: ProcessInfo.processInfo.environment["LIFTRANK_GYM_NAME"] ?? profile.name, gsr: gsr, cosmetics: profile.sharedCosmeticIDs)
@@ -93,9 +95,9 @@ struct GymHubView: View {
                 } else if !store.connected { onboarding }
                 else {
                     HStack(spacing: 12) {
-                        GymAvatarView(profile: store.me, image: store.portraits[store.uid], size: 46)
+                        GymAvatarView(profile: mine, image: portrait ?? store.portraits[store.uid], size: 46)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Welcome back, \(store.me?.name ?? profile.name)").font(.headline)
+                            Text("Welcome back, \(profile.name)").font(.headline)
                             Text("Your profile and avatar are ready.").font(.caption).foregroundStyle(.secondary)
                         }
                     }
@@ -121,19 +123,7 @@ struct GymHubView: View {
     }
     private var onboarding: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Meet your gym community").font(.title3.bold())
-            Text("Set up once. You can change this later in Profile.").font(.caption).foregroundStyle(.secondary)
-            TextField("Nickname", text: $nickname).textFieldStyle(.roundedBorder).accessibilityIdentifier("gymNickname")
-            TextField("Training interests", text: $interests).textFieldStyle(.roundedBorder)
-            Toggle("Share my rank and equipped cosmetics", isOn: $shareRank).font(.subheadline)
-            Toggle("Share this profile with gym members", isOn: $consent).font(.subheadline).accessibilityIdentifier("gymProfileConsent")
-            Text("Only your nickname, interests, avatar and selected rank details are published. Body measurements and workout history stay private. Guest accounts do not include account recovery.")
-                .font(.caption).foregroundStyle(.secondary)
-            Button {
-                store.perform { try await store.connect(name: nickname, gsr: shareRank ? gsr : 0, cosmetics: shareRank ? profile.sharedCosmeticIDs : [], interests: interests, shareRank: shareRank) }
-            } label: { Label("Create guest profile", systemImage: "arrow.right.circle.fill").frame(maxWidth: .infinity) }
-                .buttonStyle(.borderedProminent).tint(.teal)
-                .disabled(!consent || nickname.trimmingCharacters(in: .whitespaces).isEmpty || store.busy || store.restoring)
+            CommunityOnboardingCard(store: store, profile: profile, gsr: gsr)
         }.padding(18).background(.background, in: RoundedRectangle(cornerRadius: 20))
     }
     private var presetCard: some View {
@@ -149,7 +139,7 @@ struct GymHubView: View {
                         do { try beginSession() }
                         catch { await store.leave(); throw error }
                     }
-                } else { store.sample(name: nickname.isEmpty ? profile.name : nickname, gsr: gsr, cosmetics: profile.sharedCosmeticIDs) }
+                } else { store.sample(name: profile.name, gsr: gsr, cosmetics: profile.sharedCosmeticIDs) }
             } label: {
                 Label(store.connected ? "Enter live Demo Gym" : "Try offline sample", systemImage: "arrow.up.right").frame(maxWidth: .infinity)
             }.buttonStyle(.borderedProminent).tint(.teal).disabled(store.busy || store.restoring).accessibilityIdentifier("enterDemoGym")
@@ -159,7 +149,7 @@ struct GymHubView: View {
         _ = try WorkoutSession.startOrResume(profile: profile, context: context)
     }
     private func startSession() {
-        do { try beginSession() } catch { store.error = "Could not save the workout: \(error.localizedDescription)" }
+        do { try beginSession() } catch { store.error = L("Could not save the workout: %@", error.localizedDescription) }
     }
 }
 
@@ -170,6 +160,10 @@ struct GymAvatarView: View {
     var body: some View {
         Group {
             if let image { Image(uiImage: image).resizable().scaledToFill() }
+            else if let profile, profile.visibility != "anonymous", profile.cosmetics.contains(where: { $0.hasPrefix("skin.") || $0.hasPrefix("hair.") }) {
+                AvatarFigureView(spec: AvatarSpec(ids: profile.cosmetics), bust: true, showBackdrop: false)
+                    .padding(size * 0.06).frame(width: size, height: size).background(profile.avatar.tint.opacity(0.12))
+            }
             else { Image(systemName: profile?.avatar.symbol ?? "person.fill").font(.system(size: size * 0.4)).frame(width: size, height: size).background((profile?.avatar.tint ?? .teal).opacity(0.2)) }
         }.frame(width: size, height: size).clipShape(Circle())
             .overlay(Circle().stroke(profile?.avatar.tint ?? .teal, lineWidth: 2))

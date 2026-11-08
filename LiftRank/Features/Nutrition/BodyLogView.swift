@@ -132,8 +132,8 @@ struct BodyFatCalculatorView: View {
         Form {
             Section("围度 (cm)") {
                 Picker("性别", selection: $sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
-                field("身高", $height); field("颈围", $neck); field("腰围（肚脐处）", $waist)
-                if sex == .female { field("臀围", $hip) }
+                field(L("身高"), $height); field(L("颈围"), $neck); field(L("腰围（肚脐处）"), $waist)
+                if sex == .female { field(L("臀围"), $hip) }
             }
             Section("结果") {
                 if let r = result {

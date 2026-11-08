@@ -60,7 +60,7 @@ struct GymSummary: Codable, Identifiable, Equatable {
     var distanceMeters: Double?
     var isDemo: Bool
     var attributions: [Attribution]?
-    static let demo = GymSummary(id: "demo-gym", name: "Demo Gym", address: "A shared room for the hackathon. Join from anywhere.", isDemo: true)
+    static var demo: GymSummary { GymSummary(id: "demo-gym", name: L("Demo Gym"), address: L("A shared room for the hackathon. Join from anywhere."), isDemo: true) }
 }
 
 struct GymLocation: Codable {

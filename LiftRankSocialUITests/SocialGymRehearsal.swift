@@ -29,47 +29,54 @@ final class SocialGymRehearsal: XCTestCase {
         field.typeText(text)
         XCTAssertEqual(field.value as? String, text.trimmingCharacters(in: .newlines))
     }
+    private func setNickname(_ name: String) {
+        app.tabBars.buttons.element(boundBy: 4).tap()
+        let row = app.buttons["昵称"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        if row.value as? String != name {
+            row.tap()
+            let field = app.textFields.firstMatch
+            XCTAssertTrue(field.waitForExistence(timeout: 5))
+            replace(field, with: name)
+            app.alerts.buttons.element(boundBy: 1).tap()
+        }
+        app.tabBars.buttons.element(boundBy: 2).tap()
+    }
     private func enter(as name: String) {
         let enter = app.buttons["enterDemoGym"]
         XCTAssertTrue(enter.waitForExistence(timeout: 40))
-        let nickname = app.textFields["gymNickname"]
-        let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in nickname.exists || enter.label.contains("Enter live Demo Gym") }, object: nil)
+        // The community nickname is the player's nickname from 我的; set a distinct QA name there first.
+        setNickname(name)
+        let consent = app.switches["gymProfileConsent"]
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in consent.exists || enter.label.contains("Enter live Demo Gym") }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 35), .completed)
-        if nickname.exists {
-            replace(nickname, with: name + "\n")
-            app.switches["gymProfileConsent"].tap()
-            let create = app.buttons["Create guest profile"]
+        if consent.exists {
+            consent.tap()
+            let create = app.buttons["createGuestProfile"]
             if !create.isHittable { app.swipeUp() }
             create.tap()
         }
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Enter live Demo Gym"), evaluatedWith: enter)
         waitForExpectations(timeout: 45)
-        // Reuse persistent Firebase identities, while ensuring distinct QA names.
         app.buttons["Community settings"].tap()
-        let edit = app.textFields["gymEditNickname"]
-        XCTAssertTrue(edit.waitForExistence(timeout: 15))
-        if edit.value as? String != name {
-            replace(edit, with: name + "\n")
-            app.buttons["Save community profile"].tap()
-            XCTAssertTrue(app.staticTexts["Profile saved"].waitForExistence(timeout: 20))
-        }
-        let publicMode = app.segmentedControls["gymVisibility"].buttons["Public"]
-        if publicMode.exists, !publicMode.isSelected {
+        let publicMode = app.segmentedControls["gymVisibility"].buttons.firstMatch
+        XCTAssertTrue(publicMode.waitForExistence(timeout: 15))
+        if !publicMode.isSelected {
             publicMode.tap()
-            let save = app.buttons["Save community profile"]
+            let save = app.buttons["saveCommunityProfile"]
             if !save.isHittable { app.swipeUp() }
             save.tap()
-            XCTAssertTrue(app.staticTexts["Profile saved"].waitForExistence(timeout: 20))
+            XCTAssertTrue(app.staticTexts["communityProfileSaved"].waitForExistence(timeout: 20))
         }
         let activity = app.switches["Share workout highlights & activity"]
         if activity.exists, activity.value as? String == "0" {
             activity.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
             expectation(for: NSPredicate(format: "value == %@", "1"), evaluatedWith: activity)
             waitForExpectations(timeout: 3)
-            let save = app.buttons["Save community profile"]
+            let save = app.buttons["saveCommunityProfile"]
             if !save.isHittable { app.swipeUp() }
             save.tap()
-            XCTAssertTrue(app.staticTexts["Profile saved"].waitForExistence(timeout: 20))
+            XCTAssertTrue(app.staticTexts["communityProfileSaved"].waitForExistence(timeout: 20))
         }
         app.buttons["Done"].tap()
         if !enter.isHittable { app.swipeUp() }
@@ -154,7 +161,7 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["openSocialGym"].tap()
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["gymSessionSets"].label, after, "Switching tabs must retain the same session")
-        XCTAssertFalse(app.textFields["gymNickname"].exists)
+        XCTAssertFalse(app.switches["gymProfileConsent"].exists)
     }
 
     func testJordan() {
@@ -191,7 +198,7 @@ final class SocialGymRehearsal: XCTestCase {
         app.activate()
         let enter = app.buttons["enterDemoGym"]
         XCTAssertTrue(enter.waitForExistence(timeout: 10))
-        XCTAssertFalse(app.textFields["gymNickname"].exists)
+        XCTAssertFalse(app.switches["gymProfileConsent"].exists)
         if !enter.isHittable { app.swipeUp() }
         enter.tap()
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 20))
@@ -201,7 +208,7 @@ final class SocialGymRehearsal: XCTestCase {
         XCTAssertTrue(enter.waitForExistence(timeout: 40))
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Enter live Demo Gym"), evaluatedWith: enter)
         waitForExpectations(timeout: 30)
-        XCTAssertFalse(app.textFields["gymNickname"].exists, "Relaunch restores the approved profile")
+        XCTAssertFalse(app.switches["gymProfileConsent"].exists, "Relaunch restores the approved profile")
         capture("Saved community profile restored after relaunch")
     }
 
@@ -234,10 +241,10 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["Leave"].tap()
         app.buttons["Community settings"].tap()
         app.segmentedControls["gymVisibility"].buttons["Anonymous"].tap()
-        let save = app.buttons["Save community profile"]
+        let save = app.buttons["saveCommunityProfile"]
         if !save.isHittable { app.swipeUp() }
         save.tap()
-        XCTAssertTrue(app.staticTexts["Profile saved"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["communityProfileSaved"].waitForExistence(timeout: 20))
         app.buttons["Done"].tap()
         let enter = app.buttons["enterDemoGym"]
         if !enter.isHittable { app.swipeUp() }
@@ -275,7 +282,7 @@ final class SocialGymRehearsal: XCTestCase {
         app.segmentedControls["gymVisibility"].buttons["Public"].tap()
         if !save.isHittable { app.swipeUp() }
         save.tap()
-        XCTAssertTrue(app.staticTexts["Profile saved"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.staticTexts["communityProfileSaved"].waitForExistence(timeout: 20))
         app.buttons["Done"].tap()
     }
 

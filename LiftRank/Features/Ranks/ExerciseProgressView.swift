@@ -38,9 +38,9 @@ struct ExerciseProgressView: View {
                 if let ex = exercise {
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(ex.nameEn).font(.caption).foregroundStyle(.secondary)
+                            Text(AppLanguage.current.isEnglish ? ex.name : ex.nameEn).font(.caption).foregroundStyle(.secondary)
                             Text("\(ex.muscleGroup.name) · \(ex.equipment.name)").font(.caption).foregroundStyle(.secondary)
-                            if !ex.instructions.isEmpty { Text(ex.instructions).font(.footnote) }
+                            if !ex.instructions.isEmpty { Text(L(ex.instructions)).font(.footnote) }
                         }
                         Spacer()
                         if let best = pts.map(\.score).max() { ScoreGauge(score: best, size: 90) }
@@ -63,9 +63,9 @@ struct ExerciseProgressView: View {
                     }.card()
 
                     HStack {
-                        StatTile(title: "最佳 e1RM", value: "\(unit.fromKg(pts.map(\.e1RM).max() ?? 0).fmt(1)) \(unit.label)")
-                        StatTile(title: "最佳单组", value: bestSetLabel(pts, unit), color: .orange)
-                        StatTile(title: "PR 次数", value: "\(pts.filter(\.isPR).count)", color: .green)
+                        StatTile(title: L("最佳 e1RM"), value: "\(unit.fromKg(pts.map(\.e1RM).max() ?? 0).fmt(1)) \(unit.label)")
+                        StatTile(title: L("最佳单组"), value: bestSetLabel(pts, unit), color: .orange)
+                        StatTile(title: L("PR 次数"), value: "\(pts.filter(\.isPR).count)", color: .green)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -90,7 +90,7 @@ struct ExerciseProgressView: View {
             }.padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(exercise?.name ?? "动作")
+        .navigationTitle(exercise?.displayName ?? L("动作"))
         .navigationBarTitleDisplayMode(.inline)
     }
 

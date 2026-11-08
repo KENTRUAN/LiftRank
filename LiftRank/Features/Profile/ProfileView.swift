@@ -13,7 +13,7 @@ struct ProfileView: View {
     @State private var portrait: UIImage?
     @State private var nicknameDraft = ""
     @State private var showNicknameEditor = false
-    @State private var showCommunitySettings = false
+    @State private var showPortrait = false
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var info: String?
@@ -32,7 +32,7 @@ struct ProfileView: View {
                 try context.save()
             } catch {
                 profile.unit = previousUnit
-                info = "无法保存重量单位，请重试。"
+                info = L("无法保存重量单位，请重试。")
             }
             weightText = profile.unit.inputText(kg: profile.bodyweightKg)
         }
@@ -46,13 +46,16 @@ struct ProfileView: View {
             Form {
                 Section {
                     HStack(spacing: 14) {
-                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar, portrait: portrait)
+                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar, portrait: portrait ?? gym.portraits[gym.uid])
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                             HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
                         }
                         Spacer()
-                        NavigationLink { ShopView(profile: profile, gsr: gsr, muscles: muscles, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.caption.bold()).labelStyle(.titleAndIcon) }.fixedSize()
+                        VStack(alignment: .trailing, spacing: 10) {
+                            NavigationLink { ShopView(profile: profile, gsr: gsr, muscles: muscles, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.caption.bold()).labelStyle(.titleAndIcon) }
+                            Button { showPortrait = true } label: { Label("AI 肖像", systemImage: "photo").font(.caption.bold()).labelStyle(.titleAndIcon) }
+                        }.fixedSize()
                     }
                 }
                 Section("个人资料") {
@@ -73,6 +76,7 @@ struct ProfileView: View {
                     }
                 }
                 Section("偏好") {
+                    LanguagePicker()
                     Picker("重量单位", selection: unitSelection) { ForEach(WeightUnit.allCases) { Text($0.label).tag($0) } }
                     Picker("默认组间休息", selection: $profile.defaultRestSeconds) { ForEach([45, 60, 90, 120, 150, 180], id: \.self) { Text("\($0) 秒").tag($0) } }
                 }
@@ -84,13 +88,17 @@ struct ProfileView: View {
                     Button { AppState.shared.perform(.openCoach) } label: { Label("和 \(profile.coachName) 聊天 / 语音指令", systemImage: "sparkles") }
                     Text("Siri 快捷指令：「在段位健身开始训练」「用段位健身记录体重」。").font(.footnote).foregroundStyle(.secondary)
                 }
+                Section("社区") {
+                    NavigationLink { CommunityProfileView(store: gym, profile: profile, embedded: true) } label: {
+                        HStack { Label("社区资料与可见性", systemImage: "person.crop.square"); Spacer(); Text(gym.connected ? "已连接" : "未加入").font(.caption).foregroundStyle(.secondary) }
+                    }
+                    Button { AppState.shared.tab = AppState.communityTab } label: { Label("进入健身房", systemImage: "person.2.wave.2.fill") }
+                    Button { AppState.shared.communitySection = 1; AppState.shared.tab = AppState.communityTab } label: { Label("好友与消息", systemImage: "bubble.left.and.bubble.right") }
+                    NavigationLink { SocialView(profile: profile) } label: { Label("段位卡片", systemImage: "rectangle.portrait") }
+                }
                 Section("训练与总结") {
-                    Button { AppState.shared.tab = AppState.communityTab } label: { Label("Enter Gym · Community", systemImage: "person.2.wave.2.fill") }
-                    Button { showCommunitySettings = true } label: { Label("Community profile & avatar", systemImage: "person.crop.square") }
-                    Button { AppState.shared.perform(.openTab(2)) } label: { Label("奖励 · Rewards & cosmetics", systemImage: "gift.fill") }
+                    Button { AppState.shared.perform(.openTab(2)) } label: { Label("奖励与外观", systemImage: "gift.fill") }
                     NavigationLink { SummaryView(profile: profile) } label: { Label("周 / 月 / 季度 / 年总结", systemImage: "chart.xyaxis.line") }
-                    Button { AppState.shared.communitySection = 1; AppState.shared.tab = AppState.communityTab } label: { Label("Friends & messages", systemImage: "bubble.left.and.bubble.right") }
-                    NavigationLink { SocialView(profile: profile) } label: { Label("Rank cards", systemImage: "rectangle.portrait") }
 
                     Picker("每日训练目标", selection: $profile.planGoal) { ForEach(WorkoutGoal.allCases) { Text($0.name).tag($0) } }
                     Stepper("每周 \(profile.planDaysPerWeek) 天", value: $profile.planDaysPerWeek, in: 1...6)
@@ -110,8 +118,8 @@ struct ProfileView: View {
                 }
                 Section("连接与数据") {
                     Button { AppState.shared.perform(.openCardio) } label: { Label("Apple Health / Apple Watch（有氧页）", systemImage: "heart.fill") }
-                    Button { info = "Strava 授权需通过 Strava 的 OAuth 权限页完成；发布为单向（本软件 → Strava），不导入跑步/骑行记录。当前版本尚未接入。" } label: { Label("连接 Strava 账号", systemImage: "figure.run") }
-                    Button { info = "从 Strong / Hevy 导出的 CSV 导入训练历史与个人纪录，将在下一版本提供。" } label: { Label("从 Strong / Hevy 导入", systemImage: "square.and.arrow.down") }
+                    Button { info = L("Strava 授权需通过 Strava 的 OAuth 权限页完成；发布为单向（本软件 → Strava），不导入跑步/骑行记录。当前版本尚未接入。") } label: { Label("连接 Strava 账号", systemImage: "figure.run") }
+                    Button { info = L("从 Strong / Hevy 导出的 CSV 导入训练历史与个人纪录，将在下一版本提供。") } label: { Label("从 Strong / Hevy 导入", systemImage: "square.and.arrow.down") }
                 }
                 Section("统计") {
                     LabeledContent("已发布训练", value: "\(workouts.filter { $0.isPublished }.count)")
@@ -125,7 +133,7 @@ struct ProfileView: View {
             }
             .task(id: portraitRevision) { portrait = TrainingPortraitFile.image() }
             .navigationTitle("我的")
-            .sheet(isPresented: $showCommunitySettings) { GymProfileSettingsView(store: gym, profile: profile) }
+            .sheet(isPresented: $showPortrait) { PortraitEditorView(profile: profile) }
             .scrollDismissesKeyboard(.interactively)
             .onSubmit { focusedField = nil }
             .onChange(of: focusedField) { previous, _ in saveMeasurement(previous) }
@@ -145,7 +153,7 @@ struct ProfileView: View {
 
     private var nicknameRow: some View {
         let nickname = profile.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let displayName = nickname.isEmpty ? "设置昵称" : nickname
+        let displayName = nickname.isEmpty ? L("设置昵称") : nickname
         return Button {
             focusedField = nil
             nicknameDraft = nickname

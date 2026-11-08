@@ -5,8 +5,10 @@ import SwiftData
 @MainActor
 struct LiftRankApp: App {
     @StateObject private var store: StoreLoader
+    @State private var languageSettings = LanguageSettings.shared
 
     init() {
+        LanguageBundle.install()
         _store = StateObject(wrappedValue: StoreLoader {
             let schema = Schema([UserProfile.self, Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self,
                                  BodyMeasurement.self, FoodEntry.self, CustomMeal.self, QuestClaim.self, RewardEvent.self, WorkoutTemplate.self,
@@ -33,6 +35,9 @@ struct LiftRankApp: App {
                 RootView()
                     .background(KeyboardDismissal())
                     .modelContainer(container)
+                    // Rebuild the whole interface in the selected language.
+                    .id(languageSettings.language)
+                    .environment(\.locale, languageSettings.language.locale)
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle")

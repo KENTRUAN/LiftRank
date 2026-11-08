@@ -23,7 +23,7 @@ struct GymFriendsView: View {
                     if !group.isEmpty {
                         Section(status == "incoming" ? "Requests received" : status == "outgoing" ? "Requests sent" : "Friends & messages") {
                             ForEach(group) { friendship in
-                                let profile = store.profiles[friendship.uid] ?? SocialProfile(uid: friendship.uid, name: "Private profile", gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance())
+                                let profile = store.profiles[friendship.uid] ?? SocialProfile(uid: friendship.uid, name: L("Private profile"), gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance())
                                 Group {
                                     HStack {
                                         Button { if status == "accepted" { chat = profile } else { selected = profile } } label: {
@@ -55,7 +55,7 @@ struct GymFriendsView: View {
                 if !store.blocked.isEmpty {
                     Section("Blocked members") {
                         ForEach(Array(store.blocked).sorted(), id: \.self) { id in
-                            HStack { Text(store.profiles[id]?.name ?? "Blocked member"); Spacer(); Button("Unblock") { store.perform { try await store.api?.friendAction(target: id, action: "unblock") } } }
+                            HStack { Text(store.profiles[id]?.name ?? L("Blocked member")); Spacer(); Button("Unblock") { store.perform { try await store.api?.friendAction(target: id, action: "unblock") } } }
                         }
                     }
                 }
@@ -89,14 +89,14 @@ struct GymMemberView: View {
             ScrollView {
                 VStack(spacing: 18) {
                     GymAvatarView(profile: member, image: store.portraits[memberID], size: 100)
-                    Text(member?.name ?? "Gym member").font(.title.bold())
+                    Text(member?.name ?? L("Gym member")).font(.title.bold())
                     if let member, member.gsr > 0 {
                         HStack { Text("\(member.gsr) GSR").font(.headline); TierBadge(tier: RankTier.tier(for: member.gsr)) }
                         Text("Overall rank · shared by this member").font(.caption2).foregroundStyle(.secondary)
                     }
                     if member?.gsr == 0 { Text("Rank not shared yet").font(.caption).foregroundStyle(.secondary) }
                     if let interests = member?.interests, !interests.isEmpty { Text(interests).foregroundStyle(.secondary) }
-                    if let presence = store.members.first(where: { $0.uid == memberID }) { Label("\(presence.station.capitalized) · \(presence.status)", systemImage: "figure.strengthtraining.traditional").font(.subheadline) }
+                    if let presence = store.members.first(where: { $0.uid == memberID }) { Label("\(L(presence.station.capitalized)) · \(L(presence.status))", systemImage: "figure.strengthtraining.traditional").font(.subheadline) }
 
                     if let member {
                         HStack { ForEach(member.cosmetics.compactMap(CosmeticCatalog.item).filter { $0.slot == .title }) { TitleTag(cosmetic: $0) } }
@@ -107,17 +107,17 @@ struct GymMemberView: View {
                     else if member == nil || member?.visibility == "anonymous" { Text("This profile is private.").foregroundStyle(.secondary) }
                     else {
                         switch friendship?.status {
-                        case "incoming": HStack { action("Accept request", "accept"); action("Decline", "decline") }
-                        case "outgoing": Text("Friend request sent").foregroundStyle(.secondary); action("Cancel request", "cancel")
+                        case "incoming": HStack { action(L("Accept request"), "accept"); action("Decline", "decline") }
+                        case "outgoing": Text("Friend request sent").foregroundStyle(.secondary); action(L("Cancel request"), "cancel")
                         case "accepted":
                             Button { showChat = true } label: { Label("Open private chat", systemImage: "bubble.left.and.bubble.right.fill").frame(maxWidth: .infinity) }.buttonStyle(.borderedProminent).tint(.teal)
-                            action("Remove friend", "remove")
+                            action(L("Remove friend"), "remove")
                         default:
-                            action("Add friend", "request").disabled(!store.canRequestFriend(memberID))
+                            action(L("Add friend"), "request").disabled(!store.canRequestFriend(memberID))
                             if !store.canRequestFriend(memberID) { Text("Meet in the same checked-in gym to connect.").font(.caption).foregroundStyle(.secondary) }
                         }
                         Divider()
-                        Button { makeIntroduction() } label: { Label(generating ? "Writing a draft…" : "Help me introduce myself", systemImage: "sparkles") }.disabled(generating)
+                        Button { makeIntroduction() } label: { Label(generating ? L("Writing a draft…") : L("Help me introduce myself"), systemImage: "sparkles") }.disabled(generating)
                         if !draft.isEmpty {
                             Text("Your introduction · edit before sending").font(.caption).foregroundStyle(.secondary)
                             TextEditor(text: $draft).frame(height: 100).padding(6).overlay(RoundedRectangle(cornerRadius: 12).stroke(.secondary.opacity(0.3)))
@@ -127,7 +127,7 @@ struct GymMemberView: View {
                             if friendship?.status != "accepted" { Text("You can send this after your friend request is accepted.").font(.caption).foregroundStyle(.secondary) }
                         }
                         HStack {
-                            Button(store.muted.contains(memberID) ? "Unmute room messages" : "Mute room messages") { store.toggleMute(memberID) }
+                            Button(store.muted.contains(memberID) ? L("Unmute room messages") : L("Mute room messages")) { store.toggleMute(memberID) }
                             Spacer()
                             Button("Block", role: .destructive) { blockConfirmation = true }
                         }.font(.caption)
@@ -138,7 +138,7 @@ struct GymMemberView: View {
             }
             .navigationTitle("Lifter profile").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("gymMemberDone") } }
-            .sheet(isPresented: $showChat) { GymChatView(store: store, target: memberID, isRoom: false, title: member?.name ?? "Private chat") }
+            .sheet(isPresented: $showChat) { GymChatView(store: store, target: memberID, isRoom: false, title: member?.name ?? L("Private chat")) }
             .confirmationDialog("Block this member? This removes your friendship and private chat.", isPresented: $blockConfirmation, titleVisibility: .visible) {
                 Button("Block member", role: .destructive) { store.perform { try await store.api?.friendAction(target: memberID, action: "block") } }
             }
@@ -183,7 +183,7 @@ struct GymChatView: View {
                                 HStack {
                                     if message.senderID == (isRoom ? store.roomIdentity : store.uid) { Spacer(minLength: 40) }
                                     VStack(alignment: .leading, spacing: 4) {
-                                        if isRoom { Text(message.senderID.hasPrefix("anon-") ? "Anonymous lifter" : store.profiles[message.senderID]?.name ?? "Gym member").font(.caption.bold()) }
+                                        if isRoom { Text(message.senderID.hasPrefix("anon-") ? L("Anonymous lifter") : store.profiles[message.senderID]?.name ?? L("Gym member")).font(.caption.bold()) }
                                         Text(message.text)
                                     }.padding(12).background(message.senderID == (isRoom ? store.roomIdentity : store.uid) ? Color.teal.opacity(0.18) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                                         .contextMenu {
@@ -242,7 +242,7 @@ struct GymChatView: View {
                 var body: [String: Any] = ["targetID": message.senderID, "messageID": message.id]
                 if isRoom { body["roomID"] = target }
                 try await store.api?.send("reports", body: body)
-                error = "Report received. You can also mute or block this member."
+                error = L("Report received. You can also mute or block this member.")
             } catch { self.error = error.localizedDescription }
         }
     }

@@ -4,12 +4,12 @@ import SwiftData
 @MainActor
 enum CardioWorkoutSession {
     static func start(profile: UserProfile, activity: TrainingActivity, outdoor: Bool, context: ModelContext, convertingEmpty: Workout? = nil, now: Date = Date()) throws -> Workout {
-        guard activity != .strength else { throw GymFailure.message("Choose a cardio activity.") }
+        guard activity != .strength else { throw GymFailure.message(L("Choose a cardio activity.")) }
         let active = try context.fetch(FetchDescriptor<Workout>()).first { !$0.isPublished }
         if let active {
             if active.activity != .strength, active.cardioTimerStartedAt != nil, active.endedAt == nil { return active }
             guard active === convertingEmpty, active.exercises.isEmpty, active.notes.isEmpty, active.routePoints.isEmpty, !active.hasPendingSet else {
-                throw GymFailure.message("Finish your current workout before starting cardio.")
+                throw GymFailure.message(L("Finish your current workout before starting cardio."))
             }
         }
         // Keep the observed SwiftData object alive when converting the empty gym draft.
@@ -27,11 +27,11 @@ enum CardioWorkoutSession {
     /// Idempotent desired-state changes also make repeated Live Activity taps safe.
     @discardableResult
     static func setPaused(_ paused: Bool, workout: Workout, context: ModelContext, now: Date = Date()) throws -> Bool {
-        guard let start = workout.cardioTimerStartedAt, workout.activity != .strength, !workout.isPublished, workout.endedAt == nil else { throw GymFailure.message("This cardio session has ended.") }
+        guard let start = workout.cardioTimerStartedAt, workout.activity != .strength, !workout.isPublished, workout.endedAt == nil else { throw GymFailure.message(L("This cardio session has ended.")) }
         guard workout.cardioIsPaused != paused else { return false }
         let previous = workout.cardioPauses
         let latest = previous.last?.endedAt ?? previous.last?.startedAt ?? start
-        guard now >= latest else { throw GymFailure.message("The device clock changed. Please retry when it is correct.") }
+        guard now >= latest else { throw GymFailure.message(L("The device clock changed. Please retry when it is correct.")) }
         if paused { workout.cardioPauses.append(CardioPause(startedAt: now)) }
         else { workout.cardioPauses[workout.cardioPauses.count - 1].endedAt = now }
         do { try context.save() } catch { workout.cardioPauses = previous; throw error }
@@ -42,9 +42,9 @@ enum CardioWorkoutSession {
     static func finish(_ workout: Workout, context: ModelContext, now: Date = Date()) throws -> CardioSession {
         let id = TrainingHealthManager.syncIdentifier(workout.id)
         if let saved = try context.fetch(FetchDescriptor<CardioSession>()).first(where: { $0.externalID == id }) { return saved }
-        guard workout.activity != .strength, let started = workout.cardioTimerStartedAt, !workout.isPublished else { throw GymFailure.message("Start the cardio timer first.") }
+        guard workout.activity != .strength, let started = workout.cardioTimerStartedAt, !workout.isPublished else { throw GymFailure.message(L("Start the cardio timer first.")) }
         let end = workout.endedAt ?? now
-        guard end >= (workout.cardioPauses.last?.endedAt ?? workout.cardioPauses.last?.startedAt ?? started) else { throw GymFailure.message("The device clock changed. Please retry when it is correct.") }
+        guard end >= (workout.cardioPauses.last?.endedAt ?? workout.cardioPauses.last?.startedAt ?? started) else { throw GymFailure.message(L("The device clock changed. Please retry when it is correct.")) }
         let duration = max(0.001, workout.cardioElapsed(at: end))
         let type = CardioType(rawValue: workout.activity.rawValue) ?? .other
         let record = CardioSession(date: started, type: type, durationMinutes: duration / 60,

@@ -20,7 +20,7 @@ struct RankCalculatorView: View {
         let w = unit.toKg(Double(weightText) ?? 0)
         Form {
             Section("输入") {
-                Picker("动作", selection: $exerciseKey) { ForEach(ranked) { Text($0.name).tag($0.key) } }
+                Picker("动作", selection: $exerciseKey) { ForEach(ranked) { Text($0.displayName).tag($0.key) } }
                 HStack { Text("重量 (\(unit.label))"); Spacer(); TextField("", text: $weightText).keyboardType(.decimalPad).multilineTextAlignment(.trailing) }
                 Stepper("次数 \(reps)", value: $reps, in: 1...30)
                 Stepper("RIR（剩余次数）\(rir)", value: $rir, in: 0...6)
@@ -34,7 +34,7 @@ struct RankCalculatorView: View {
                 Section("结果") {
                     HStack { Spacer(); ScoreGauge(score: score); Spacer() }
                     LabeledContent("估算 1RM (Epley)", value: "\(unit.fromKg(e1).fmt(1)) \(unit.label)")
-                    LabeledContent("相对力量", value: "\((e1 / bw).fmt(2)) × 体重")
+                    LabeledContent("相对力量", value: L("%@ × 体重", (e1 / bw).fmt(2)))
                     LabeledContent("段位进度", value: "\(RankTier.lp(for: score)) LP")
                 }
                 Section("各段位所需重量（\(reps) 次）") {

@@ -33,7 +33,7 @@ struct TrainerConversationView: View {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             if messages.isEmpty {
                                 Text("What are we training?").font(.title2.bold())
-                                ForEach(["Plan my workout today", "Create a week of training", "Add bench press to my todos"], id: \.self) { text in Button(text) { input = text }.buttonStyle(.bordered) }
+                                ForEach([L("Plan my workout today"), L("Create a week of training"), L("Add bench press to my todos")], id: \.self) { text in Button(text) { input = text }.buttonStyle(.bordered) }
                             }
                             ForEach(messages.suffix(100)) { message in
                                 HStack {

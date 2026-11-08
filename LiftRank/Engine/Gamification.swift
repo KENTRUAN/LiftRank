@@ -69,12 +69,12 @@ struct Season {
     let year: Int
     let start: Date
     let end: Date
-    var name: String { "\(year) 年第 \(index) 赛季" }
+    var name: String { L("%lld 年第 %lld 赛季", year, index) }
     var daysLeft: Int { max(0, end.daysSince(Date())) }
     /// Milestones are counted in training days within the season.
-    static let milestones: [(days: Int, eggs: Int, title: String)] = [
-        (5, 30, "赛季新秀"), (12, 60, "稳定输出"), (24, 120, "赛季主力"), (40, 200, "赛季王者")
-    ]
+    static var milestones: [(days: Int, eggs: Int, title: String)] {
+        [(5, 30, L("赛季新秀")), (12, 60, L("稳定输出")), (24, 120, L("赛季主力")), (40, 200, L("赛季王者"))]
+    }
 }
 
 enum SeasonEngine {
@@ -126,7 +126,7 @@ enum DailyTrainingEngine {
         let s = status(profile: profile, workouts: workouts, cardio: cardio, claims: claims, gsr: gsr, today: today)
         guard s.isComplete, !s.claimed else { return 0 }
         context.insert(QuestClaim(questID: questID, periodKey: s.dayKey))
-        context.insert(RewardEvent(date: today, kind: .dailyTraining, xp: 0, eggs: s.reward, note: "完成今日训练（\(RankTier.tier(for: gsr).name) 段位加成）"))
+        context.insert(RewardEvent(date: today, kind: .dailyTraining, xp: 0, eggs: s.reward, note: L("完成今日训练（%@ 段位加成）", RankTier.tier(for: gsr).name)))
         profile.eggs += s.reward
         try? context.save()
         return s.reward
@@ -151,10 +151,10 @@ enum QuestEngine {
         let weekVolume = Int(weeks.reduce(0) { $0 + $1.totalVolumeKg })
         let trainingDays = Set(weeks.map { ($0.publishedAt ?? $0.startedAt).dayKey } + cardioWeek.filter { $0.durationMinutes >= DailyTrainingEngine.minCardioMinutes }.map { $0.date.dayKey }).count
         return [
-            Quest(id: "w.days", title: "本周训练 3 天", target: 3, progress: trainingDays, rewardEggs: 25),
-            Quest(id: "w.volume", title: "本周训练量 10,000 kg", target: 10000, progress: weekVolume, rewardEggs: 20),
-            Quest(id: "w.sets", title: "本周完成 60 组", target: 60, progress: weeks.reduce(0) { $0 + $1.completedSets.count }, rewardEggs: 15),
-            Quest(id: "w.cardio", title: "本周有氧 90 分钟", target: 90, progress: Int(cardioWeek.reduce(0) { $0 + $1.durationMinutes }), rewardEggs: 20),
+            Quest(id: "w.days", title: L("本周训练 3 天"), target: 3, progress: trainingDays, rewardEggs: 25),
+            Quest(id: "w.volume", title: L("本周训练量 10,000 kg"), target: 10000, progress: weekVolume, rewardEggs: 20),
+            Quest(id: "w.sets", title: L("本周完成 60 组"), target: 60, progress: weeks.reduce(0) { $0 + $1.completedSets.count }, rewardEggs: 15),
+            Quest(id: "w.cardio", title: L("本周有氧 90 分钟"), target: 90, progress: Int(cardioWeek.reduce(0) { $0 + $1.durationMinutes }), rewardEggs: 20),
         ]
     }
 

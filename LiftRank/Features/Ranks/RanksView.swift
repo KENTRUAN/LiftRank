@@ -35,8 +35,8 @@ struct RanksView: View {
                             Text("肌群段位图").font(.headline)
                             Spacer()
                             HStack(spacing: 2) {
-                                sideButton("正面", showsFront: true)
-                                sideButton("背面", showsFront: false)
+                                sideButton(L("正面"), showsFront: true)
+                                sideButton(L("背面"), showsFront: false)
                             }
                             .padding(3)
                             .background(.quaternary, in: Capsule())
@@ -57,7 +57,7 @@ struct RanksView: View {
                             NavigationLink { ExerciseProgressView(exerciseKey: b.exerciseKey, profile: profile) } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(b.name).foregroundStyle(.primary)
+                                        Text(ExerciseNames.display(b.name)).foregroundStyle(.primary)
                                         Text("\(b.muscleGroup.name) · e1RM \(profile.unit.fromKg(b.bestE1RM).fmt(1)) \(profile.unit.label)").font(.caption).foregroundStyle(.secondary)
                                     }
                                     Spacer()
@@ -147,10 +147,10 @@ private struct MuscleRankDetail: View {
                             Text(region.name).font(.headline)
                             Spacer()
                             rankValue(RankAggregator.muscleScore(bests: records),
-                                      empty: related.contains(where: \.isRanked) ? "待评分" : "暂无独立评分")
+                                      empty: related.contains(where: \.isRanked) ? L("待评分") : L("暂无独立评分"))
                         }
                         if !related.isEmpty {
-                            Text(related.map(\.name).sorted().joined(separator: "、"))
+                            Text(related.map(\.displayName).sorted().joined(separator: L("、")))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -175,7 +175,7 @@ private struct MuscleRankDetail: View {
                         ExerciseProgressView(exerciseKey: record.exerciseKey, profile: profile)
                     } label: {
                         HStack {
-                            Text(record.name)
+                            Text(ExerciseNames.display(record.name))
                             Spacer()
                             rankValue(record.bestScore)
                         }
@@ -188,7 +188,7 @@ private struct MuscleRankDetail: View {
     }
 
     @ViewBuilder
-    private func rankValue(_ score: Int?, empty: String = "待评分") -> some View {
+    private func rankValue(_ score: Int?, empty: String = L("待评分")) -> some View {
         if let score {
             Text("\(score)").monospacedDigit()
             TierBadge(tier: RankTier.tier(for: score), compact: true)
@@ -356,9 +356,9 @@ private enum AvatarBuild: String, CaseIterable, Identifiable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .slim: "轻盈"
-        case .balanced: "均衡"
-        case .broad: "厚实"
+        case .slim: L("轻盈")
+        case .balanced: L("均衡")
+        case .broad: L("厚实")
         }
     }
     var offset: Double {
@@ -492,15 +492,13 @@ private struct TrainingAvatarCard: View {
             }
             .font(.subheadline.weight(.semibold))
             .buttonStyle(.bordered)
-            if AIBackend.showsPortraitControls {
-                Button { showPortrait = true } label: {
-                    Label("AI 肖像", systemImage: "photo")
-                }
-                .font(.subheadline.weight(.semibold))
+            Button { showPortrait = true } label: {
+                Label("AI 肖像", systemImage: "photo")
             }
+            .font(.subheadline.weight(.semibold))
         }
         .sheet(isPresented: $showPortrait) {
-            TrainingPortraitView()
+            PortraitEditorView(profile: profile)
         }
         .card()
         .onChange(of: dates) { _, _ in position = 1 }
@@ -532,7 +530,7 @@ private struct TrainingAvatarCard: View {
 
     private func frame(at position: Double, positions: [Double]) -> AvatarFrame {
         guard let last = history.last else {
-            return AvatarFrame(strength: [:], snapshot: nil, caption: "起始形象")
+            return AvatarFrame(strength: [:], snapshot: nil, caption: L("起始形象"))
         }
         guard let rightIndex = positions.firstIndex(where: { $0 >= position }), rightIndex > 0 else {
             return AvatarFrame(snapshot: position >= 1 ? last : history[0])
@@ -568,102 +566,6 @@ private struct AvatarFrame {
     init(snapshot: MuscleRankSnapshot) {
         strength = snapshot.scores.mapValues(Double.init)
         self.snapshot = snapshot
-        caption = snapshot.date.formatted(.dateTime.year().month().day().locale(Locale(identifier: "zh_CN")))
-    }
-}
-
-
-private struct TrainingPortraitView: View {
-    @Environment(\.dismiss) private var dismiss
-    @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
-    @State private var description = ""
-    @State private var image: UIImage?
-    @State private var generating = false
-    @State private var error: String?
-
-    private var prompt: String { description.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                if let image {
-                    Section {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity)
-                            .accessibilityLabel("训练化身肖像")
-                    }
-                }
-                Section {
-                    TextField("例如：蓝色短发、黑色背心、漫画风", text: $description, axis: .vertical)
-                        .lineLimit(2...4)
-                    Button(generating ? "正在生成…" : "生成一张肖像") { generate() }
-                        .disabled(generating || prompt.isEmpty || prompt.count > 600 || AIBackend.portraitConfig == nil)
-                    if generating { ProgressView() }
-                    if prompt.count > 600 { Text("描述最多 600 个字。").font(.caption).foregroundStyle(.secondary) }
-                    if let error { Text(error).font(.footnote).foregroundStyle(.red) }
-                    if AIBackend.portraitConfig == nil {
-                        Text("接入 OpenAI 后即可生成。").font(.footnote).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("描述你的训练化身")
-                } footer: {
-                    Text("生成后会更新「我的」头像和段位页训练化身。每次点击只生成一张。")
-                }
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("AI 肖像")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("完成") { dismiss() }.disabled(generating)
-                }
-            }
-            .interactiveDismissDisabled(generating)
-            .task {
-                image = TrainingPortraitFile.image()
-            }
-        }
-    }
-
-    private func generate() {
-        guard !generating, !prompt.isEmpty, prompt.count <= 600, let config = AIBackend.portraitConfig else { return }
-        let requestedLook = prompt
-        generating = true
-        error = nil
-        Task {
-            defer { generating = false }
-            do {
-                let data = try await AIService.generatePortrait(description: requestedLook, config: config)
-                guard let result = UIImage(data: data) else { throw AIError.badResponse }
-                try TrainingPortraitFile.save(data)
-                portraitRevision += 1
-                image = result
-            } catch {
-                self.error = error.localizedDescription
-            }
-        }
-    }
-}
-
-
-// Shared by the two player views and the generator. The existing portrait is recognized on upgrade.
-enum TrainingPortraitFile {
-    static let revisionKey = "trainingAvatar.portraitRevision"
-
-    static func image() -> UIImage? {
-        guard let url = try? url() else { return nil }
-        return UIImage(contentsOfFile: url.path)
-    }
-
-    static func save(_ data: Data) throws {
-        try data.write(to: url(), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-    }
-
-    private static func url() throws -> URL {
-        try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
-                                    appropriateFor: nil, create: true)
-            .appendingPathComponent("training-avatar-portrait.jpg")
+        caption = snapshot.date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
     }
 }

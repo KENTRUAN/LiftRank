@@ -74,7 +74,7 @@ struct GymEquipmentSheet: View {
                     }
                 } else if let exercise {
                     Button {
-                        guard !requiresEquipment || gym.ownsStation(station) else { error = "This equipment is no longer reserved for you."; return }
+                        guard !requiresEquipment || gym.ownsStation(station) else { error = L("This equipment is no longer reserved for you."); return }
                         do { try WorkoutSession.beginSet(workout, exerciseKey: exercise.key, context: context); dismiss() }
                         catch { self.error = error.localizedDescription }
                     } label: { Label("Start set", systemImage: "play.fill").frame(maxWidth: .infinity) }
@@ -119,6 +119,6 @@ struct GymEquipmentSheet: View {
             let rest = workout.exercises.first { $0.exerciseKey == exercise.key }?.restSeconds ?? profile.defaultRestSeconds
             onLogged(exercise.nameEn, rest)
             dismiss()
-        } catch { self.error = "Could not save this set. \(error.localizedDescription)" }
+        } catch { self.error = L("Could not save this set. %@", error.localizedDescription) }
     }
 }

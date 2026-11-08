@@ -17,7 +17,7 @@ struct ActiveWorkoutView: View {
     @State private var plateWeight: PlateTarget?
     @State private var showChecklist = true
     @State private var prep: Set<String> = []
-    private let prepItems = ["热身 5–10 分钟", "补水与装备就绪", "确认今日体重"]
+    private var prepItems: [String] { [L("热身 5–10 分钟"), L("补水与装备就绪"), L("确认今日体重")] }
 
     private var exerciseByKey: [String: Exercise] { Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) }) }
 
@@ -124,7 +124,7 @@ struct ActiveWorkoutView: View {
                     HStack {
                         Image(systemName: all ? "checkmark.circle.fill" : finished > 0 ? "circle.lefthalf.filled" : "circle")
                             .foregroundStyle(all ? .green : finished > 0 ? Color.accentColor : .secondary)
-                        Text(we.exerciseName).strikethrough(all, color: .secondary)
+                        Text(ExerciseNames.display(we.exerciseName)).strikethrough(all, color: .secondary)
                         Spacer()
                         Text("\(finished)/\(we.sets.count) 组").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                     }.font(.subheadline)
@@ -214,7 +214,7 @@ private struct ExerciseSection: View {
         } header: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(we.exerciseName).font(.headline).foregroundStyle(.primary).textCase(nil)
+                    Text(ExerciseNames.display(we.exerciseName)).font(.headline).foregroundStyle(.primary).textCase(nil)
                     HStack(spacing: 6) {
                         Text(we.muscleGroup.name)
                         if let ex = exercise, ex.isRanked { Text("· 支持段位") }
@@ -232,7 +232,7 @@ private struct ExerciseSection: View {
                         ForEach(1...3, id: \.self) { g in Button("超级组 \(g)") { we.supersetGroup = g } }
                     }
                     Button("添加备注") { showNotes = true }
-                    if let ex = exercise, !ex.instructions.isEmpty { Button("动作要点") { showNotes = true; if we.notes.isEmpty { we.notes = "要点：" + ex.instructions } } }
+                    if let ex = exercise, !ex.instructions.isEmpty { Button("动作要点") { showNotes = true; if we.notes.isEmpty { we.notes = L("要点：") + L(ex.instructions) } } }
                     Button("移除动作", role: .destructive, action: onDelete).disabled(we.sets.contains(where: \.isCompleted))
                 } label: { Image(systemName: "ellipsis.circle").font(.title3) }
             }
@@ -339,7 +339,7 @@ struct SetRowView: View {
 
     private var previousLabel: String {
         guard let p = previous else { return "—" }
-        if isCardio { return "\(p.weightKg.fmt(1))km×\(p.reps)分" }
+        if isCardio { return L("%@km×%lld分", p.weightKg.fmt(1), p.reps) }
         return "\(unit.fromKg(p.weightKg).fmt(1))×\(p.reps)"
     }
 }
@@ -397,10 +397,10 @@ struct FinishWorkoutSheet: View {
                         if s.firstOfDay {
                             LabeledContent("今日训练奖励") { EggAmount(amount: s.eggs, signed: true) }
                         } else {
-                            LabeledContent("今日训练奖励", value: "今天已领取")
+                            LabeledContent("今日训练奖励", value: L("今天已领取"))
                         }
                         LabeledContent("总体评分 GSR") { HStack { Text("\(s.overallScore)"); TierBadge(tier: RankTier.tier(for: s.overallScore), compact: true) } }
-                        LabeledContent("连续训练", value: "\(s.streakDays) 天")
+                        LabeledContent("连续训练", value: L("%lld 天", s.streakDays))
                     }
                     if !s.prs.isEmpty {
                         Section("个人纪录 PR") { ForEach(s.prs, id: \.self) { Label($0, systemImage: "trophy.fill").foregroundStyle(.orange) } }

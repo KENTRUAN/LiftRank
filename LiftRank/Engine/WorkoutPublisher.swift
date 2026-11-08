@@ -53,7 +53,7 @@ enum WorkoutPublisher {
                 newBest = max(newBest, StrengthScoring.e1RM(set: s, exercise: ex, bodyweightKg: workout.bodyweightKg))
                 bestScore = max(bestScore, StrengthScoring.score(set: s, exercise: ex, bodyweightKg: workout.bodyweightKg, sex: profile.sex))
             }
-            if newBest > (old[ex.key] ?? 0) + 0.01, newBest > 0 { prs.append("\(ex.name) e1RM \(newBest.fmt(1)) kg") }
+            if newBest > (old[ex.key] ?? 0) + 0.01, newBest > 0 { prs.append("\(ex.displayName) e1RM \(newBest.fmt(1)) kg") }
         }
 
         let now = Date()
@@ -65,7 +65,7 @@ enum WorkoutPublisher {
         let all = workouts.contains { $0.id == workout.id } ? workouts : workouts + [workout]
         let gsr = RankAggregator.overall(muscleScores: RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: all, exercises: exercises, sex: profile.sex)))
         let streak = StreakEngine.current(profile: profile, workouts: all, cardio: cardio, today: now)
-        context.insert(RewardEvent(date: now, kind: .workout, xp: 0, eggs: 0, note: "发布训练：\(workout.title)"))
+        context.insert(RewardEvent(date: now, kind: .workout, xp: 0, eggs: 0, note: L("发布训练：%@", workout.title)))
         let eggs = DailyTrainingEngine.claimIfEarned(profile: profile, workouts: all, cardio: cardio, claims: claims, gsr: gsr, context: context, today: now)
         workout.xpEarned = 0
         try? context.save()
@@ -151,7 +151,7 @@ enum DailyPlanEngine {
         }
         let generated = WorkoutGenerator.generate(goal: profile.planGoal, daysPerWeek: profile.planDaysPerWeek, equipment: profile.planEquipment,
                                                   experience: profile.planExperience, weeks: 1, exercises: exercises)
-        guard !generated.isEmpty else { return ("今日训练", []) }
+        guard !generated.isEmpty else { return (L("今日训练"), []) }
         let dayNumber = Calendar.current.ordinality(of: .day, in: .era, for: today) ?? 0
         let t = generated[dayNumber % generated.count]
         return (t.name, t.items)

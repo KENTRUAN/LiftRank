@@ -19,7 +19,7 @@ enum WorkoutSession {
 
     static func applyPreset(to workout: Workout, title: String, items: [TemplateExercise], exercises: [Exercise], context: ModelContext) throws {
         guard !workout.isPublished, workout.endedAt == nil, workout.exercises.isEmpty, !workout.hasPendingSet else {
-            throw GymFailure.message("A preset can only be added to an empty workout. Your recorded work has been kept.")
+            throw GymFailure.message(L("A preset can only be added to an empty workout. Your recorded work has been kept."))
         }
         let history = try context.fetch(FetchDescriptor<Workout>())
         let oldTitle = workout.title
@@ -38,7 +38,7 @@ enum WorkoutSession {
     }
 
     static func beginSet(_ workout: Workout, exerciseKey: String, context: ModelContext, now: Date = Date()) throws {
-        guard !workout.isPublished, workout.endedAt == nil, !workout.hasPendingSet, !exerciseKey.isEmpty else { throw GymFailure.message("Finish or discard the current set first.") }
+        guard !workout.isPublished, workout.endedAt == nil, !workout.hasPendingSet, !exerciseKey.isEmpty else { throw GymFailure.message(L("Finish or discard the current set first.")) }
         workout.currentExerciseKey = exerciseKey; workout.setStartedAt = now; workout.setEndedAt = nil; workout.restUntil = nil
         try context.save()
     }
@@ -54,7 +54,7 @@ enum WorkoutSession {
 
     static func saveEndedSet(_ workout: Workout, exercise: Exercise, weight: Double, reps: Int, unit: WeightUnit, restSeconds: Int, context: ModelContext) throws {
         guard workout.hasPendingSet, let ended = workout.setEndedAt, workout.currentExerciseKey == exercise.key else {
-            throw GymFailure.message("End your set before saving it.")
+            throw GymFailure.message(L("End your set before saving it."))
         }
         let started = workout.setStartedAt
         // Clear pending state in the same save as the completed set, preventing double saves.
@@ -67,11 +67,11 @@ enum WorkoutSession {
     @discardableResult
     static func log(exercise: Exercise, workout: Workout, weight: Double, reps: Int, unit: WeightUnit,
                     restSeconds: Int, context: ModelContext, completedAt: Date = Date()) throws -> WorkoutSet {
-        guard !workout.isPublished else { throw GymFailure.message("This workout is finished. Start a new session first.") }
+        guard !workout.isPublished else { throw GymFailure.message(L("This workout is finished. Start a new session first.")) }
         let storedWeight = exercise.isCardio ? weight : unit.toKg(weight)
         guard weight.isFinite, storedWeight.isFinite, storedWeight >= 0, storedWeight <= (exercise.isCardio ? 1000 : 1500),
               reps > 0, reps <= (exercise.isCardio ? 1440 : 1000) else {
-            throw GymFailure.message("Enter a valid nonnegative weight or distance, and a positive number of reps or minutes.")
+            throw GymFailure.message(L("Enter a valid nonnegative weight or distance, and a positive number of reps or minutes."))
         }
         let existingExercise = workout.exercises.first { $0.exerciseKey == exercise.key }
         let entry = existingExercise ?? WorkoutExercise(order: (workout.exercises.map(\.order).max() ?? -1) + 1, exercise: exercise, restSeconds: restSeconds)
@@ -102,6 +102,6 @@ enum GymEquipment {
         }
     }
     static func title(_ station: String) -> String {
-        switch station { case "rack": "Squat rack"; case "platform": "Lifting platform"; case "cardio": "Cardio zone"; case "bench": "Bench"; default: "Social lounge" }
+        switch station { case "rack": L("Squat rack"); case "platform": L("Lifting platform"); case "cardio": L("Cardio zone"); case "bench": L("Bench"); default: L("Social lounge") }
     }
 }

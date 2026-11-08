@@ -5,7 +5,7 @@ import Charts
 enum SummaryPeriod: String, CaseIterable, Identifiable {
     case week, month, quarter, year
     var id: String { rawValue }
-    var name: String { ["周", "月", "季度", "年"][SummaryPeriod.allCases.firstIndex(of: self)!] }
+    var name: String { [L("周"), L("月"), L("季度"), L("年")][SummaryPeriod.allCases.firstIndex(of: self)!] }
     var component: Calendar.Component { self == .week ? .weekOfYear : self == .month ? .month : self == .quarter ? .quarter : .year }
 
     func interval(offset: Int, now: Date = Date()) -> DateInterval {
@@ -23,11 +23,13 @@ enum SummaryPeriod: String, CaseIterable, Identifiable {
 
     func label(_ i: DateInterval) -> String {
         let f = DateFormatter()
+        let en = AppLanguage.current.isEnglish
+        f.locale = AppLanguage.current.locale
         switch self {
-        case .week: f.dateFormat = "M月d日"; return "\(f.string(from: i.start)) – \(f.string(from: i.end.addingTimeInterval(-1)))"
-        case .month: f.dateFormat = "yyyy年M月"; return f.string(from: i.start)
-        case .quarter: f.dateFormat = "yyyy年"; return "\(f.string(from: i.start)) 第 \((Calendar.current.component(.month, from: i.start) - 1) / 3 + 1) 季度"
-        case .year: f.dateFormat = "yyyy年"; return f.string(from: i.start)
+        case .week: f.dateFormat = en ? "MMM d" : "M月d日"; return "\(f.string(from: i.start)) – \(f.string(from: i.end.addingTimeInterval(-1)))"
+        case .month: f.dateFormat = en ? "MMM yyyy" : "yyyy年M月"; return f.string(from: i.start)
+        case .quarter: f.dateFormat = en ? "yyyy" : "yyyy年"; return L("%@ 第 %lld 季度", f.string(from: i.start), (Calendar.current.component(.month, from: i.start) - 1) / 3 + 1)
+        case .year: f.dateFormat = en ? "yyyy" : "yyyy年"; return f.string(from: i.start)
         }
     }
 }
@@ -78,7 +80,7 @@ enum SummaryEngine {
         // PRs: exercise bests reached inside the period that beat everything before it.
         let oldBest = Dictionary(uniqueKeysWithValues: RankAggregator.exerciseBests(workouts: before, exercises: exercises, sex: profile.sex).map { ($0.exerciseKey, $0.bestE1RM) })
         for b in RankAggregator.exerciseBests(workouts: through, exercises: exercises, sex: profile.sex) where interval.contains(b.date) && b.bestE1RM > (oldBest[b.exerciseKey] ?? 0) + 0.01 {
-            s.prs.append("\(b.name) e1RM \(profile.unit.fromKg(b.bestE1RM).fmt(1)) \(profile.unit.label)")
+            s.prs.append("\(ExerciseNames.display(b.name)) e1RM \(profile.unit.fromKg(b.bestE1RM).fmt(1)) \(profile.unit.label)")
         }
 
         let weights = measurements.filter { $0.metric == .weight && interval.contains($0.date) }.sorted { $0.date < $1.date }
@@ -133,11 +135,11 @@ struct SummaryView: View {
                 }
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    StatTile(title: "训练天数", value: "\(s.trainingDays)")
-                    StatTile(title: "力量训练", value: "\(s.workouts) 次", subtitle: "\(s.durationMin.fmt(0)) 分钟")
-                    StatTile(title: "总组数", value: "\(s.sets)")
-                    StatTile(title: "训练量", value: "\(profile.unit.fromKg(s.volumeKg).fmt(0))", subtitle: profile.unit.label, color: .purple)
-                    StatTile(title: "有氧", value: "\(s.cardioMinutes.fmt(0)) 分", subtitle: s.cardioKm > 0 ? "\(s.cardioKm.fmt(1)) km · \(s.cardioSessions) 次" : "\(s.cardioSessions) 次", color: .blue)
+                    StatTile(title: L("训练天数"), value: "\(s.trainingDays)")
+                    StatTile(title: L("力量训练"), value: L("%lld 次", s.workouts), subtitle: L("%@ 分钟", s.durationMin.fmt(0)))
+                    StatTile(title: L("总组数"), value: "\(s.sets)")
+                    StatTile(title: L("训练量"), value: "\(profile.unit.fromKg(s.volumeKg).fmt(0))", subtitle: profile.unit.label, color: .purple)
+                    StatTile(title: L("有氧"), value: L("%@ 分", s.cardioMinutes.fmt(0)), subtitle: s.cardioKm > 0 ? L("%@ km · %lld 次", s.cardioKm.fmt(1), s.cardioSessions) : L("%lld 次", s.cardioSessions), color: .blue)
                     StatTile(title: "Eggs", value: "+\(s.eggs)", color: .orange)
                 }
 
@@ -205,7 +207,7 @@ struct SummaryView: View {
         let weightCount = measurements.filter { $0.metric == .weight && interval.contains($0.date) }.count
         let weightTrend = weightCount >= 2
             ? "\(s.weightStart.map { $0.fmt(1) } ?? "—") → \(s.weightEnd.map { $0.fmt(1) } ?? "—") kg"
-            : "仅 \(weightCount) 次测量，无法判断趋势"
+            : L("仅 %lld 次测量，无法判断趋势", weightCount)
         let data = """
         周期：\(period.label(interval))。训练天数 \(s.trainingDays)，力量训练 \(s.workouts) 次 \(s.sets) 组，训练量 \(s.volumeKg.fmt(0)) kg，时长 \(s.durationMin.fmt(0)) 分钟。
         有氧 \(s.cardioSessions) 次 \(s.cardioMinutes.fmt(0)) 分钟 \(s.cardioKm.fmt(1)) km。GSR \(s.gsrStart) → \(s.gsrEnd)。

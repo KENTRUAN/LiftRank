@@ -81,18 +81,19 @@ struct RootTabView: View {
          workouts.filter(\.isPublished).map { "\($0.id):\($0.completedSets.count):\($0.strengthScore)" }.sorted().joined(),
          cardio.map { "\($0.id):\($0.durationMinutes)" }.sorted().joined(),
          templates.filter(\.isPublic).map { "\($0.id):\($0.name):\((try? JSONEncoder().encode($0.items).base64EncodedString()) ?? "")" }.sorted().joined(),
-         profile.sharedCosmeticIDs.joined(), Date().dayKey].joined(separator: "|")
+         profile.sharedCosmeticIDs.joined(), profile.name, Date().dayKey].joined(separator: "|")
     }
     private func syncSharedProfile() async {
         guard gym.connected, !gym.offlineSample, let me = gym.me else { return }
         let ranks = GymProfileSnapshot.ranks(profile: profile, workouts: workouts, exercises: exercises)
         let total = RankAggregator.overall(muscleScores: Dictionary(uniqueKeysWithValues: ranks.compactMap { key, value in MuscleGroup(rawValue: key).map { ($0, value) } }))
         do {
-            try await gym.updateProfile(name: me.name, interests: me.interests, shareRank: gym.sharesRank, gsr: total, cosmetics: profile.sharedCosmeticIDs,
+            // A nickname edited in 我的 is an identity change, which only a full update may publish.
+            try await gym.updateProfile(name: profile.name, interests: me.interests, shareRank: gym.sharesRank, gsr: total, cosmetics: profile.sharedCosmeticIDs,
                 muscleRanks: ranks, shareActivity: me.shareActivity,
                 highlights: me.shareActivity ? GymProfileSnapshot.highlights(profile: profile, workouts: workouts, exercises: exercises, cardio: cardio) : nil,
-                routines: GymProfileSnapshot.routines(templates, exercises: exercises), snapshotOnly: true)
-        } catch { gym.error = "Could not refresh your shared profile. \(error.localizedDescription)" }
+                routines: GymProfileSnapshot.routines(templates, exercises: exercises), snapshotOnly: me.name == profile.name)
+        } catch { gym.error = L("Could not refresh your shared profile. %@", error.localizedDescription) }
     }
 
     private func refreshDailyPlan() {
@@ -108,7 +109,7 @@ struct RootTabView: View {
             profile.bodyweightKg = kg
             try? context.save()
             app.pending = nil
-            app.flash("已记录体重 \(profile.unit.fromKg(kg).fmt(1)) \(profile.unit.label)")
+            app.flash(L("已记录体重 %@ %@", profile.unit.fromKg(kg).fmt(1), profile.unit.label))
         default:
             break
         }

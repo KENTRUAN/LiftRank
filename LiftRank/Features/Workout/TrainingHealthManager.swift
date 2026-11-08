@@ -45,13 +45,13 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         let requestedID = workout.id
         if startingID == requestedID { return }
         for _ in 0..<100 where startingID != nil { try? await Task.sleep(for: .milliseconds(100)) }
-        guard startingID == nil else { fail(workout, "Apple tracking is still switching activities. Retry shortly."); return }
+        guard startingID == nil else { fail(workout, L("Apple tracking is still switching activities. Retry shortly.")); return }
         for _ in 0..<100 where !finishingIDs.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
-        guard finishingIDs.isEmpty else { fail(workout, "The previous Apple workout is still saving. Retry shortly."); return }
+        guard finishingIDs.isEmpty else { fail(workout, L("The previous Apple workout is still saving. Retry shortly.")); return }
         guard workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
         if let previous = current, previous.id != workout.id, previous.healthOwner == "watch", previous.healthState != "saved" {
             sendWatch(message("finish", previous))
-            fail(workout, "Finish saving the previous workout on your Watch, then retry Apple Health.")
+            fail(workout, L("Finish saving the previous workout on your Watch, then retry Apple Health."))
             return
         }
         if current?.id == workout.id, workout.healthOwner != "watch", builder != nil { return }
@@ -63,7 +63,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         guard UserDefaults.standard.object(forKey: "training.appleHealthEnabled") as? Bool != false else {
             workout.healthState = "off"; save(); return
         }
-        guard HKHealthStore.isHealthDataAvailable() else { fail(workout, "Apple Health is unavailable on this device."); return }
+        guard HKHealthStore.isHealthDataAvailable() else { fail(workout, L("Apple Health is unavailable on this device.")); return }
         startingID = workout.id
         defer { startingID = nil }
         do {
@@ -73,7 +73,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
             }
             guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
             guard healthStore.authorizationStatus(for: type) == .sharingAuthorized else {
-                fail(workout, "Allow LiftRank to write workouts in Settings → Health → Data Access & Devices.")
+                fail(workout, L("Allow LiftRank to write workouts in Settings → Health → Data Access & Devices."))
                 return
             }
             if workout.healthOwner == "watch" {
@@ -100,7 +100,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
                         guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
                         sendWatch(message("cancel", workout))
                         workout.healthOwner = "phone"
-                        workout.healthError = "Watch unavailable. Recording on iPhone."
+                        workout.healthError = L("Watch unavailable. Recording on iPhone.")
                     }
                 }
             }
@@ -153,7 +153,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         #endif
         guard UserDefaults.standard.object(forKey: "training.appleHealthEnabled") as? Bool != false || workout.healthState.hasPrefix("recording") else { return }
         guard healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized else {
-            fail(workout, "Workout saved locally. Apple Health permission is needed to sync."); return
+            fail(workout, L("Workout saved locally. Apple Health permission is needed to sync.")); return
         }
         if workout.healthOwner == "watch" {
             workout.healthState = "savingWatch"; save()
@@ -174,7 +174,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
                     for _ in 0..<50 where session.state != .stopped && session.state != .ended {
                         try await Task.sleep(for: .milliseconds(100))
                     }
-                    guard session.state == .stopped || session.state == .ended else { throw GymFailure.message("Apple workout is still stopping. Retry sync.") }
+                    guard session.state == .stopped || session.state == .ended else { throw GymFailure.message(L("Apple workout is still stopping. Retry sync.")) }
                 }
             } else {
                 recorder = HKWorkoutBuilder(healthStore: healthStore, configuration: workout.healthConfiguration, device: .local())
@@ -198,7 +198,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
             if ownsBuilder, current?.id == workout.id { session?.end(); session = nil; builder = nil }
         } catch {
             if current?.id == workout.id { session?.end(); session = nil; builder = nil }
-            fail(workout, "Workout saved locally. Health sync failed: \(error.localizedDescription)")
+            fail(workout, L("Workout saved locally. Health sync failed: %@", error.localizedDescription))
         }
     }
 
@@ -288,7 +288,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         watchTimeout = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(20)) } catch { return }
             guard ["startingWatch", "savingWatch", "error"].contains(workout.healthState), workout.healthOwner == "watch" else { return }
-            workout.healthError = "Open LiftRank on your Watch and check its Health permissions, then retry. Your local workout continues."
+            workout.healthError = L("Open LiftRank on your Watch and check its Health permissions, then retry. Your local workout continues.")
             self?.save()
         }
     }
@@ -345,15 +345,15 @@ struct TrainingHealthStatusView: View {
     @ObservedObject private var health = TrainingHealthManager.shared
     private var label: String {
         switch workout.healthState {
-        case "startingWatch": "Starting Apple Watch…"
-        case "recordingWatch": "Apple Watch · recording"
-        case "recordingPhone": "iPhone · Apple Health recording"
-        case "savingWatch": "Waiting for Watch to save"
-        case "saving": "Saving to Apple Health…"
-        case "saved": "Saved to Apple Health"
-        case "off": "Apple Health sync off"
-        case "error": "Apple Health needs attention"
-        default: "Apple Health starts after workout setup"
+        case "startingWatch": L("Starting Apple Watch…")
+        case "recordingWatch": L("Apple Watch · recording")
+        case "recordingPhone": L("iPhone · Apple Health recording")
+        case "savingWatch": L("Waiting for Watch to save")
+        case "saving": L("Saving to Apple Health…")
+        case "saved": L("Saved to Apple Health")
+        case "off": L("Apple Health sync off")
+        case "error": L("Apple Health needs attention")
+        default: L("Apple Health starts after workout setup")
         }
     }
     var body: some View {

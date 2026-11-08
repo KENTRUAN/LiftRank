@@ -54,7 +54,7 @@ final class GymStore: ObservableObject {
     }
     func roomProfile(_ id: String) -> SocialProfile? {
         if id.hasPrefix("anon-") || members.first(where: { $0.uid == id })?.visibility == "anonymous" {
-            var hidden = SocialProfile(uid: id, name: "Anonymous lifter", gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "anonymous", color: "blue"))
+            var hidden = SocialProfile(uid: id, name: L("Anonymous lifter"), gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "anonymous", color: "blue"))
             hidden.visibility = "anonymous"
             return hidden
         }
@@ -71,7 +71,7 @@ final class GymStore: ObservableObject {
         setCompletedAt = time; publishPresence(force: true)
     }
     func equipmentAction(_ station: String, _ action: String, target: String? = nil, mode: String = "workIn") async throws {
-        guard let api, membership != nil else { throw GymFailure.message("Enter a live gym first.") }
+        guard let api, membership != nil else { throw GymFailure.message(L("Enter a live gym first.")) }
         var body: [String: Any] = ["mode": mode]
         if let target { body["targetID"] = target }
         try await api.send("equipment/\(station)/\(action)", body: body)
@@ -80,7 +80,7 @@ final class GymStore: ObservableObject {
     }
     func trainerAPI() async throws -> GymAPI {
         if let api { return api }
-        guard let configuration else { throw GymFailure.message("Cloud setup is missing.") }
+        guard let configuration else { throw GymFailure.message(L("Cloud setup is missing.")) }
         configuration.configureFirebase()
         if Auth.auth().currentUser == nil { _ = try await Auth.auth().signInAnonymously() }
         uid = Auth.auth().currentUser?.uid ?? ""
@@ -107,12 +107,12 @@ final class GymStore: ObservableObject {
         do {
             let snapshot = try await Database.database().reference(withPath: "profiles/\(user.uid)").getData()
             if snapshot.exists() {
-                guard let profile: SocialProfile = Self.decode(snapshot.value) else { throw GymFailure.message("Your community profile could not be loaded. Please retry.") }
+                guard let profile: SocialProfile = Self.decode(snapshot.value) else { throw GymFailure.message(L("Your community profile could not be loaded. Please retry.")) }
                 uid = user.uid; api = GymAPI(configuration: configuration)
                 activate(profile)
             }
             prepared = true
-        } catch { restoreError = "Could not restore your community profile. \(error.localizedDescription)" }
+        } catch { restoreError = L("Could not restore your community profile. %@", error.localizedDescription) }
     }
 
     func perform(_ work: @escaping @MainActor () async throws -> Void) {
@@ -123,14 +123,14 @@ final class GymStore: ObservableObject {
             do { try await work() } catch {
                 let nsError = error as NSError
                 self.error = nsError.domain == AuthErrorDomain && nsError.code == AuthErrorCode.keychainError.rawValue
-                    ? "Your device could not securely save the guest session. Please close and reopen the app."
+                    ? L("Your device could not securely save the guest session. Please close and reopen the app.")
                     : error.localizedDescription
             }
         }
     }
 
     func connect(name: String, gsr: Int, cosmetics: [String], interests: String, shareRank: Bool? = nil) async throws {
-        guard let configuration else { throw GymFailure.message("Cloud setup is missing. Use the offline sample, or add SocialConfig.plist using the setup guide.") }
+        guard let configuration else { throw GymFailure.message(L("Cloud setup is missing. Use the offline sample, or add SocialConfig.plist using the setup guide.")) }
         configuration.configureFirebase()
         api = GymAPI(configuration: configuration)
         let user: FirebaseAuth.User
@@ -143,7 +143,7 @@ final class GymStore: ObservableObject {
     }
 
     func updateProfile(name: String, interests: String, shareRank: Bool, gsr: Int, cosmetics: [String], muscleRanks: [String: Int], shareActivity: Bool, highlights: GymTrainingHighlights?, routines: [GymPublicRoutine], snapshotOnly: Bool = false, visibility: String? = nil) async throws {
-        guard let me, let api else { throw GymFailure.message("Connect your community profile first.") }
+        guard let me, let api else { throw GymFailure.message(L("Connect your community profile first.")) }
         let previousRoom = room, changedVisibility = visibility != nil && visibility != me.visibility
         var body = me.jsonObject
         if let visibility { body["visibility"] = visibility }
@@ -191,7 +191,7 @@ final class GymStore: ObservableObject {
                 if snap.value as? Bool == false, self.membership != nil {
                     Database.database().purgeOutstandingWrites()
                     self.detachRoom()
-                    self.error = "Connection lost. Check in again when you are online."
+                    self.error = L("Connection lost. Check in again when you are online.")
                 }
             }
         }))
@@ -228,8 +228,8 @@ final class GymStore: ObservableObject {
     func sample(name: String, gsr: Int, cosmetics: [String]) {
         stopObservers(); uid = "sample-me"; connected = false; offlineSample = true; prepared = true
         friends = []; blocked = []; muted = []
-        profiles = [uid: SocialProfile(uid: uid, name: name, gsr: gsr, cosmetics: cosmetics, interests: "Strength training", avatar: AvatarAppearance())]
-        let sample = SocialProfile(uid: "sample-alex", name: "Alex · sample", gsr: 540, cosmetics: [], interests: "Bench press and consistency", avatar: AvatarAppearance(preset: "star", color: "blue"))
+        profiles = [uid: SocialProfile(uid: uid, name: name, gsr: gsr, cosmetics: cosmetics, interests: L("Strength training"), avatar: AvatarAppearance())]
+        let sample = SocialProfile(uid: "sample-alex", name: L("Alex · sample"), gsr: 540, cosmetics: [], interests: L("Bench press and consistency"), avatar: AvatarAppearance(preset: "star", color: "blue"))
         profiles[sample.uid] = sample
         members = [RoomPresence(uid: uid, sessionId: "sample", x: 2, y: 7, station: "lounge", status: status, updatedAt: Date().timeIntervalSince1970 * 1000),
             RoomPresence(uid: sample.uid, sessionId: "sample", x: 4, y: 3, station: "bench", status: "Training", updatedAt: Date().timeIntervalSince1970 * 1000)]
@@ -237,7 +237,7 @@ final class GymStore: ObservableObject {
     }
 
     func search(query: String, nearby: Bool, radius: Int) async throws {
-        guard let api else { throw GymFailure.message("Connect your guest profile first.") }
+        guard let api else { throw GymFailure.message(L("Connect your guest profile first.")) }
         let point = nearby ? try await location.current() : nil
         gyms = try await api.search(query: query, location: point, radius: radius)
     }
@@ -249,14 +249,14 @@ final class GymStore: ObservableObject {
         // A quick Leave → Enter must finish removing the old presence before publishing a new one.
         await cleanup?.value
         cleanup = nil
-        guard joinAttempt == attempt else { throw GymFailure.message("Gym entry was cancelled. Enter again when ready.") }
+        guard joinAttempt == attempt else { throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready.")) }
         await leave()
-        guard joinAttempt == attempt else { throw GymFailure.message("Gym entry was cancelled. Enter again when ready.") }
+        guard joinAttempt == attempt else { throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready.")) }
         let point = gym.isDemo ? nil : try await location.current()
         let lease = try await api.join(gym, location: point)
         guard joinAttempt == attempt else {
             try? await api.leave(lease)
-            throw GymFailure.message("Gym entry was cancelled. Enter again when ready.")
+            throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready."))
         }
         membership = lease; position = CGPoint(x: lease.spawnX ?? 2, y: lease.spawnY ?? 7); station = "lounge"
         let ref = Database.database().reference(withPath: "world/rooms/\(lease.roomId)/presence/\(lease.publicID ?? uid)")
@@ -270,7 +270,7 @@ final class GymStore: ObservableObject {
             guard joinAttempt == attempt, membership?.sessionId == lease.sessionId else {
                 _ = try? await ref.removeValue(); _ = try? await ref.cancelDisconnectOperations()
                 try? await api.leave(lease)
-                throw GymFailure.message("Gym entry was cancelled. Enter again when ready.")
+                throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready."))
             }
             for station in GymLayout.stations where station != "lounge" {
                 let equipmentRef = Database.database().reference(withPath: "world/rooms/\(lease.roomId)/equipment/\(station)/members/\(lease.publicID ?? uid)")
@@ -446,7 +446,7 @@ final class GymChatFeed: ObservableObject {
         self.query = query
         handle = query.observe(.value, with: { [weak self] snap in
             Task { @MainActor in self?.messages = GymStore.decodeDictionary(snap.value, as: ChatMessage.self).sorted { $0.createdAt < $1.createdAt } }
-        }, withCancel: { [weak self] _ in Task { @MainActor in self?.messages = []; self?.error = "This conversation is no longer available." } })
+        }, withCancel: { [weak self] _ in Task { @MainActor in self?.messages = []; self?.error = L("This conversation is no longer available.") } })
     }
     func stop() { if let handle { query?.removeObserver(withHandle: handle) }; query = nil; handle = nil; messages = [] }
 }

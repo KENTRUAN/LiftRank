@@ -66,7 +66,7 @@ enum GymProfileSnapshot {
         let uniqueCardio = cardio.filter { !recordedIDs.contains($0.externalID) }
         memories += uniqueCardio.map { effort in
             GymActivityMemory(id: effort.id.uuidString, date: effort.date.timeIntervalSince1970 * 1000,
-                              title: HealthKitManager.activityType(for: effort.type) == .running ? "Running" : "Cardio workout",
+                              title: HealthKitManager.activityType(for: effort.type) == .running ? L("Running") : L("Cardio workout"),
                               minutes: min(1440, max(0, Int(effort.durationMinutes))), sets: 0, score: 0)
         }
         let cal = Calendar.current

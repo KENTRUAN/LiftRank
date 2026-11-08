@@ -13,7 +13,7 @@ struct ShopView: View {
     @State private var toast: String?
     @State private var front = true
 
-    init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases, title: String = "商店") {
+    init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases, title: String = L("商店")) {
         _profile = Bindable(wrappedValue: profile)
         self.gsr = gsr
         self.muscles = muscles
@@ -50,9 +50,9 @@ struct ShopView: View {
                 if slots.contains(.frame) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("连续记录道具").font(.headline)
-                        itemRow("Super Restore", price: 100, desc: "恢复最长 30 天的连续记录", owned: profile.superRestore) { profile.superRestore += 1 }
-                        itemRow("Mega Restore", price: 200, desc: "恢复最长 60 天的连续记录", owned: profile.megaRestore) { profile.megaRestore += 1 }
-                        itemRow("Streak Revive", price: 400, desc: "恢复任意长度的连续记录", owned: profile.streakRevive) { profile.streakRevive += 1 }
+                        itemRow("Super Restore", price: 100, desc: L("恢复最长 30 天的连续记录"), owned: profile.superRestore) { profile.superRestore += 1 }
+                        itemRow("Mega Restore", price: 200, desc: L("恢复最长 60 天的连续记录"), owned: profile.megaRestore) { profile.megaRestore += 1 }
+                        itemRow("Streak Revive", price: 400, desc: L("恢复任意长度的连续记录"), owned: profile.streakRevive) { profile.streakRevive += 1 }
                         Text("Eggs 通过每日训练、本周奖励与赛季里程碑获得。虚拟物品不可兑换现金。").font(.caption2).foregroundStyle(.secondary)
                     }.card()
                 }
@@ -121,7 +121,7 @@ struct ShopView: View {
             }
             VStack(spacing: 2) {
                 Text(item.name).font(.subheadline.bold())
-                Text(item.requiredTier.map { "需 \($0.name) 段位" } ?? item.detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
             }
             if equipped {
                 Button("已装备") { if item.price > 0 { profile.unequip(item.slot); try? context.save() } }
@@ -141,14 +141,14 @@ struct ShopView: View {
     }
 
     private func buy(_ item: Cosmetic) {
-        if let t = item.requiredTier, tier < t { toast = "需要达到 \(t.name) 段位"; return }
-        guard profile.eggs >= item.price else { toast = "Eggs 不足"; return }
+        if let t = item.requiredTier, tier < t { toast = L("需要达到 %@ 段位", t.name); return }
+        guard profile.eggs >= item.price else { toast = L("Eggs 不足"); return }
         profile.eggs -= item.price
         profile.ownedCosmetics.append(item.id)
         profile.equip(item)
-        context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -item.price, note: "购买外观：\(item.name)"))
+        context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -item.price, note: L("购买外观：%@", item.name)))
         try? context.save()
-        toast = "已购买并装备「\(item.name)」"
+        toast = L("已购买并装备「%@」", item.name)
     }
 
     private func itemRow(_ name: String, price: Int, desc: String, owned: Int, buy: @escaping () -> Void) -> some View {
@@ -156,12 +156,12 @@ struct ShopView: View {
             VStack(alignment: .leading) { Text("\(name) ×\(owned)").font(.subheadline.bold()); Text(desc).font(.caption).foregroundStyle(.secondary) }
             Spacer()
             Button {
-                guard profile.eggs >= price else { toast = "Eggs 不足"; return }
+                guard profile.eggs >= price else { toast = L("Eggs 不足"); return }
                 profile.eggs -= price
                 buy()
-                context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -price, note: "购买 \(name)"))
+                context.insert(RewardEvent(kind: .shop, xp: 0, eggs: -price, note: L("购买 %@", name)))
                 try? context.save()
-                toast = "已购买 \(name)"
+                toast = L("已购买 %@", name)
             } label: { EggAmount(amount: price) }.buttonStyle(.bordered).controlSize(.small).disabled(profile.eggs < price)
         }
     }

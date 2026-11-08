@@ -154,7 +154,7 @@ struct BodyAnalysisView: View {
                                                                  profile: profile, exercises: exercises, config: config)
                 let encoded = try program.encoded()
                 guard nutrition == planAtStart else {
-                    self.error = "饮食建议已更新，请重新分析以继续调整。"
+                    self.error = L("饮食建议已更新，请重新分析以继续调整。")
                     return
                 }
                 let previous = (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt)

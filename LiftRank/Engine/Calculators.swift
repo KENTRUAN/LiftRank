@@ -72,10 +72,10 @@ enum WorkoutGoal: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .strength: "力量"
-        case .hypertrophy: "增肌"
-        case .general: "综合体能"
-        case .fatLoss: "减脂"
+        case .strength: L("力量")
+        case .hypertrophy: L("增肌")
+        case .general: L("综合体能")
+        case .fatLoss: L("减脂")
         }
     }
     var scheme: (sets: Int, low: Int, high: Int, rest: Int) {
@@ -93,9 +93,9 @@ enum ExperienceLevel: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .beginner: "新手"
-        case .intermediate: "进阶"
-        case .advanced: "高级"
+        case .beginner: L("新手")
+        case .intermediate: L("进阶")
+        case .advanced: L("高级")
         }
     }
     var exercisesPerDay: Int { self == .beginner ? 4 : self == .intermediate ? 5 : 6 }
@@ -106,9 +106,9 @@ enum EquipmentAccess: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .fullGym: "健身房"
-        case .dumbbellsOnly: "仅哑铃"
-        case .bodyweight: "自重"
+        case .fullGym: L("健身房")
+        case .dumbbellsOnly: L("仅哑铃")
+        case .bodyweight: L("自重")
         }
     }
     func allows(_ e: Equipment) -> Bool {
@@ -124,10 +124,10 @@ enum EquipmentAccess: String, CaseIterable, Identifiable {
 enum WorkoutGenerator {
     static func splits(daysPerWeek: Int) -> [(name: String, groups: [MuscleGroup])] {
         switch daysPerWeek {
-        case ...2: return [("全身 A", [.quads, .chest, .back, .shoulders, .abs]), ("全身 B", [.hamstrings, .back, .chest, .glutes, .biceps, .triceps])]
-        case 3: return [("全身 A", [.quads, .chest, .back, .abs]), ("全身 B", [.hamstrings, .shoulders, .back, .biceps, .triceps]), ("全身 C", [.glutes, .chest, .back, .calves, .abs])]
-        case 4: return [("上肢 A", [.chest, .back, .shoulders, .triceps]), ("下肢 A", [.quads, .hamstrings, .glutes, .calves]), ("上肢 B", [.back, .chest, .biceps, .shoulders]), ("下肢 B", [.glutes, .quads, .hamstrings, .abs])]
-        default: return [("推", [.chest, .shoulders, .triceps, .chest]), ("拉", [.back, .back, .biceps, .traps]), ("腿", [.quads, .hamstrings, .glutes, .calves]), ("上肢", [.chest, .back, .shoulders, .biceps]), ("下肢核心", [.quads, .glutes, .hamstrings, .abs]), ("弱项补强", [.shoulders, .back, .triceps, .abs])]
+        case ...2: return [(L("全身 A"), [.quads, .chest, .back, .shoulders, .abs]), (L("全身 B"), [.hamstrings, .back, .chest, .glutes, .biceps, .triceps])]
+        case 3: return [(L("全身 A"), [.quads, .chest, .back, .abs]), (L("全身 B"), [.hamstrings, .shoulders, .back, .biceps, .triceps]), (L("全身 C"), [.glutes, .chest, .back, .calves, .abs])]
+        case 4: return [(L("上肢 A"), [.chest, .back, .shoulders, .triceps]), (L("下肢 A"), [.quads, .hamstrings, .glutes, .calves]), (L("上肢 B"), [.back, .chest, .biceps, .shoulders]), (L("下肢 B"), [.glutes, .quads, .hamstrings, .abs])]
+        default: return [(L("推"), [.chest, .shoulders, .triceps, .chest]), (L("拉"), [.back, .back, .biceps, .traps]), (L("腿"), [.quads, .hamstrings, .glutes, .calves]), (L("上肢"), [.chest, .back, .shoulders, .biceps]), (L("下肢核心"), [.quads, .glutes, .hamstrings, .abs]), (L("弱项补强"), [.shoulders, .back, .triceps, .abs])]
         }
     }
 
@@ -136,7 +136,7 @@ enum WorkoutGenerator {
         let pool = exercises.filter { !$0.isCardio && equipment.allows($0.equipment) }
         let scheme = goal.scheme
         let perDay = experience.exercisesPerDay
-        let planName = "\(goal.name) · 每周 \(daysPerWeek) 天 · \(weeks) 周"
+        let planName = L("%@ · 每周 %lld 天 · %lld 周", goal.name, daysPerWeek, weeks)
         var templates: [WorkoutTemplate] = []
         for (i, split) in splits(daysPerWeek: max(1, min(6, daysPerWeek))).prefix(max(1, daysPerWeek)).enumerated() {
             var chosen: [Exercise] = []
@@ -159,7 +159,7 @@ enum WorkoutGenerator {
                 TemplateExercise(exerciseKey: ex.key, exerciseName: ex.name, sets: scheme.sets, repsLow: scheme.low, repsHigh: scheme.high,
                                  restSeconds: scheme.rest, weekProgressionPercent: goal == .strength ? 2.5 : 1.5)
             }
-            templates.append(WorkoutTemplate(name: "第 \(i + 1) 天 · \(split.name)", items: items, weeks: weeks, dayIndex: i, planName: planName))
+            templates.append(WorkoutTemplate(name: L("第 %lld 天 · %@", i + 1, split.name), items: items, weeks: weeks, dayIndex: i, planName: planName))
         }
         return templates
     }

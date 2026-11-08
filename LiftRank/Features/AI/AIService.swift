@@ -55,12 +55,12 @@ enum AIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured: "AI 服务暂未开通：此构建没有配置开发者接口。"
-        case .http(let code, let body): "请求失败（HTTP \(code)）：\(body.prefix(300))"
-        case .refusal: "模型拒绝回答这个请求。"
-        case .emptyResponse: "模型没有返回内容。"
-        case .invalidProgram: "AI 没有返回完整且有效的四周方案，请再试一次。已有安排已保留。"
-        case .badResponse: "无法解析模型返回的数据。"
+        case .notConfigured: L("AI 服务暂未开通：此构建没有配置开发者接口。")
+        case .http(let code, let body): L("请求失败（HTTP %lld）：%@", code, String(body.prefix(300)))
+        case .refusal: L("模型拒绝回答这个请求。")
+        case .emptyResponse: L("模型没有返回内容。")
+        case .invalidProgram: L("AI 没有返回完整且有效的四周方案，请再试一次。已有安排已保留。")
+        case .badResponse: L("无法解析模型返回的数据。")
         }
     }
 }
@@ -70,8 +70,8 @@ enum AIError: LocalizedError {
 /// and can be overridden with `LIFTRANK_AI_*` environment variables when launching from Xcode or `simctl`.
 /// Point `LIFTRANK_AI_BASE_URL` at your own relay server to keep the real provider key off the device.
 enum AIBackend {
-    static let displayName = "段位健身 AI"
-    static let unavailableHint = "AI 能力由开发者统一提供，无需填写 Key。当前构建没有配置接口（Config/AI.local.xcconfig），所以暂时不可用。"
+    static var displayName: String { L("段位健身 AI") }
+    static var unavailableHint: String { L("AI 能力由开发者统一提供，无需填写 Key。当前构建没有配置接口（Config/AI.local.xcconfig），所以暂时不可用。") }
 
     static var config: AIConfig? {
         let env = ProcessInfo.processInfo.environment
@@ -116,6 +116,8 @@ enum AIBackend {
 /// Raw HTTP clients for the supported providers (or a developer relay that speaks the same protocol).
 enum AIService {
     static func complete(system: String, messages: [AIChatMessage], config: AIConfig, maxTokens: Int = 4096) async throws -> String {
+        // Replies follow the interface language whatever language the prompt itself is written in.
+        let system = system + "\n" + AppLanguage.current.aiReplyInstruction
         switch config.provider {
         case .anthropic: return try await anthropic(system: system, messages: messages, config: config, maxTokens: maxTokens)
         case .openai, .deepseek: return try await openAICompatible(system: system, messages: messages, config: config)
@@ -124,7 +126,7 @@ enum AIService {
     }
 
     static func test(config: AIConfig) async throws -> String {
-        try await complete(system: "你是一个健身助手。", messages: [AIChatMessage(role: .user, text: "请只回复两个字：连接成功")], config: config, maxTokens: 64)
+        try await complete(system: "你是一个健身助手。", messages: [AIChatMessage(role: .user, text: L("请只回复两个字：连接成功"))], config: config, maxTokens: 64)
     }
 
     static func generatePortrait(description: String, config: AIConfig, subject: String = "training avatar") async throws -> Data {

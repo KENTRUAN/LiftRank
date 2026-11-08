@@ -202,7 +202,7 @@ struct WorkoutHomeView: View {
 
     private func defaultTitle() -> String {
         let h = Calendar.current.component(.hour, from: Date())
-        return h < 11 ? "晨间训练" : h < 17 ? "午后训练" : "夜间训练"
+        return h < 11 ? L("晨间训练") : h < 17 ? L("午后训练") : L("夜间训练")
     }
 }
 

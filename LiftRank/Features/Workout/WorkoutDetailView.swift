@@ -24,7 +24,7 @@ struct WorkoutDetailView: View {
             }
             if workout.healthState != "notStarted" { Section("Apple Health") { TrainingHealthStatusView(workout: workout) } }
             ForEach(workout.sortedExercises) { we in
-                Section(we.exerciseName) {
+                Section(ExerciseNames.display(we.exerciseName)) {
                     ForEach(we.sortedSets) { s in
                         HStack {
                             Text(s.type == .normal ? "\(s.order + 1)" : s.type.tag).font(.caption.bold()).frame(width: 24)

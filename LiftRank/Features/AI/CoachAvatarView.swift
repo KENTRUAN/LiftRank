@@ -26,7 +26,7 @@ struct CoachAvatarView: View {
     }
 
     private var spec: AvatarSpec { AvatarSpec(ids: ids) }
-    private let examples = ["粉色长发、戴墨镜、穿黑色连帽衫的女生，叫小粉", "寸头、小麦肤色、穿红色背心的教练，表情坚定", "蓝色卷发，戴王冠，穿金色长袍，站在星空下", "银白马尾、戴眼镜、灰色 T 恤，背景是健身房"]
+    private var examples: [String] { [L("粉色长发、戴墨镜、穿黑色连帽衫的女生，叫小粉"), L("寸头、小麦肤色、穿红色背心的教练，表情坚定"), L("蓝色卷发，戴王冠，穿金色长袍，站在星空下"), L("银白马尾、戴眼镜、灰色 T 恤，背景是健身房")] }
 
     var body: some View {
         NavigationStack {
@@ -147,7 +147,7 @@ struct CoachAvatarView: View {
             withAnimation { ids = result.ids }
             if let n = result.name { name = n }
             intro = description
-            note = result.usedAI ? "已由 AI 解析描述，可继续逐项微调。" : (AIBackend.isConfigured ? "AI 暂时不可用，已按关键词解析。" : "已按关键词解析，可继续逐项微调。")
+            note = result.usedAI ? L("已由 AI 解析描述，可继续逐项微调。") : (AIBackend.isConfigured ? L("AI 暂时不可用，已按关键词解析。") : L("已按关键词解析，可继续逐项微调。"))
             generating = false
         }
     }
@@ -166,7 +166,7 @@ struct CoachAvatarView: View {
                 guard UIImage(data: data) != nil else { throw AIError.badResponse }
                 portraitDraft = data
                 usePortrait = true
-                note = "已生成肖像，点「保存」应用。"
+                note = L("已生成肖像，点「保存」应用。")
             } catch { note = error.localizedDescription }
         }
     }

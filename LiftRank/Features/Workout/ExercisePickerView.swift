@@ -21,7 +21,7 @@ struct ExercisePickerView: View {
             VStack(spacing: 0) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
-                        chip(nil, "全部")
+                        chip(nil, L("全部"))
                         ForEach(MuscleGroup.allCases) { g in chip(g, g.name) }
                     }.padding(.horizontal).padding(.vertical, 8)
                 }
@@ -29,8 +29,8 @@ struct ExercisePickerView: View {
                     Button { onSelect(e); dismiss() } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(e.name).foregroundStyle(.primary)
-                                Text("\(e.muscleGroup.name) · \(e.equipment.name)\(e.isCustom ? " · 自定义" : "")").font(.caption).foregroundStyle(.secondary)
+                                Text(e.displayName).foregroundStyle(.primary)
+                                Text("\(e.muscleGroup.name) · \(e.equipment.name)\(e.isCustom ? L(" · 自定义") : "")").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
                             if e.isRanked { Image(systemName: "chart.bar.fill").foregroundStyle(Color.accentColor).font(.caption) }

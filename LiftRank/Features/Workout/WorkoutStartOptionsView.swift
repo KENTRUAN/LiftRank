@@ -59,7 +59,7 @@ struct WorkoutStartOptionsView: View {
                     Button("Week \(week.week) · \(day.title)") {
                         let items = day.resolved(using: exercises)
                         guard !items.isEmpty, items.count == day.items.count else {
-                            error = "Some exercises in this saved plan are unavailable. Your workout is unchanged."
+                            error = L("Some exercises in this saved plan are unavailable. Your workout is unchanged.")
                             return
                         }
                         apply(day.title, items, plan: nil)

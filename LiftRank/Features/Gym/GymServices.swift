@@ -50,7 +50,7 @@ final class GymAPI {
     init(configuration: SocialConfiguration) { self.configuration = configuration }
     deinit { session.invalidateAndCancel() }
     func post<T: Decodable>(_ path: String, body: [String: Any] = [:], as type: T.Type = T.self) async throws -> T {
-        guard let user = Auth.auth().currentUser else { throw GymFailure.message("Please connect your guest profile first.") }
+        guard let user = Auth.auth().currentUser else { throw GymFailure.message(L("Please connect your guest profile first.")) }
         let token = try await user.getIDToken()
         var request = URLRequest(url: configuration.apiURL.appendingPathComponent(path))
         request.httpMethod = "POST"
@@ -146,13 +146,13 @@ final class GymLocationManager: NSObject, ObservableObject, @preconcurrency CLLo
     private var timeout: Task<Void, Never>?
     override init() { super.init(); manager.delegate = self; manager.desiredAccuracy = kCLLocationAccuracyBest }
     func current() async throws -> GymLocation {
-        guard continuation == nil else { throw GymFailure.message("Already finding your location.") }
+        guard continuation == nil else { throw GymFailure.message(L("Already finding your location.")) }
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             timeout = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { return }
-                self?.finish(.failure(GymFailure.message("Location timed out. Try again outdoors or use Demo Gym.")))
+                self?.finish(.failure(GymFailure.message(L("Location timed out. Try again outdoors or use Demo Gym."))))
             }
             if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
             else { requestIfAuthorized() }
@@ -161,7 +161,7 @@ final class GymLocationManager: NSObject, ObservableObject, @preconcurrency CLLo
     private func requestIfAuthorized() {
         switch manager.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse: manager.requestLocation()
-        case .denied, .restricted: finish(.failure(GymFailure.message("Enable precise location in Settings to check in. You can still search or use Demo Gym.")))
+        case .denied, .restricted: finish(.failure(GymFailure.message(L("Enable precise location in Settings to check in. You can still search or use Demo Gym."))))
         default: break
         }
     }

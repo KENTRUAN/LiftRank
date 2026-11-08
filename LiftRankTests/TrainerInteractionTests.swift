@@ -97,7 +97,7 @@ final class TrainerInteractionTests: XCTestCase {
     @MainActor func testAnonymousRoomProfileNeverUsesCachedIdentity() throws {
         let store = GymStore()
         let profile = store.roomProfile("anon-random-identity")
-        XCTAssertEqual(profile?.name, "Anonymous lifter")
+        XCTAssertEqual(profile?.name, L("Anonymous lifter"))
         XCTAssertEqual(profile?.avatar.preset, "anonymous")
         XCTAssertEqual(profile?.gsr, 0)
         XCTAssertEqual(profile?.visibility, "anonymous")

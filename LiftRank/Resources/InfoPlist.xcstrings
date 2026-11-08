@@ -1,0 +1,48 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "LiftRank" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "段位健身" } }
+      }
+    },
+    "NSCameraUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Used to photograph meals and scan food barcodes." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "用于拍照记餐与扫描食品条码。" } }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Used for voice commands to the training assistant." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "用于语音输入训练指令。" } }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Turns your speech into text for the AI training assistant." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "把语音转换为文字，交给 AI 训练助手。" } }
+      }
+    },
+    "NSHealthShareUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Read workouts, heart rate and distance for your LiftRank training session." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "读取训练、心率和距离，用于段位健身的训练记录。" } }
+      }
+    },
+    "NSHealthUpdateUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save LiftRank strength and cardio workouts to Apple Health and Fitness." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "把段位健身的力量和有氧训练保存到 Apple 健康与健身。" } }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show your private outdoor workout route while LiftRank is open, and verify voluntary gym check-ins. Your coordinates are never shared with gym members." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "在段位健身打开时显示你的私人户外路线，并用于自愿的健身房签到。你的坐标不会分享给健身房成员。" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

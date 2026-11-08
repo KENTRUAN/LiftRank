@@ -41,9 +41,9 @@ final class GymScene: SKScene {
         return node
     }
     private func buildRoom() {
-        let title = label("LIFT / SOCIAL CLUB", size: 20, color: .white)
+        let title = label(L("LIFT / SOCIAL CLUB"), size: 20, color: .white)
         title.position = CGPoint(x: 390, y: 555); addChild(title)
-        let subtitle = label("YOUR PEOPLE. YOUR PACE.", size: 10, color: .systemMint)
+        let subtitle = label(L("YOUR PEOPLE. YOUR PACE."), size: 10, color: .systemMint)
         subtitle.position = CGPoint(x: 390, y: 529); addChild(subtitle)
         for x in 0..<GymLayout.width {
             for y in 0..<GymLayout.height {
@@ -65,9 +65,9 @@ final class GymScene: SKScene {
         equipment("cardio", x: 8, y: 1, color: .systemMint)
         equipment("platform", x: 8, y: 5, color: .systemPurple)
         equipment("lounge", x: 1, y: 8, color: .systemIndigo)
-        let helper = label("Tap equipment to train · Tap a lifter to connect", size: 12, color: .lightGray)
+        let helper = label(L("Tap equipment to train · Tap a lifter to connect"), size: 12, color: .lightGray)
         helper.position = CGPoint(x: 390, y: 91); addChild(helper)
-        let coach = makePerson(profile: SocialProfile(uid: "trainer", name: "AI trainer", gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "star", color: "green")), portrait: nil)
+        let coach = makePerson(profile: SocialProfile(uid: "trainer", name: L("AI trainer"), gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "star", color: "green")), portrait: nil)
         coach.name = "trainer"; coach.position = point(4, 7); coach.zPosition = 30
         world.addChild(coach); trainer = coach
     }
@@ -127,7 +127,7 @@ final class GymScene: SKScene {
                 node.childNode(withName: "occupancy")?.removeFromParent()
                 let count = members.filter { $0.station == station }.count
                 if count > 0 {
-                    let tag = label(station == "cardio" ? "IN USE" : "IN USE · \(count)/2", size: 9, color: .systemOrange)
+                    let tag = label(station == "cardio" ? L("IN USE") : L("IN USE · %lld/2", count), size: 9, color: .systemOrange)
                     tag.name = "occupancy"; tag.position = CGPoint(x: 10, y: 34); node.addChild(tag)
                 }
             }
@@ -136,7 +136,7 @@ final class GymScene: SKScene {
         for id in Array(people.keys) where !ids.contains(id) { people[id]?.removeFromParent(); people[id] = nil; appearances[id] = nil }
         for member in members {
             guard let profile = profiles[member.uid] else { continue }
-            let signature = "\(profile.name)|\(profile.gsr)|\(profile.avatar)|\(portraits[member.uid] != nil)"
+            let signature = "\(profile.name)|\(profile.gsr)|\(profile.avatar)|\(profile.cosmetics)|\(portraits[member.uid] != nil)"
             let isNew = people[member.uid] == nil
             if isNew || appearances[member.uid] != signature {
                 let prior = people[member.uid]?.position
@@ -160,13 +160,13 @@ final class GymScene: SKScene {
             if completed > (completionTimes[member.uid] ?? 0) {
                 completionTimes[member.uid] = completed
                 if Date().timeIntervalSince1970 * 1000 - completed < 8000 {
-                    let popup = label("SET COMPLETE ✓", size: 12, color: .systemMint)
+                    let popup = label(L("SET COMPLETE ✓"), size: 12, color: .systemMint)
                     popup.position.y = 100; popup.zPosition = 100; node.addChild(popup)
                     popup.run(.sequence([.group([.moveBy(x: 0, y: 22, duration: 2), .sequence([.wait(forDuration: 1.2), .fadeOut(withDuration: 0.8)])]), .removeFromParent()]))
                 }
             }
             node.childNode(withName: "activity")?.removeFromParent()
-            let state = label(member.status, size: 8, color: member.status == "Training" ? .systemOrange : .systemMint)
+            let state = label(L(member.status), size: 8, color: member.status == "Training" ? .systemOrange : .systemMint)
             state.name = "activity"; state.position.y = 78; node.addChild(state)
             if member.uid != uid {
                 node.removeAction(forKey: "move")
@@ -183,7 +183,7 @@ final class GymScene: SKScene {
     func cancelMovement() { route = [] }
     func confirmSet(at station: String) {
         guard let cell = GymLayout.stationCells[station] else { return }
-        let note = label("SET SAVED ✓", size: 15, color: .systemMint)
+        let note = label(L("SET SAVED ✓"), size: 15, color: .systemMint)
         note.position = point(Double(cell.x), Double(cell.y)); note.position.y += 65; note.zPosition = 100
         world.addChild(note)
         note.run(.sequence([.group([.moveBy(x: 0, y: 30, duration: 1.5), .fadeOut(withDuration: 1.5)]), .removeFromParent()]))

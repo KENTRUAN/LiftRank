@@ -116,9 +116,9 @@ struct RewardsView: View {
             guard let last = streak.lastPostDate else { return }
             consume()
             profile.streakBridgeDays.append(contentsOf: StreakEngine.bridgeDays(from: last))
-            context.insert(RewardEvent(kind: .streakRestore, xp: 0, eggs: 0, note: "使用 \(name) 恢复连续记录"))
+            context.insert(RewardEvent(kind: .streakRestore, xp: 0, eggs: 0, note: L("使用 %@ 恢复连续记录", name)))
             try? context.save()
-            toast = "已恢复连续记录"
+            toast = L("已恢复连续记录")
         } label: {
             VStack(spacing: 2) { Text(name).font(.caption2.bold()); Text("×\(count)").font(.caption2) }.frame(maxWidth: .infinity)
         }
@@ -179,9 +179,9 @@ struct RewardsView: View {
                         Button("领取") {
                             context.insert(QuestClaim(questID: "season.\(m.days)", periodKey: season.name))
                             profile.eggs += m.eggs
-                            context.insert(RewardEvent(kind: .season, xp: 0, eggs: m.eggs, note: "赛季奖励：\(m.title)"))
+                            context.insert(RewardEvent(kind: .season, xp: 0, eggs: m.eggs, note: L("赛季奖励：%@", m.title)))
                             try? context.save()
-                            toast = "获得称号「\(m.title)」 +\(m.eggs) Eggs"
+                            toast = L("获得称号「%@」 +%lld Eggs", m.title, m.eggs)
                         }.buttonStyle(.borderedProminent).controlSize(.mini)
                     }
                 }
@@ -231,13 +231,13 @@ struct RewardsView: View {
             let key = QuestEngine.periodKey(q)
             guard !claims.contains(where: { $0.questID == q.id && $0.periodKey == key }) else { continue }
             context.insert(QuestClaim(questID: q.id, periodKey: key))
-            context.insert(RewardEvent(kind: .quest, xp: 0, eggs: q.rewardEggs, note: "本周奖励：\(q.title)"))
+            context.insert(RewardEvent(kind: .quest, xp: 0, eggs: q.rewardEggs, note: L("本周奖励：%@", q.title)))
             profile.eggs += q.rewardEggs
             gained += q.rewardEggs
         }
         if gained > 0 {
             try? context.save()
-            toast = "获得 +\(gained) Eggs"
+            toast = L("获得 +%lld Eggs", gained)
         }
     }
 }

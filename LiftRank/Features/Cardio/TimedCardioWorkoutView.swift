@@ -36,7 +36,7 @@ struct CardioStartView: View {
                 Section {
                     Button(timed == nil ? "Start cardio" : "Resume cardio") {
                         if let timed { onStarted(timed); return }
-                        guard active?.hasPendingSet != true else { error = "Finish your current strength set first."; return }
+                        guard active?.hasPendingSet != true else { error = L("Finish your current strength set first."); return }
                         if let active, !active.exercises.isEmpty || !active.notes.isEmpty || !active.routePoints.isEmpty { confirmSwitch = true }
                         else { start() }
                     }.disabled(busy).accessibilityIdentifier("startCardioTimer")
@@ -54,19 +54,19 @@ struct CardioStartView: View {
         }
     }
     private func start(finishing: Bool = false) {
-        guard !requiresEquipment || gym.ownsStation("cardio") else { error = "This cardio machine is no longer reserved for you."; return }
+        guard !requiresEquipment || gym.ownsStation("cardio") else { error = L("This cardio machine is no longer reserved for you."); return }
         busy = true; error = nil
         Task { @MainActor in
             defer { busy = false }
             do {
                 var convertingEmpty: Workout?
                 if let current = active {
-                    guard !current.hasPendingSet else { throw GymFailure.message("Finish the current set first.") }
+                    guard !current.hasPendingSet else { throw GymFailure.message(L("Finish the current set first.")) }
                     if finishing {
                         _ = WorkoutPublisher.publish(current, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
                         await TrainingHealthManager.shared.finish(current, context: context)
                     } else {
-                        guard current.exercises.isEmpty, current.notes.isEmpty, current.routePoints.isEmpty else { throw GymFailure.message("Finish your current workout first.") }
+                        guard current.exercises.isEmpty, current.notes.isEmpty, current.routePoints.isEmpty else { throw GymFailure.message(L("Finish your current workout first.")) }
                         TrainingHealthManager.shared.discard(current); convertingEmpty = current
                     }
                 }

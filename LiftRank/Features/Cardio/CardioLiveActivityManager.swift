@@ -21,7 +21,7 @@ final class CardioLiveActivityManager: ObservableObject {
     }
     func setPaused(_ paused: Bool, workoutID: String) async throws {
         guard let context, let workout = try context.fetch(FetchDescriptor<Workout>()).first(where: { $0.id.uuidString == workoutID }) else {
-            throw GymFailure.message("Open LiftRank to restore this workout.")
+            throw GymFailure.message(L("Open LiftRank to restore this workout."))
         }
         let changed = try CardioWorkoutSession.setPaused(paused, workout: workout, context: context)
         // Update the system timer immediately; Health tracking follows the same desired state.
@@ -45,7 +45,7 @@ final class CardioLiveActivityManager: ObservableObject {
             for duplicate in existing.dropFirst() { await duplicate.end(nil, dismissalPolicy: .immediate) }
             error = nil; return
         }
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { error = "Live Activities are off. Enable them in iPhone Settings → LiftRank. Your timer still runs."; return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { error = L("Live Activities are off. Enable them in iPhone Settings → LiftRank. Your timer still runs."); return }
         guard UIApplication.shared.applicationState == .active else { return }
         // Respect a Live Activity dismissed by the user or ended by iOS; Retry is explicit.
         guard UserDefaults.standard.string(forKey: requestedKey) != workout.id.uuidString else { return }
@@ -53,6 +53,6 @@ final class CardioLiveActivityManager: ObservableObject {
             _ = try Activity.request(attributes: CardioActivityAttributes(workoutID: workout.id.uuidString, activityName: workout.activity.name, outdoor: workout.isOutdoor), content: content, pushType: nil)
             UserDefaults.standard.set(workout.id.uuidString, forKey: requestedKey)
             error = nil
-        } catch { self.error = "Live Activity unavailable: \(error.localizedDescription). Your workout timer continues." }
+        } catch { self.error = L("Live Activity unavailable: %@. Your workout timer continues.", error.localizedDescription) }
     }
 }

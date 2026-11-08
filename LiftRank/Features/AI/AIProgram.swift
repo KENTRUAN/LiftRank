@@ -250,7 +250,7 @@ struct AIProgramView: View {
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("\(program.date(week: week.week, day: day.day).shortString) · \(day.title)").font(.headline)
                                 ForEach(Array(day.resolved(using: exercises).enumerated()), id: \.offset) { _, item in
-                                    Text("\(item.exerciseName) · \(item.sets) 组 × \(item.repsLow) 次")
+                                    Text("\(ExerciseNames.display(item.exerciseName)) · \(item.sets) 组 × \(item.repsLow) 次")
                                         .font(.subheadline).foregroundStyle(.secondary)
                                 }
                                 if let onStrength { Button("开始这项训练") { onStrength(day) }.buttonStyle(.bordered) }
@@ -284,7 +284,7 @@ struct AIProgramView: View {
 struct AIStrengthPlanView: View {
     let profile: UserProfile
     var body: some View {
-        TrainerConversationView(profile: profile, initialDraft: "Create a four-week strength training schedule for me. Keep my current workout unchanged.")
+        TrainerConversationView(profile: profile, initialDraft: L("Create a four-week strength training schedule for me. Keep my current workout unchanged."))
     }
 }
 
@@ -297,7 +297,7 @@ struct TrainerScheduleView: View {
                     Text(plan.title).font(.headline)
                     if plan.items.isEmpty { Text("Rest day").foregroundStyle(.secondary) }
                     ForEach(plan.items) { item in
-                        Text("\(item.exerciseName) · \(item.sets) × \(item.repsLow)–\(item.repsHigh)")
+                        Text("\(ExerciseNames.display(item.exerciseName)) · \(item.sets) × \(item.repsLow)–\(item.repsHigh)")
                     }
                 }
             }

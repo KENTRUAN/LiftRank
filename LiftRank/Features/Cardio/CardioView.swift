@@ -48,9 +48,9 @@ struct CardioView: View {
             }
             Section {
                 HStack(spacing: 10) {
-                    StatTile(title: "本周时长", value: "\(week.reduce(0) { $0 + $1.durationMinutes }.fmt(0)) 分")
-                    StatTile(title: "本周距离", value: "\(week.reduce(0) { $0 + $1.distanceKm }.fmt(1)) km", color: .blue)
-                    StatTile(title: "本周次数", value: "\(week.count)", color: .green)
+                    StatTile(title: L("本周时长"), value: L("%@ 分", week.reduce(0) { $0 + $1.durationMinutes }.fmt(0)))
+                    StatTile(title: L("本周距离"), value: "\(week.reduce(0) { $0 + $1.distanceKm }.fmt(1)) km", color: .blue)
+                    StatTile(title: L("本周次数"), value: "\(week.count)", color: .green)
                 }
                 .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
                 Chart(weekly) { b in
@@ -99,9 +99,9 @@ struct CardioView: View {
     }
 
     private func detail(_ s: CardioSession) -> String {
-        var parts = [s.sourceRaw == "timer" ? (s.durationMinutes * 60).clockString : "\(s.durationMinutes.fmt(0)) 分钟"]
+        var parts = [s.sourceRaw == "timer" ? (s.durationMinutes * 60).clockString : L("%@ 分钟", s.durationMinutes.fmt(0))]
         if s.distanceKm > 0 { parts.append("\(s.distanceKm.fmt(2)) km") }
-        if s.distanceKm > 0 && s.durationMinutes > 0 && s.type.usesDistance { parts.append("配速 \((s.durationMinutes / s.distanceKm).paceString)/km") }
+        if s.distanceKm > 0 && s.durationMinutes > 0 && s.type.usesDistance { parts.append(L("配速 %@/km", (s.durationMinutes / s.distanceKm).paceString)) }
         if s.calories > 0 { parts.append("\(s.calories.fmt(0)) kcal") }
         if s.avgHeartRate > 0 { parts.append("♥ \(s.avgHeartRate.fmt(0))") }
         return parts.joined(separator: " · ")
@@ -109,8 +109,8 @@ struct CardioView: View {
 
     private func connectHealth() {
         Task {
-            do { try await HealthKitManager.shared.requestAuthorization(); healthStatus = "已请求授权。若未弹出窗口，请到「设置 → 健康 → 数据访问与设备」中开启。" }
-            catch { healthStatus = "无法连接：\(error.localizedDescription)" }
+            do { try await HealthKitManager.shared.requestAuthorization(); healthStatus = L("已请求授权。若未弹出窗口，请到「设置 → 健康 → 数据访问与设备」中开启。") }
+            catch { healthStatus = L("无法连接：%@", error.localizedDescription) }
         }
     }
 
@@ -126,15 +126,15 @@ struct CardioView: View {
                 for i in imports where !existing.contains(i.externalID) {
                     let s = CardioSession(date: i.date, type: i.type, durationMinutes: i.durationMinutes, distanceKm: i.distanceKm, calories: i.calories,
                                           avgHeartRate: i.avgHeartRate, source: "health", externalID: i.externalID)
-                    s.notes = "来自 \(i.sourceName)"
+                    s.notes = L("来自 %@", i.sourceName)
                     s.writtenToHealth = true
                     context.insert(s)
                     added += 1
                 }
                 try? context.save()
-                healthStatus = added > 0 ? "已导入 \(added) 条运动记录。" : "没有新的运动记录（共找到 \(imports.count) 条）。"
+                healthStatus = added > 0 ? L("已导入 %lld 条运动记录。", added) : L("没有新的运动记录（共找到 %lld 条）。", imports.count)
             } catch {
-                healthStatus = "导入失败：\(error.localizedDescription)"
+                healthStatus = L("导入失败：%@", error.localizedDescription)
             }
         }
     }
@@ -165,10 +165,10 @@ struct CardioEditor: View {
                 Section("运动") {
                     Picker("类型", selection: $type) { ForEach(CardioType.allCases) { Label($0.name, systemImage: $0.icon).tag($0) } }
                     DatePicker("时间", selection: $date)
-                    numField("时长（分钟）", $minutes)
-                    if type.usesDistance { numField("距离（km）", $distance) }
-                    numField("消耗（kcal）", $calories)
-                    numField("平均心率", $heartRate)
+                    numField(L("时长（分钟）"), $minutes)
+                    if type.usesDistance { numField(L("距离（km）"), $distance) }
+                    numField(L("消耗（kcal）"), $calories)
+                    numField(L("平均心率"), $heartRate)
                     Button("按体重估算消耗：\(estimatedKcal.fmt(0)) kcal") { calories = estimatedKcal.fmt(0) }.font(.subheadline)
                 }
                 Section("备注") { TextField("感受、路线、器械…", text: $notes, axis: .vertical).lineLimit(2...5) }

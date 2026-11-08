@@ -489,29 +489,30 @@ enum AvatarDescriber {
     }
 
     private static let colorWords: [(String, String)] = [
-        ("black", "黑"), ("brown", "棕|褐|栗"), ("blonde", "金|黄"), ("red", "红"), ("white", "白|银"), ("blue", "蓝"),
-        ("pink", "粉"), ("green", "绿"), ("purple", "紫"), ("gray", "灰"), ("orange", "橙|橘"),
+        ("black", "黑|black"), ("brown", "棕|褐|栗|brown|brunette"), ("blonde", "金|黄|blond|blonde|golden|yellow"), ("red", "红|red|ginger"), ("white", "白|银|white|silver"), ("blue", "蓝|blue"),
+        ("pink", "粉|pink"), ("green", "绿|green"), ("purple", "紫|purple|violet"), ("gray", "灰|gray|grey"), ("orange", "橙|橘|orange"),
     ]
     private static let rules: [(CosmeticSlot, String, String)] = [
-        (.hair, "none", "光头|没有头发|秃"), (.hair, "buzz", "寸头|板寸|平头"), (.hair, "mohawk", "莫西干|鸡冠头"), (.hair, "spiky", "刺猬|竖起|炸毛|尖发"),
-        (.hair, "bun", "丸子|发髻|盘发"), (.hair, "ponytail", "马尾"), (.hair, "curly", "卷发|卷毛"), (.hair, "long", "长发"), (.hair, "short", "短发"),
-        (.skin, "light", "白皙|皮肤白|肤色浅"), (.skin, "tan", "小麦|古铜|健康肤色|晒黑"), (.skin, "dark", "黑皮肤|深色皮肤|肤色深"), (.skin, "brown", "棕色皮肤|棕皮"),
-        (.eyes, "happy", "开心|微笑|笑眯眯|爱笑|可爱"), (.eyes, "cool", "冷酷|很酷|酷酷|眯眼|高冷"), (.eyes, "determined", "坚定|认真|严肃|凶"), (.eyes, "wink", "眨眼|wink|俏皮"),
-        (.outfit, "none", "赤膊|不穿上衣|光膀子|裸上身"), (.outfit, "armor", "盔甲|铠甲|战甲"), (.outfit, "robe", "长袍|道袍|斗篷|袍子"), (.outfit, "hoodie", "连帽|卫衣"),
-        (.outfit, "tee", "T恤|t恤|短袖|体恤"), (.outfit, "tank", "背心"),
-        (.accessory, "sunglasses", "墨镜|太阳镜"), (.accessory, "glasses", "眼镜"), (.accessory, "cap", "棒球帽|鸭舌帽|帽子"), (.accessory, "headband", "发带|头带|头巾"),
-        (.accessory, "wristbands", "护腕"), (.accessory, "crown", "皇冠|王冠"), (.accessory, "halo", "光环|天使"), (.accessory, "beard", "胡子|胡须|络腮"),
-        (.backdrop, "gym", "健身房"), (.backdrop, "dojo", "道场|武馆"), (.backdrop, "galaxy", "星空|宇宙|银河|太空"), (.backdrop, "sunset", "夕阳|日落|黄昏"),
+        // Chinese and English keywords; matching is case-insensitive.
+        (.hair, "none", "光头|没有头发|秃|bald|shaved head|no hair"), (.hair, "buzz", "寸头|板寸|平头|buzz ?cut|crew ?cut"), (.hair, "mohawk", "莫西干|鸡冠头|mohawk"), (.hair, "spiky", "刺猬|竖起|炸毛|尖发|spiky|spiked"),
+        (.hair, "bun", "丸子|发髻|盘发|\\bbun\\b|top ?knot"), (.hair, "ponytail", "马尾|ponytail|pony ?tail"), (.hair, "curly", "卷发|卷毛|curly|curls|afro"), (.hair, "long", "长发|long hair"), (.hair, "short", "短发|short hair"),
+        (.skin, "light", "白皙|皮肤白|肤色浅|pale|fair skin|light skin"), (.skin, "tan", "小麦|古铜|健康肤色|晒黑|tan|tanned|bronze skin"), (.skin, "dark", "黑皮肤|深色皮肤|肤色深|dark skin|black skin"), (.skin, "brown", "棕色皮肤|棕皮|brown skin"),
+        (.eyes, "happy", "开心|微笑|笑眯眯|爱笑|可爱|happy|smil|cheerful|cute"), (.eyes, "cool", "冷酷|很酷|酷酷|眯眼|高冷|\\bcool\\b|chill"), (.eyes, "determined", "坚定|认真|严肃|凶|determined|serious|fierce|intense"), (.eyes, "wink", "眨眼|wink|俏皮|playful"),
+        (.outfit, "none", "赤膊|不穿上衣|光膀子|裸上身|shirtless|topless|no shirt"), (.outfit, "armor", "盔甲|铠甲|战甲|armou?r"), (.outfit, "robe", "长袍|道袍|斗篷|袍子|robe|cloak|cape"), (.outfit, "hoodie", "连帽|卫衣|hoodie|hooded"),
+        (.outfit, "tee", "T恤|t恤|短袖|体恤|t-?shirt|\\btee\\b"), (.outfit, "tank", "背心|tank ?top|singlet|vest"),
+        (.accessory, "sunglasses", "墨镜|太阳镜|sunglasses|shades"), (.accessory, "glasses", "眼镜|glasses|spectacles"), (.accessory, "cap", "棒球帽|鸭舌帽|帽子|\\bcap\\b|\\bhat\\b"), (.accessory, "headband", "发带|头带|头巾|headband|bandana"),
+        (.accessory, "wristbands", "护腕|wristband|wrist wraps"), (.accessory, "crown", "皇冠|王冠|crown|tiara"), (.accessory, "halo", "光环|天使|halo|angel"), (.accessory, "beard", "胡子|胡须|络腮|beard|stubble|moustache|mustache"),
+        (.backdrop, "gym", "健身房|\\bgym\\b"), (.backdrop, "dojo", "道场|武馆|dojo"), (.backdrop, "galaxy", "星空|宇宙|银河|太空|galaxy|space|stars|starry"), (.backdrop, "sunset", "夕阳|日落|黄昏|sunset|dusk"),
     ]
 
     /// Limit the chat fallback to explicit appearance requests; general chat still needs a backend.
     static func offlineChatLook(_ text: String, base: [String]) -> [String]? {
-        let request = "^(请|帮我|能不能|可以|麻烦)*(把|给|让|改|换|染|穿|戴|变|留|剪|弄|设置)"
-        let excluded = "不要|别|不用|不想|如果|假如|是否|能否|会不会|可以吗|好不好"
-        let appearance = "形象|头像|外观|头发|发型|发色|[长短卷]发|马尾|光头|墨镜|眼镜|肤色|皮肤|帽子|衣|连帽|卫衣|T恤|t恤|背心|服装|背景|护腕|发带|胡子|盔甲"
-        guard text.range(of: request, options: .regularExpression) != nil,
-              text.range(of: excluded, options: .regularExpression) == nil,
-              text.range(of: appearance, options: .regularExpression) != nil else { return nil }
+        let request = "^(请|帮我|能不能|可以|麻烦)*(把|给|让|改|换|染|穿|戴|变|留|剪|弄|设置)|^(please |can you |could you )?(change|make|give|put|wear|dye|set|switch|turn|use|try)"
+        let excluded = "不要|别|不用|不想|如果|假如|是否|能否|会不会|可以吗|好不好|don'?t|do not|should i|whether"
+        let appearance = "形象|头像|外观|头发|发型|发色|[长短卷]发|马尾|光头|墨镜|眼镜|肤色|皮肤|帽子|衣|连帽|卫衣|T恤|t恤|背心|服装|背景|护腕|发带|胡子|盔甲|hair|glasses|shades|skin|hat|cap|hoodie|shirt|tee|tank|outfit|robe|armou?r|background|backdrop|wristband|headband|beard|crown|halo|look|avatar|appearance"
+        guard text.range(of: request, options: [.regularExpression, .caseInsensitive]) != nil,
+              text.range(of: excluded, options: [.regularExpression, .caseInsensitive]) == nil,
+              text.range(of: appearance, options: [.regularExpression, .caseInsensitive]) != nil else { return nil }
         return parse(text, base: base)
     }
 
@@ -519,36 +520,42 @@ enum AvatarDescriber {
         var ids = base
         var touched: Set<CosmeticSlot> = []
         for (slot, key, pattern) in rules where !touched.contains(slot) {
-            if text.range(of: pattern, options: .regularExpression) != nil { ids = replacing(ids, slot: slot, key: key); touched.insert(slot) }
+            if text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil { ids = replacing(ids, slot: slot, key: key); touched.insert(slot) }
         }
-        let hairTarget = "(头发|发色|长发|短发|卷发|马尾)"
-        let clothTarget = "(衣服|服装|背心|[Tt]恤|短袖|连帽衫|卫衣|外套|长袍|盔甲|铠甲|上衣|衬衫)"
+        let hairTarget = "(头发|发色|长发|短发|卷发|马尾|hair|ponytail|bun|curls)"
+        let clothTarget = "(衣服|服装|背心|[Tt]恤|短袖|连帽衫|卫衣|外套|长袍|盔甲|铠甲|上衣|衬衫|hoodie|shirt|tee|tank|top|robe|armou?r|outfit|clothes)"
         for (key, words) in colorWords {
             let color = "(\(words))(色)?"
             let connector = "(改成|染成|换成|变成|调成|设成|弄成|变为|改为|换为|用)"
-            let hairPattern = "\(color)的?\(hairTarget)|\(hairTarget)\\s*\(connector)\\s*\(color)"
-            if !touched.contains(.hairColor), text.range(of: hairPattern, options: .regularExpression) != nil,
+            // "蓝色的头发" / "头发改成蓝色" / "blue hair" / "pink long hair"
+            let hairPattern = "\(color)的?\(hairTarget)|\(hairTarget)\\s*\(connector)\\s*\(color)|\(color)\\s+(\\w+\\s+)?\(hairTarget)"
+            if !touched.contains(.hairColor), text.range(of: hairPattern, options: [.regularExpression, .caseInsensitive]) != nil,
                CosmeticCatalog.item("hairColor.\(key)") != nil {
                 ids = replacing(ids, slot: .hairColor, key: key); touched.insert(.hairColor)
             }
             let clothKey = key == "blonde" ? "gold" : key
-            let clothPattern = "\(color)的?\(clothTarget)|\(clothTarget)\\s*\(connector)\\s*\(color)"
-            if !touched.contains(.outfitColor), text.range(of: clothPattern, options: .regularExpression) != nil,
+            let clothPattern = "\(color)的?\(clothTarget)|\(clothTarget)\\s*\(connector)\\s*\(color)|\(color)\\s+(\\w+\\s+)?\(clothTarget)"
+            if !touched.contains(.outfitColor), text.range(of: clothPattern, options: [.regularExpression, .caseInsensitive]) != nil,
                CosmeticCatalog.item("outfitColor.\(clothKey)") != nil {
                 ids = replacing(ids, slot: .outfitColor, key: clothKey); touched.insert(.outfitColor)
             }
         }
         if !touched.contains(.hair) {
-            if text.range(of: "女", options: .regularExpression) != nil { ids = replacing(ids, slot: .hair, key: "long") }
-            else if text.range(of: "男", options: .regularExpression) != nil { ids = replacing(ids, slot: .hair, key: "short") }
+            if text.range(of: "女|\\b(girl|woman|female|lady)\\b", options: [.regularExpression, .caseInsensitive]) != nil { ids = replacing(ids, slot: .hair, key: "long") }
+            else if text.range(of: "男|\\b(boy|man|male|guy|dude)\\b", options: [.regularExpression, .caseInsensitive]) != nil { ids = replacing(ids, slot: .hair, key: "short") }
         }
         return ids
     }
 
     static func name(in text: String) -> String? {
-        guard let r = text.range(of: "(叫|名字是|名为|名叫|称呼)([\\p{Han}A-Za-z0-9]{1,8})", options: .regularExpression) else { return nil }
-        let match = String(text[r])
-        for p in ["名字是", "名为", "名叫", "称呼", "叫"] where match.hasPrefix(p) { return String(match.dropFirst(p.count)) }
+        if let r = text.range(of: "(叫|名字是|名为|名叫|称呼)([\\p{Han}A-Za-z0-9]{1,8})", options: .regularExpression) {
+            let match = String(text[r])
+            for p in ["名字是", "名为", "名叫", "称呼", "叫"] where match.hasPrefix(p) { return String(match.dropFirst(p.count)) }
+        }
+        // "named Max" / "called Nova" / "her name is Lily"
+        if let r = text.range(of: "(?:named|called|name is)\\s+([A-Za-z][A-Za-z0-9]{0,11})", options: [.regularExpression, .caseInsensitive]) {
+            return text[r].split(separator: " ").last.map(String.init)
+        }
         return nil
     }
 

@@ -25,7 +25,7 @@ struct WorkoutSetupView: View {
             Form {
                 Section("计划") {
                     TextField("训练名称，如：推力日", text: $name)
-                    LabeledContent("动作 / 组数", value: "\(items.count) 个 · \(totalSets) 组")
+                    LabeledContent("动作 / 组数", value: L("%lld 个 · %lld 组", items.count, totalSets))
                 }
                 Section {
                     ForEach($items) { $item in
@@ -40,7 +40,7 @@ struct WorkoutSetupView: View {
                             }
                         } label: {
                             HStack {
-                                Text(item.exerciseName)
+                                Text(ExerciseNames.display(item.exerciseName))
                                 Spacer()
                                 Text("\(item.sets) × \(item.repsLow)–\(item.repsHigh) · 休 \(item.restSeconds)s").font(.caption).foregroundStyle(.secondary)
                             }
@@ -62,7 +62,7 @@ struct WorkoutSetupView: View {
                 ToolbarItem(placement: .primaryAction) { EditButton() }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        onSave(name.trimmingCharacters(in: .whitespaces).isEmpty ? "训练" : name, items)
+                        onSave(name.trimmingCharacters(in: .whitespaces).isEmpty ? L("训练") : name, items)
                         dismiss()
                     }.bold().disabled(items.isEmpty)
                 }

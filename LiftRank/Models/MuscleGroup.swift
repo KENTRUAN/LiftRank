@@ -9,21 +9,21 @@ enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .chest: "胸"
-        case .shoulders: "肩"
-        case .biceps: "二头"
-        case .triceps: "三头"
-        case .forearms: "前臂"
-        case .abs: "核心"
-        case .quads: "股四头"
-        case .calves: "小腿"
-        case .back: "背"
-        case .traps: "斜方肌"
-        case .glutes: "臀"
-        case .hamstrings: "腘绳肌"
-        case .lowerBack: "下背"
-        case .cardio: "有氧"
-        case .fullBody: "全身"
+        case .chest: L("胸")
+        case .shoulders: L("肩")
+        case .biceps: L("二头")
+        case .triceps: L("三头")
+        case .forearms: L("前臂")
+        case .abs: L("核心")
+        case .quads: L("股四头")
+        case .calves: L("小腿")
+        case .back: L("背")
+        case .traps: L("斜方肌")
+        case .glutes: L("臀")
+        case .hamstrings: L("腘绳肌")
+        case .lowerBack: L("下背")
+        case .cardio: L("有氧")
+        case .fullBody: L("全身")
         }
     }
 
@@ -36,39 +36,39 @@ enum MuscleGroup: String, Codable, CaseIterable, Identifiable {
     var regions: [MuscleRegion] {
         switch self {
         case .chest:
-            [.init("上胸", ["incline_bench", "incline_db_bench"]),
-             .init("中胸", ["bench_press", "db_bench", "pushup", "chest_fly_machine"]),
-             .init("下胸", ["dips"]), .init("左胸"), .init("右胸")]
+            [.init(L("上胸"), ["incline_bench", "incline_db_bench"]),
+             .init(L("中胸"), ["bench_press", "db_bench", "pushup", "chest_fly_machine"]),
+             .init(L("下胸"), ["dips"]), .init(L("左胸")), .init(L("右胸"))]
         case .shoulders:
-            [.init("三角肌前束", ["ohp", "db_shoulder_press", "arnold_press"]),
-             .init("三角肌中束", ["lateral_raise", "upright_row"]),
-             .init("三角肌后束", ["rear_delt_fly", "face_pull"])]
+            [.init(L("三角肌前束"), ["ohp", "db_shoulder_press", "arnold_press"]),
+             .init(L("三角肌中束"), ["lateral_raise", "upright_row"]),
+             .init(L("三角肌后束"), ["rear_delt_fly", "face_pull"])]
         case .biceps:
-            [.init("肱二头肌长头"), .init("肱二头肌短头"), .init("肱肌", ["hammer_curl"])]
+            [.init(L("肱二头肌长头")), .init(L("肱二头肌短头")), .init(L("肱肌"), ["hammer_curl"])]
         case .triceps:
-            [.init("肱三头肌长头", ["overhead_tricep_ext", "skullcrusher"]),
-             .init("肱三头肌外侧头", ["tricep_pushdown"]), .init("肱三头肌内侧头")]
+            [.init(L("肱三头肌长头"), ["overhead_tricep_ext", "skullcrusher"]),
+             .init(L("肱三头肌外侧头"), ["tricep_pushdown"]), .init(L("肱三头肌内侧头"))]
         case .forearms:
-            [.init("腕屈肌群", ["wrist_curl"]), .init("腕伸肌群"),
-             .init("肱桡肌", ["reverse_curl", "hammer_curl"])]
+            [.init(L("腕屈肌群"), ["wrist_curl"]), .init(L("腕伸肌群")),
+             .init(L("肱桡肌"), ["reverse_curl", "hammer_curl"])]
         case .abs:
-            [.init("腹直肌", ["cable_crunch", "hanging_leg_raise"]), .init("腹斜肌", ["russian_twist"])]
+            [.init(L("腹直肌"), ["cable_crunch", "hanging_leg_raise"]), .init(L("腹斜肌"), ["russian_twist"])]
         case .quads:
-            [.init("股直肌", ["leg_extension"]), .init("股内侧肌"), .init("股外侧肌"), .init("股中间肌")]
+            [.init(L("股直肌"), ["leg_extension"]), .init(L("股内侧肌")), .init(L("股外侧肌")), .init(L("股中间肌"))]
         case .calves:
-            [.init("腓肠肌", ["standing_calf_raise"]), .init("比目鱼肌", ["seated_calf_raise"])]
+            [.init(L("腓肠肌"), ["standing_calf_raise"]), .init(L("比目鱼肌"), ["seated_calf_raise"])]
         case .back:
-            [.init("背阔肌", ["pullup", "chinup", "lat_pulldown"]),
-             .init("上背中部", ["barbell_row", "db_row", "seated_row", "tbar_row"])]
+            [.init(L("背阔肌"), ["pullup", "chinup", "lat_pulldown"]),
+             .init(L("上背中部"), ["barbell_row", "db_row", "seated_row", "tbar_row"])]
         case .traps:
-            [.init("斜方肌上束", ["barbell_shrug", "db_shrug", "upright_row"]),
-             .init("斜方肌中束", ["seated_row", "tbar_row"]), .init("斜方肌下束")]
+            [.init(L("斜方肌上束"), ["barbell_shrug", "db_shrug", "upright_row"]),
+             .init(L("斜方肌中束"), ["seated_row", "tbar_row"]), .init(L("斜方肌下束"))]
         case .glutes:
-            [.init("臀大肌", ["hip_thrust", "sumo_deadlift", "kb_swing"]), .init("臀中肌"), .init("臀小肌")]
+            [.init(L("臀大肌"), ["hip_thrust", "sumo_deadlift", "kb_swing"]), .init(L("臀中肌")), .init(L("臀小肌"))]
         case .hamstrings:
-            [.init("屈膝动作", ["leg_curl", "nordic_curl"]), .init("伸髋动作", ["rdl", "good_morning"])]
+            [.init(L("屈膝动作"), ["leg_curl", "nordic_curl"]), .init(L("伸髋动作"), ["rdl", "good_morning"])]
         case .lowerBack:
-            [.init("竖脊肌", ["hyperextension", "good_morning"]), .init("多裂肌")]
+            [.init(L("竖脊肌"), ["hyperextension", "good_morning"]), .init(L("多裂肌"))]
         case .cardio, .fullBody:
             []
         }
@@ -91,15 +91,15 @@ enum Equipment: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .barbell: "杠铃"
-        case .dumbbell: "哑铃"
-        case .machine: "器械"
-        case .cable: "绳索"
-        case .bodyweight: "自重"
-        case .kettlebell: "壶铃"
-        case .band: "弹力带"
-        case .cardio: "有氧"
-        case .other: "其他"
+        case .barbell: L("杠铃")
+        case .dumbbell: L("哑铃")
+        case .machine: L("器械")
+        case .cable: L("绳索")
+        case .bodyweight: L("自重")
+        case .kettlebell: L("壶铃")
+        case .band: L("弹力带")
+        case .cardio: L("有氧")
+        case .other: L("其他")
         }
     }
 }
@@ -116,9 +116,9 @@ enum SetType: String, Codable, CaseIterable, Identifiable {
     }
     var name: String {
         switch self {
-        case .normal: "正式组"
-        case .warmup: "热身组"
-        case .drop: "递减组"
+        case .normal: L("正式组")
+        case .warmup: L("热身组")
+        case .drop: L("递减组")
         }
     }
 }

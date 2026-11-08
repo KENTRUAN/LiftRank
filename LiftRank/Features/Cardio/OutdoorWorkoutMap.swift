@@ -31,7 +31,7 @@ final class OutdoorWorkoutTracker: NSObject, ObservableObject, CLLocationManager
         switch manager.authorizationStatus {
         case .notDetermined: manager.requestWhenInUseAuthorization()
         case .authorizedAlways, .authorizedWhenInUse: error = nil; manager.startUpdatingLocation()
-        default: error = "Allow location in Settings to show your outdoor route. Workout timing continues."
+        default: error = L("Allow location in Settings to show your outdoor route. Workout timing continues.")
         }
     }
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -53,7 +53,7 @@ final class OutdoorWorkoutTracker: NSObject, ObservableObject, CLLocationManager
         }
     }
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in self.error = "Waiting for an accurate location…" }
+        Task { @MainActor in self.error = L("Waiting for an accurate location…") }
     }
 }
 

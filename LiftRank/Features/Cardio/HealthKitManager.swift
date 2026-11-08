@@ -137,6 +137,6 @@ final class HealthKitManager {
 
     enum HealthError: LocalizedError {
         case unavailable
-        var errorDescription: String? { "此设备不支持 Apple Health。" }
+        var errorDescription: String? { L("此设备不支持 Apple Health。") }
     }
 }

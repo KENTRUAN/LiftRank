@@ -15,7 +15,7 @@ enum WeightUnit: String, Codable, CaseIterable, Identifiable {
 enum Sex: String, Codable, CaseIterable, Identifiable {
     case male, female
     var id: String { rawValue }
-    var label: String { self == .male ? "男" : "女" }
+    var label: String { self == .male ? L("男") : L("女") }
 }
 
 extension Double {
@@ -32,10 +32,10 @@ extension Date {
     }
     func adding(days: Int) -> Date { Calendar.current.date(byAdding: .day, value: days, to: self) ?? self }
     var shortString: String {
-        let f = DateFormatter(); f.dateFormat = "M月d日"; return f.string(from: self)
+        let f = DateFormatter(); f.locale = AppLanguage.current.locale; f.dateFormat = AppLanguage.current.isEnglish ? "MMM d" : "M月d日"; return f.string(from: self)
     }
     var mediumString: String {
-        let f = DateFormatter(); f.dateFormat = "yyyy年M月d日 HH:mm"; return f.string(from: self)
+        let f = DateFormatter(); f.locale = AppLanguage.current.locale; f.dateFormat = AppLanguage.current.isEnglish ? "MMM d, yyyy HH:mm" : "yyyy年M月d日 HH:mm"; return f.string(from: self)
     }
     var weekKey: String {
         let c = Calendar(identifier: .iso8601)
