@@ -1,5 +1,17 @@
 # 段位健身（LiftRank）iOS
 
+## Demo on a new Mac
+
+Follow the [new Mac setup guide](docs/NEW_MAC_SETUP.md) to connect to the existing hosted demo without copying local files from another laptop. Install Xcode, Python 3.9+ and Node 22+, then run from the checkout:
+
+```sh
+npm ci --prefix backend
+./scripts/setup-demo
+open LiftRank.xcodeproj
+```
+
+The script signs you into Firebase when needed, downloads the registered simulator/iPhone app configurations, asks for your Apple Team ID and registered device bundle ID once, and checks the demo backend. Generated configuration remains ignored by Git. Use `./scripts/setup-demo --simulator-only` if you do not need a physical iPhone, or `--check` to validate without writing setup files. The guide covers Firebase access, new bundle registration, Xcode signing, two-device rehearsal and optional AI configuration.
+
 ## AI avatars and live social gym
 
 [Feature branch documentation](docs/FEATURE_BRANCH.md) describes the implemented app, architecture, verification and remaining prototype work.

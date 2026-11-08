@@ -4,11 +4,13 @@ See [feature documentation](../docs/FEATURE_BRANCH.md) for the complete implemen
 
 The iOS client uses Firebase anonymous Auth, Realtime Database and Storage. The TypeScript API runs on Cloud Run; **no VM is needed**. The intended development project is `liftrank-514018`.
 
+For a **new Mac using the already deployed demo**, follow [New Mac setup](../docs/NEW_MAC_SETUP.md): run `npm ci --prefix backend` and `./scripts/setup-demo` from the repository root. This fetches Firebase client configuration and generates ignored local signing settings. It does not deploy anything, start emulators, retrieve provider secrets or require Google Cloud CLI. The cloud-provisioning steps below are for project maintainers, not laptop onboarding.
+
 Without `SocialConfig.plist`, the app opens normally and offers an explicitly labeled offline sample. Cloud configuration is required for real multiplayer. Existing SwiftData workout records and offline rank cards are unchanged.
 
 The development API is deployed at `https://liftrank-social-937516211756.us-central1.run.app`. Its public `/health` route reports readiness; all feature routes require Firebase authentication. This checkout's ignored local app configuration points to that deployment. Provider secrets are held in Secret Manager. The source upload allowlist in `.gcloudignore` excludes local configuration, credentials, tests and dependencies.
 
-For a physical iPhone, `configuration/Build.xcconfig` optionally loads the ignored `configuration/Signing.local.xcconfig`. Copy the adjacent `.example` file and enter your Apple team and a unique device bundle ID. Register that bundle ID as another iOS app in the same Firebase project, then save its matching social configuration in the ignored `configuration/SocialConfig.device.plist`. The SDK-conditional settings apply to physical-device builds; simulator identifiers and configuration keep their existing defaults. Run `xcodegen generate` after changing the project specification. Xcode's normal **LiftRank → your iPhone → Run** action then uses the saved local settings.
+For a physical iPhone, `configuration/Build.xcconfig` optionally loads the ignored `configuration/Signing.local.xcconfig`. The setup script generates this file and `configuration/SocialConfig.device.plist` from your Apple Team ID and a registered device bundle ID. Alternatively, copy the adjacent `.example` files and configure them manually. Register a new device bundle ID as another iOS app in the same Firebase project before fetching its configuration. The SDK-conditional settings apply to physical-device builds; simulator identifiers and configuration keep their existing defaults. Run `xcodegen generate` only after changing the project specification; setup does not require project regeneration. Xcode's normal **LiftRank → your iPhone → Run** action then uses the saved local settings.
 
 ## Local multiplayer
 
