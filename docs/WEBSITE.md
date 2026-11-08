@@ -18,10 +18,24 @@ Open http://127.0.0.1:4173/ for the preview. For project-path testing, serve a
 temporary parent directory containing a LiftRank symlink to the website
 directory, then open /LiftRank/. All asset URLs are relative so both work.
 
-Before publishing, check widths of 320, 390, 768, and 1440 pixels; complete the
-sample workout; visit all nine ranks and six gym details; test reset, keyboard
-tabs and dialogs, reduced motion, and JavaScript-disabled content. Demo
-actions must make no service requests.
+Before publishing, check widths of 320, 390, 768, and 1440 pixels, including
+equipment labels and dialog controls. Exercise these paths:
+
+- Strength: choose a preset or keep the workout blank and add an exercise;
+  start, end, confirm, and save a set. Switch to Community and continue the
+  same session. Check all three leave choices, including saving an unlogged
+  set (zero completed sets) and discarding a logged set.
+- Cardio: select indoor/outdoor, start, pause, resume, and end. Paused time
+  must not advance. The two visible clocks must agree. Switching tabs must
+  keep the timer; ending, discarding, or resetting must stop it.
+- Ranks: visit all nine tiers in both mascot families. Toggle the crown and
+  backdrop. Check 30/90/365-day and all-history ranges, keyboard date changes,
+  and scores carrying forward between recorded sample days.
+- Community: open all eight equipment/member details, close them by button
+  and Escape, and verify focus returns to the trigger.
+- Check reset, keyboard tabs and dialog focus, reduced motion, section links,
+  FAQ disclosures, and JavaScript-disabled content. Demo actions must make no
+  service requests; local image requests are expected when changing mascots.
 
 ## Publish with GitHub Pages
 
@@ -29,7 +43,7 @@ actions must make no service requests.
    open **Pages → Build and deployment → Source** and select **GitHub Actions**.
    This one-time step requires repository admin or maintainer access.
 2. Review and explicitly authorize merging the website feature branch into
-   main. Do not merge app work as part of the website change.
+   main. Keep unrelated app changes out of the website pull request.
 3. The **Website checks and Pages** workflow validates the site and publishes
    only the website directory. Feature-branch pushes and pull requests run checks
    without deploying. Manual runs also deploy only when run on main.
@@ -40,7 +54,8 @@ actions must make no service requests.
 No deploy secrets are required: the workflow uses GitHub's scoped Pages and
 OIDC permissions. The existing iOS/backend workflow is unchanged. If Pages
 has a protected environment, approve its deployment through GitHub as needed.
-Hosting is not active merely because these files exist.
+The repository already uses GitHub Actions as its Pages source. Future website
+updates publish after an explicitly authorized merge to main succeeds in CI.
 
 ## Content and assets
 
@@ -48,11 +63,23 @@ Hosting is not active merely because these files exist.
   badges, release claims, testimonials, or a waitlist without real destinations.
 - The rank explorer mirrors the nine names, ranges, and colors in
   LiftRank/Engine/RankTier.swift; it is not a strength calculator.
-- The workout begins blank, requires an explicit sample routine, then follows
-  Start set → End set → Confirm → Save → Finish. Only that sample set is counted.
+- The current content was checked against main at c36ca44, including the
+  unified workout flow, workout exit decisions, persisted cardio timeline,
+  Live Activities, trainer identity, rank history, and gym artwork.
+- The strength demo begins blank, offers an optional routine, then follows
+  Start set → End set → Confirm → Save → Finish. Only completed, logged sets
+  count. Save and leave excludes unfinished plans; discard clears the session.
+- The cardio clock measures active browser time with a monotonic clock.
+  Its route is a fixed illustration, with no geolocation or Apple connection.
+  Strength elapsed/rest values and the supporting Live Activity card are
+  explicitly labeled illustrations, not running native activities.
+- Rank history is fictional, fixed through November 8, 2026, and independent
+  of the workout demo. It carries forward the latest recorded sample score.
+- NaiLong and Doubao each have nine tier images. Crown/backdrop choices are
+  local previews; they spend no Eggs and do not edit the visitor's app profile.
 - Gym members and messages are fictional; nothing is sent or reserved.
-- Mascots and the app icon are resized copies of the existing asset catalog.
-  Keep the originals in the app unchanged.
+- Mascots, gym artwork, crown, backdrop, and app icon are optimized copies
+  of the existing asset catalog. Keep the originals in the app unchanged.
 - Keep the HTML description, canonical URL, and social metadata in sync if the
   public address changes. The social preview asset is a static image.
 - No Xcode source membership, native behavior, backend API, or data migration

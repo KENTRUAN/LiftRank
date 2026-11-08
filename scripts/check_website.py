@@ -57,9 +57,16 @@ def main():
         if reference not in page.ids:
             errors.append(f"Missing ARIA target: {reference}")
     for tier in ("wood", "bronze", "silver", "gold", "platinum", "diamond", "champion", "titan", "olympian"):
-        if not (SITE / "assets" / f"mascot-{tier}.png").is_file():
-            errors.append(f"Missing rank mascot: {tier}")
-    allowed_extensions = {".html", ".css", ".js", ".png", ".svg", ".webp", ".ico"}
+        for family in ("mascot", "doubao"):
+            if not (SITE / "assets" / f"{family}-{tier}.png").is_file():
+                errors.append(f"Missing {family} rank asset: {tier}")
+    for name in ("rack", "bench", "cardio", "platform", "lounge", "floor", "wall"):
+        if not (SITE / "assets" / f"gym-{name}.png").is_file():
+            errors.append(f"Missing gym artwork: {name}")
+    for name in ("accessory-crown.png", "backdrop-sunset.jpg"):
+        if not (SITE / "assets" / name).is_file():
+            errors.append(f"Missing cosmetic preview: {name}")
+    allowed_extensions = {".html", ".css", ".js", ".png", ".jpg", ".svg", ".webp", ".ico"}
     size = 0
     for path in SITE.rglob("*"):
         if path.is_symlink():

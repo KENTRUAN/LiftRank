@@ -259,3 +259,166 @@ dialog .button{font-size:12px;width:100%}
 
 @media(max-width:600px){.orbit-two{transform:none;width:calc(100% - 24px);right:12px}.hero-mascot{left:-5px}.hero-sticker{bottom:25px}.art-caption{bottom:0}}
 @media(min-width:601px) and (max-width:1100px){.orbit-two{transform:none;width:calc(100% - 36px);right:18px}.reward-art img:first-child{left:0}}
+
+/* Current app tour: one workout, two mascot families, and the neon gym. */
+.mode-picker { display:flex; gap:4px; padding:4px; background:#edf1e7; border-radius:10px; margin-block:18px; }
+.mode-picker button { flex:1; border:1px solid transparent; background:transparent; border-radius:7px; padding:10px 12px; font-size:11px; font-weight:650; min-height:40px; }
+.mode-picker button[aria-pressed="true"] { background:#fffefa; border-color:#d8e0d2; box-shadow:0 2px 4px #1d292a08; }
+.mode-picker button:disabled { opacity:.45; }
+.demo-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+.demo-actions .button { flex:1 1 150px; }
+.button-secondary { border:1px solid #bccbbc; background:#f5f7ef; color:var(--teal); box-shadow:none; }
+.button-secondary:hover { background:#e9efdf; }
+.workout-empty { padding-top:24px; }
+.workout-empty .demo-actions { max-width:400px; margin-inline:auto; }
+.leave-link { margin:13px auto 0; display:flex; font-size:10px; }
+#mode-help { margin:-6px 0 15px; font-size:10px; }
+.cardio-setup { padding-block:25px 8px; }
+.cardio-setup>.mini-eyebrow { color:var(--teal); }
+.cardio-setup h4 { font-size:23px; letter-spacing:-.7px; margin-bottom:14px; }
+.cardio-setup>p:not(.mini-eyebrow) { font-size:12px; line-height:1.8; color:var(--muted); }
+.compact-select { display:flex; align-items:center; gap:12px; font-size:11px; font-weight:650; }
+.compact-select select,.history-heading select { min-height:40px; border:1px solid #bdcabc; border-radius:8px; background:#fffefa; color:var(--ink); padding:8px 25px 8px 10px; font:inherit; font-size:11px; max-width:100%; }
+select:focus-visible,input:focus-visible { outline:3px solid var(--blue); outline-offset:4px; }
+.cardio-setup .compact-select { margin-block:21px; }
+.cardio-setup>.button { width:100%; }
+.cardio-running { padding-top:17px; text-align:center; }
+.cardio-running>.mini-eyebrow { color:var(--teal); }
+.cardio-clock { font-size:62px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-2px; margin:0 0 10px; line-height:1.2; }
+.sample-route { background:#edf3ec; border:1px solid #dce7db; border-radius:12px; padding:8px; margin-block:18px; overflow:hidden; }
+.sample-route svg { display:block; height:65px; width:100%; }
+.sample-route>span { color:var(--teal); font-size:8px; }
+.cardio-running .button { min-height:43px; font-size:11px; padding:12px; }
+#workout-live-preview { border-top:1px solid var(--line); padding-top:18px; margin-top:18px; }
+.live-preview { background:#18353c; color:#e4f4ef; padding:16px 18px; border-radius:14px; }
+.live-preview>div { display:flex; justify-content:space-between; gap:10px; font-size:7px; letter-spacing:1px; color:#91d6c7; }
+.live-preview>p { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:13px 0 5px; }
+.live-preview strong { font-size:12px; font-weight:600; }
+.live-preview b { font-size:27px; letter-spacing:-1px; font-weight:650; font-variant-numeric:tabular-nums; }
+.live-preview small { font-size:10px; color:#bad7ce; }
+.rank-toolbar { display:flex; align-items:center; justify-content:space-between; gap:15px; }
+.rank-toolbar .mode-picker { margin:0; flex:1; }
+.rank-toolbar .mode-picker button { white-space:nowrap; }
+.rank-toolbar .compact-select { gap:8px; }
+.rank-showcase { grid-template-columns:minmax(0,.95fr) minmax(0,1fr); gap:25px; margin-block:23px; }
+#mascot-stage { border-radius:20px; max-width:290px; width:100%; overflow:hidden; background-position:center; background-size:cover; }
+#mascot-stage.sunset-backdrop { background-image:url("./assets/backdrop-sunset.jpg"); }
+#rank-mascot { width:91%; height:91%; left:4.5%; top:4.5%; bottom:auto; object-fit:contain; }
+#rank-accessory { position:absolute; width:13.923%; height:7.735%; left:50%; top:11.052%; bottom:auto; object-fit:contain; transform:translate(-50%,-50%); filter:drop-shadow(0 2px 2px #0003); }
+.mascot-customization { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:21px; }
+.mascot-customization>span { font-size:10px; color:var(--muted); margin-right:auto; }
+.mascot-customization button { display:flex; align-items:center; justify-content:center; gap:8px; padding:9px 12px; min-height:38px; border:1px solid #d4ddce; border-radius:8px; background:transparent; font-size:10px; }
+.mascot-customization button[aria-pressed="true"] { background:#e8efda; border-color:#6c8365; color:#2b4a2e; }
+.mascot-customization button>span { font-size:15px; }
+.rank-history { border:1px solid #dbe2d3; border-radius:12px; padding:16px; background:#f4f6ee; }
+.history-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:11px; font-weight:650; margin-bottom:20px; }
+.history-selection { display:flex; flex-wrap:wrap; justify-content:space-between; gap:5px 12px; font-size:10px; line-height:1.7; color:var(--muted); margin-bottom:12px; }
+.history-selection output { font-weight:650; color:var(--ink); }
+#history-day { display:block; width:100%; margin:0; min-height:30px; accent-color:var(--teal); cursor:pointer; }
+.history-endpoints { display:flex; justify-content:space-between; gap:12px; font-size:8px; color:var(--muted); margin-top:5px; }
+.gym { width:100%; aspect-ratio:1.4; background:#101e2e; margin-top:25px; }
+.gym-heading { z-index:4; }
+.gym-floor { inset:8% 0 auto; width:100%; height:88%; z-index:0; }
+.gym-station { position:absolute; z-index:2; width:24%; display:flex; flex-direction:column; align-items:center; padding:0; background:none; border:0; color:#e5f8fa; border-radius:8px; }
+.gym-station img { width:100%; height:auto; display:block; filter:drop-shadow(0 6px 5px #0007); transition:transform .15s; }
+.gym-station>span { font-size:9px; display:flex; align-items:center; justify-content:center; gap:9px; min-height:28px; background:#102431e8; border:1px solid #3e6c78; border-radius:6px; padding:4px 9px; white-space:nowrap; margin-top:-7px; }
+.gym-station b { color:#77e7dc; font-size:12px; }
+.gym-station:hover img { transform:translateY(-4px); }
+.gym-station:focus-visible { outline-color:#7ef7e5; }
+.station-rack { left:13%; top:23%; width:22%; }
+.station-cardio { right:10%; top:24%; width:22%; }
+.station-bench { left:35%; top:43%; }
+.station-platform { right:9%; top:61%; }
+.station-lounge { left:9%; top:63%; width:21%; }
+.gym-person { z-index:3; }
+.person-alex { left:42%; top:34%; }
+.person-jamie { right:23%; top:18%; }
+.person-you { left:58%; bottom:9%; }
+.gym-hint { z-index:4; bottom:11px; }
+.community-session { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 16px; padding:16px; margin-top:19px; background:#edf3e8; border-radius:12px; }
+.community-session strong { display:block; font-size:11px; }
+.community-session p { font-size:10px; line-height:1.7; margin:6px 0 0; color:var(--muted); }
+.community-actions { display:flex; flex-wrap:wrap; gap:10px; }
+.community-actions .text-button { font-size:10px; padding:4px 0; margin:0; min-height:32px; }
+.continuity-feature { display:grid; grid-template-columns:1fr 1fr; gap:45px; padding:38px 40px; background:#dfeae7; border:1px solid #ceddd6; border-radius:26px; margin-top:23px; align-items:center; }
+.continuity-feature .mini-eyebrow { color:var(--teal); font-size:8px; margin-bottom:17px; }
+.continuity-feature h3 { font-size:30px; line-height:1.2; letter-spacing:-1px; font-weight:650; margin-bottom:18px; }
+.continuity-feature>div>p:not(.mini-eyebrow) { font-size:12px; line-height:1.85; color:var(--muted); }
+.continuity-feature .text-link { font-size:11px; }
+.activity-illustration { padding:28px 23px; background:#c7d8d5; border-radius:22px; border:5px solid #233b3f; box-shadow:7px 9px 0 #1b3c2b0c; }
+.activity-island { width:80px; height:22px; border-radius:30px; background:#233b3f; margin:-17px auto 29px; }
+.activity-card { border-radius:17px; background:#14343b; color:#eef9f4; padding:22px; }
+.activity-card>div:first-child { display:flex; justify-content:space-between; gap:10px; font-size:7px; letter-spacing:1px; color:#95d2c7; }
+.activity-card>strong { display:block; font-size:14px; margin-top:19px; }
+.activity-metrics { display:flex; justify-content:space-between; gap:10px; margin-top:18px; }
+.activity-metrics>p { margin:0; }
+.activity-metrics b { display:block; font-size:25px; font-weight:600; letter-spacing:-.6px; }
+.activity-metrics span { display:block; font-size:8px; color:#b1d6ca; margin-top:6px; }
+.activity-card>small { display:block; font-size:7px; line-height:1.7; color:#b1d6ca; margin-top:22px; }
+#leave-dialog>.mini-eyebrow { color:var(--teal); }
+#leave-description { font-size:13px; line-height:1.8; color:var(--muted); }
+.leave-actions { display:flex; flex-direction:column; align-items:stretch; gap:10px; margin-top:25px; }
+.leave-actions .button { min-height:45px; font-size:12px; }
+.leave-actions .text-button { align-self:center; margin:0; min-height:40px; }
+@media(max-width:1100px) {
+  .rank-toolbar { align-items:stretch; flex-direction:column; gap:12px; }
+  .rank-toolbar .compact-select { justify-content:space-between; }
+  .mascot-customization>span { width:100%; margin-bottom:2px; }
+  .rank-copy h4 { font-size:33px; }
+  .continuity-feature { padding:30px; gap:28px; }
+  .activity-illustration { padding:24px 15px; }
+  .activity-card { padding:17px; }
+}
+@media(min-width:601px) and (max-width:800px) {
+  .rank-toolbar { flex-direction:row; align-items:center; }
+  .mascot-customization>span { width:auto; margin-bottom:0; }
+}
+@media(max-width:600px) {
+  .mode-picker { margin-block:15px; }
+  .mode-picker button { font-size:10px; padding:9px; min-height:39px; }
+  .rank-toolbar { gap:10px; }
+  .rank-toolbar .mode-picker { margin:0; }
+  .rank-toolbar .compact-select { font-size:10px; }
+  .rank-showcase { gap:14px; margin-block:19px; }
+  #mascot-stage { border-radius:13px; }
+  .rank-copy h4 { font-size:27px; }
+  .rank-explanation { font-size:9px; }
+  .mascot-customization { gap:7px; }
+  .mascot-customization>span { font-size:9px; }
+  .mascot-customization button { flex:1; font-size:9px; min-height:40px; padding:7px; }
+  .history-heading { font-size:10px; margin-bottom:15px; }
+  .history-heading select { font-size:10px; }
+  .rank-history { padding:13px; }
+  .history-selection { font-size:9px; }
+  .history-endpoints { font-size:7px; }
+  .cardio-setup h4 { font-size:21px; }
+  .cardio-clock { font-size:53px; }
+  .cardio-running .demo-actions { gap:8px; }
+  .demo-actions .button { flex-basis:140px; }
+  .gym { aspect-ratio:.86; min-height:390px; margin-top:20px; }
+  .gym-floor { inset:14% -14% auto; width:128%; height:77%; }
+  .gym-heading { font-size:8px; letter-spacing:.5px; }
+  .gym-station { width:31%; }
+  .gym-station>span { font-size:8px; gap:6px; min-height:27px; padding:4px 7px; }
+  .station-rack { left:6%; top:24%; width:31%; }
+  .station-cardio { right:3%; top:29%; width:31%; }
+  .station-bench { left:31%; top:45%; width:34%; }
+  .station-platform { right:2%; top:65%; width:29%; }
+  .station-lounge { left:3%; top:66%; width:28%; }
+  .person-alex { left:37%; top:35%; }
+  .person-jamie { right:13%; top:18%; }
+  .person-you { left:37%; bottom:7%; }
+  .gym-hint { font-size:7px; bottom:14px; }
+  .community-session { padding:13px; }
+  .community-session strong { font-size:10px; }
+  .community-session p { font-size:9px; }
+  .community-actions { gap:14px; }
+  .continuity-feature { grid-template-columns:1fr; padding:28px 24px; gap:25px; border-radius:18px; margin-top:16px; }
+  .continuity-feature h3 { font-size:27px; }
+  .activity-illustration { width:100%; max-width:340px; justify-self:center; padding:25px 17px; }
+  .live-preview { padding:14px; }
+  .live-preview>div { font-size:6px; gap:7px; }
+  .live-preview strong { font-size:10px; }
+  .live-preview b { font-size:24px; }
+}
+@media(prefers-reduced-motion:reduce) { .gym-station:hover img { transform:none; } }
