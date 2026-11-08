@@ -10,7 +10,6 @@ struct ShopView: View {
     let mascotStyle: RankMascotStyle?
     @AppStorage("trainingAvatar.mascotStyle") private var storedMascotStyle: RankMascotStyle = .nailong
     @Environment(\.modelContext) private var context
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var slot: CosmeticSlot
     @State private var toast: String?
 
@@ -74,47 +73,55 @@ struct ShopView: View {
     private var header: some View {
         let style = mascotPreviewStyle(for: slot)
         let previewHeight: CGFloat = style == nil ? 64 : 126
-        return VStack(alignment: .trailing, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                if let style {
-                    RankMascotView(tier: tier, spec: profile.avatar, style: style)
-                        .frame(width: 92, height: previewHeight)
-                        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
-                }
+        return HStack(alignment: .top, spacing: 12) {
+            if let style {
+                RankMascotView(tier: tier, spec: profile.avatar, style: style)
+                    .frame(width: 92, height: previewHeight)
+                    .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
+            }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    TitleTag(cosmetic: profile.equipped(.title))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(profile.name).font(.headline)
-                    if style != nil {
-                        Spacer(minLength: 6)
-                        Text("装备后会显示在当前训练化身上。")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                TitleTag(cosmetic: profile.equipped(.title))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(profile.name).font(.headline)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        shopRank
+                        Spacer(minLength: 8)
+                        shopBalance
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        shopRank
+                        shopBalance
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: previewHeight, alignment: .topLeading)
-
-                if !dynamicTypeSize.isAccessibilitySize { shopMetrics }
+                if style != nil {
+                    Spacer(minLength: 4)
+                    Text("装备后会显示在当前训练化身上。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
-            if dynamicTypeSize.isAccessibilitySize { shopMetrics }
+            .frame(maxWidth: .infinity, minHeight: previewHeight, alignment: .topLeading)
         }
         .card()
     }
 
-    private var shopMetrics: some View {
-        VStack(alignment: .trailing, spacing: 8) {
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("GSR \(gsr)").font(.caption.bold()).monospacedDigit()
-                TierBadge(tier: tier, compact: true)
-            }
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("余额").font(.caption2).foregroundStyle(.secondary)
-                EggAmount(amount: profile.eggs).font(.subheadline.bold())
-            }
+    private var shopRank: some View {
+        HStack(spacing: 4) {
+            Text("GSR \(gsr)").font(.caption.bold()).monospacedDigit()
+            TierBadge(tier: tier, compact: true)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var shopBalance: some View {
+        HStack(spacing: 4) {
+            Text("余额").font(.caption2).foregroundStyle(.secondary)
+            EggAmount(amount: profile.eggs).font(.caption.bold())
         }
         .fixedSize(horizontal: true, vertical: false)
     }

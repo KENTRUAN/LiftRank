@@ -361,7 +361,6 @@ private struct TrainingAvatarCard: View {
     let history: [MuscleRankSnapshot]
 
     @AppStorage("trainingAvatar.mascotStyle") private var mascotStyle: RankMascotStyle = .nailong
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var range: RankHistoryRange = .all
     @State private var selectedDate: Date?
 
@@ -380,6 +379,7 @@ private struct TrainingAvatarCard: View {
                 }
             }
             .pickerStyle(.segmented)
+            if let date { historySelection(date: date, score: score, tier: tier) }
             RankMascotView(tier: tier, spec: profile.avatar, style: mascotStyle, allowsAccessoryPlacement: true)
                 .frame(height: 230)
                 .frame(maxWidth: .infinity)
@@ -387,7 +387,7 @@ private struct TrainingAvatarCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
             if let timeline, let date {
-                historyControls(timeline, date: date, score: score, tier: tier)
+                historyControls(timeline, date: date)
             } else {
                 Text("发布训练后，这里会出现可以回看的训练日期。")
                     .font(.caption)
@@ -427,12 +427,48 @@ private struct TrainingAvatarCard: View {
         }
     }
 
-    private func historyControls(_ timeline: RankHistoryTimeline, date: Date, score: Int, tier: RankTier) -> some View {
+    private func historySelection(date: Date, score: Int, tier: RankTier) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                selectedDateLabel(date)
+                Spacer(minLength: 8)
+                selectedRankLabel(score: score, tier: tier)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                selectedDateLabel(date)
+                selectedRankLabel(score: score, tier: tier)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("rankHistorySelection")
+    }
+
+    private func selectedDateLabel(_ date: Date) -> some View {
+        Text(date, format: .dateTime.year().month(.abbreviated).day().locale(AppLanguage.current.locale))
+            .font(.subheadline.weight(.semibold))
+    }
+
+    @ViewBuilder
+    private func selectedRankLabel(score: Int, tier: RankTier) -> some View {
+        if score > 0 {
+            Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tier.color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(tier.color.opacity(0.12), in: Capsule())
+        } else {
+            Text("待评分").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private func historyControls(_ timeline: RankHistoryTimeline, date: Date) -> some View {
+        let day = timeline.offset(for: date)
         let caption = date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(spacing: 4) {
             HStack {
                 Text("回看范围").font(.subheadline.weight(.semibold))
-                Spacer()
+                Spacer(minLength: 8)
                 Picker("回看范围", selection: $range) {
                     ForEach(RankHistoryRange.allCases) { option in
                         Text(option.title).tag(option)
@@ -441,63 +477,29 @@ private struct TrainingAvatarCard: View {
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("rankHistoryRange")
             }
-            HStack(alignment: .firstTextBaseline) {
-                Text(caption).font(.subheadline.weight(.semibold))
-                Spacer()
-                if score > 0 {
-                    Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(tier.color)
-                } else {
-                    Text("待评分").font(.caption).foregroundStyle(.secondary)
-                }
-            }
             if timeline.daySpan > 0 {
                 Slider(value: Binding(
-                    get: { Double(timeline.offset(for: date)) },
+                    get: { Double(day) },
                     set: { selectedDate = timeline.date(at: Int($0.rounded())) }
                 ), in: 0...Double(timeline.daySpan), step: 1)
                 .accessibilityLabel("训练日期")
                 .accessibilityValue(caption)
                 .accessibilityIdentifier("rankMascotTimeline")
 
-                HStack {
-                    tick(timeline.start, timeline: timeline, alignment: .leading)
-                    Spacer()
-                    tick(timeline.end, timeline: timeline, alignment: .trailing)
+                let style = Date.FormatStyle().month(.abbreviated).day().locale(AppLanguage.current.locale)
+                let crossesYears = !Calendar.current.isDate(timeline.start, equalTo: timeline.end, toGranularity: .year)
+                let endpointStyle = crossesYears ? style.year() : style
+                HStack(alignment: .top, spacing: 12) {
+                    Text(timeline.start, format: endpointStyle)
+                        .accessibilityIdentifier("rankHistoryStart")
+                    Spacer(minLength: 0)
+                    Text(timeline.end, format: endpointStyle)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier("rankHistoryEnd")
                 }
-                .overlay {
-                    if timeline.daySpan >= 4, !dynamicTypeSize.isAccessibilitySize {
-                        let middle = timeline.daySpan / 2
-                        GeometryReader { geometry in
-                            tick(timeline.date(at: middle), timeline: timeline, alignment: .center)
-                                .position(x: geometry.size.width * CGFloat(middle) / CGFloat(timeline.daySpan),
-                                          y: geometry.size.height / 2)
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .accessibilityHidden(true)
-            }
-            Text("\(timeline.daySpan + 1) 天")
-                .font(.caption.weight(.semibold))
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
-            if !DemoData.showsMascotDemo {
-                Text(range == .all ? "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。" : "所选天数包含今天。没有新评分时，沿用此前的段位。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    private func tick(_ date: Date, timeline: RankHistoryTimeline, alignment: HorizontalAlignment) -> some View {
-        let style = Date.FormatStyle().month(.abbreviated).day().locale(AppLanguage.current.locale)
-        let crossesYears = !Calendar.current.isDate(timeline.start, equalTo: timeline.end, toGranularity: .year)
-        return VStack(alignment: alignment, spacing: 3) {
-            Rectangle().fill(.secondary.opacity(0.55)).frame(width: 1, height: 5)
-            Text(date.formatted(crossesYears ? style.year(.twoDigits) : style))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
     }
 }
