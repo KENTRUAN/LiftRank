@@ -45,6 +45,7 @@ struct WorkoutHomeView: View {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button { showSummary = true } label: { Image(systemName: "chart.xyaxis.line") }
                     Button { app.showCoach = true } label: { Image(systemName: "sparkles") }
+                        .accessibilityLabel("AI trainer").accessibilityIdentifier("openHomeTrainer")
                 }
             }
             .fullScreenCover(item: $activeWorkout) { w in
@@ -82,17 +83,14 @@ struct WorkoutHomeView: View {
 
     private var strengthList: some View {
         List {
-            if let p = todayPlan {
+            if let p = todayPlan, !p.items.isEmpty {
                 Section("Today") {
-                    HStack {
+                    NavigationLink { TodayTrainingListView(plan: p) } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(p.title).font(.headline)
-                            Text(p.items.isEmpty ? "Rest day" : "\(p.items.count) exercises").font(.caption).foregroundStyle(.secondary)
+                            Text("\(p.items.count) exercises").font(.caption).foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Button { app.showCoach = true } label: { Image(systemName: "sparkles") }
-                        Button { setup = SetupTarget(plan: p) } label: { Image(systemName: "slider.horizontal.3") }
-                    }
+                    }.accessibilityIdentifier("todayTraining")
                 }
             }
 
@@ -166,8 +164,6 @@ struct WorkoutHomeView: View {
             context.insert(WorkoutTemplate(name: name, items: items))
         case .template(let t):
             t.name = name; t.items = items
-        case .plan(let p):
-            p.title = name; p.items = items; p.sourceRaw = "manual"
         }
         try? context.save()
     }
@@ -179,7 +175,7 @@ struct WorkoutHomeView: View {
 }
 
 struct SetupTarget: Identifiable {
-    enum Kind { case newTemplate, template(WorkoutTemplate), plan(DailyPlan) }
+    enum Kind { case newTemplate, template(WorkoutTemplate) }
     let id = UUID()
     let kind: Kind
     let title: String
@@ -189,7 +185,6 @@ struct SetupTarget: Identifiable {
     static func newTemplate() -> SetupTarget { SetupTarget(kind: .newTemplate, title: "", items: []) }
     init(kind: Kind, title: String, items: [TemplateExercise]) { self.kind = kind; self.title = title; self.items = items }
     init(template: WorkoutTemplate) { self.init(kind: .template(template), title: template.name, items: template.items) }
-    init(plan: DailyPlan) { self.init(kind: .plan(plan), title: plan.title, items: plan.items) }
 }
 
 struct WorkoutRow: View {

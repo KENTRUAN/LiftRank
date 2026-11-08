@@ -5,6 +5,7 @@ Implemented on `codex/nearby-workout-spaces`; main is unchanged.
 ## Experience
 
 - Home has a short trainer welcome and one **Start workout / Continue workout** button. Home, Profile, routine starts and external start actions route through Community. Cardio uses the same space selection.
+- Home's **Today** section appears only when today's requested plan contains exercises. Tapping it opens a read-only list of exercises, sets, rep ranges and rest times. It never opens trainer chat, workout setup or starts a session; trainer chat has its own entry.
 - Select a registered gym within 500 meters, create a public/private space, join an approved nearby space, or start a private solo workout offline. Entering starts or resumes the same local workout. Choosing a preset remains a separate optional step.
 - Custom spaces are open floors with avatars and a private trainer. **Start set** selects any strength exercise. The **Cardio** shortcut beside the set controls retains automatic timing, pause/resume, the outdoor map and Apple Health/Watch handling. Recorded sets remain locked.
 - Pinch to zoom from 0.8× to 3×; drag with two fingers to pan. There are also zoom/reset buttons and an option for a taller viewport. One-finger taps still walk or open profiles/equipment. Camera changes never send movement.
