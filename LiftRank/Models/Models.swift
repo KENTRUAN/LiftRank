@@ -179,6 +179,7 @@ final class Workout {
         CardioClock.elapsed(start: cardioTimerStartedAt ?? startedAt, pauses: cardioPauses, at: endedAt ?? date)
     }
     var cardioClockRevision: String { "\(id)|\(cardioTimerStartedAt?.timeIntervalSince1970 ?? 0)|\(cardioPauses)|\(endedAt?.timeIntervalSince1970 ?? 0)|\(isPublished)" }
+    var liveActivityRevision: String { "\(cardioClockRevision)|\(startOptionsChosen)|\(completedSets.count)|\(restUntil?.timeIntervalSince1970 ?? 0)|\(healthState)" }
     var duration: TimeInterval { cardioTimerStartedAt == nil ? (endedAt ?? Date()).timeIntervalSince(startedAt) : cardioElapsed() }
     var completedSets: [WorkoutSet] { exercises.flatMap { $0.sets }.filter { $0.isCompleted } }
     var totalVolumeKg: Double { completedSets.filter { $0.type != .warmup }.reduce(0) { $0 + $1.weightKg * Double($1.reps) } }

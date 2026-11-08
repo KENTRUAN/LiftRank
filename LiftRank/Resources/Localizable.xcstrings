@@ -21748,6 +21748,214 @@
           }
         }
       }
+    },
+    "Choose an activity available for this location.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an activity available for this location."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请选择适合当前场地的运动。"
+          }
+        }
+      }
+    },
+    "Choose an outdoor cardio activity.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an outdoor cardio activity."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请选择一项户外有氧运动。"
+          }
+        }
+      }
+    },
+    "Could not finish the workout: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not finish the workout: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法结束训练：%@"
+          }
+        }
+      }
+    },
+    "Could not refresh your Live Activity. Open LiftRank to retry.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not refresh your Live Activity. Open LiftRank to retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法刷新实时活动，请打开段位健身重试。"
+          }
+        }
+      }
+    },
+    "Discard workout & leave": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard workout & leave"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放弃训练并离开"
+          }
+        }
+      }
+    },
+    "Heart rate unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heart rate unavailable"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无心率数据"
+          }
+        }
+      }
+    },
+    "Keep training": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep training"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续训练"
+          }
+        }
+      }
+    },
+    "Open LiftRank to restore your workout data, then retry.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open LiftRank to restore your workout data, then retry."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请打开段位健身恢复训练数据，然后重试。"
+          }
+        }
+      }
+    },
+    "Ready for cardio? Choose an indoor or outdoor activity to get started.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready for cardio? Choose an indoor or outdoor activity to get started."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备好做有氧了吗？选择室内或户外运动即可开始。"
+          }
+        }
+      }
+    },
+    "Save keeps completed sets or cardio time. Unlogged sets and unfinished todos are not saved. Discard deletes this workout.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save keeps completed sets or cardio time. Unlogged sets and unfinished todos are not saved. Discard deletes this workout."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存会保留已完成的组数或有氧时长，未记录的组和未完成的计划不会保存。放弃会删除本次训练。"
+          }
+        }
+      }
+    },
+    "Save workout & leave": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save workout & leave"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存训练并离开"
+          }
+        }
+      }
+    },
+    "Save workout before leaving?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save workout before leaving?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "离开前保存训练？"
+          }
+        }
+      }
+    },
+    "Start cardio to choose an indoor or outdoor activity. Outdoor workouts show your private route while LiftRank is open. End saves elapsed time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start cardio to choose an indoor or outdoor activity. Outdoor workouts show your private route while LiftRank is open. End saves elapsed time."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始有氧训练时可选择室内或户外运动。户外训练会在段位健身打开时显示你的私人路线。结束后自动保存实际时长。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

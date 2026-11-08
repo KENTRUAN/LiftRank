@@ -94,3 +94,36 @@ test('background snapshot refresh cannot revert sharing consent or publish unsel
   assert.equal(refreshed.gsr, 600);
   assert.deepEqual(refreshed.routines, []);
 });
+
+test('training avatar and equipped cosmetics follow profile snapshots without exposing extra fields', () => {
+  const trainingAvatar = { style: 'doubao', offsetX: 0.2, offsetY: -0.1, rotation: 45, scale: 1.5 };
+  const original = cleanProfile('a', { name: 'Owner', gsr: 540, shareRank: true, cosmetics: ['accessory.glasses'] });
+  const refreshed = cleanProfile('a', { snapshotOnly: true, trainingAvatar: { ...trainingAvatar, assetPath: 'other-user', bodyweightKg: 90 },
+    cosmetics: ['accessory.crown'], gsr: 600, name: 'Stale name', shareRank: false }, original);
+  assert.deepEqual(refreshed.trainingAvatar, trainingAvatar);
+  assert.deepEqual(refreshed.cosmetics, ['accessory.crown']);
+  assert.equal(refreshed.gsr, 600); assert.equal(refreshed.name, 'Owner'); assert.equal(refreshed.shareRank, true);
+  const legacyUpdate = cleanProfile('a', { snapshotOnly: true, gsr: 610 }, refreshed);
+  assert.deepEqual(legacyUpdate.trainingAvatar, trainingAvatar);
+  assert.deepEqual(legacyUpdate.cosmetics, ['accessory.crown']);
+});
+
+test('avatar sharing respects opt-out and anonymous visibility even during background refresh', () => {
+  const value = { name: 'Owner', gsr: 540, shareRank: true, trainingAvatar: { style: 'nailong' }, cosmetics: ['accessory.crown'] };
+  const publicProfile = cleanProfile('a', value);
+  assert.ok(publicProfile.trainingAvatar);
+  const hidden = cleanProfile('a', { ...value, shareRank: false }, publicProfile);
+  assert.equal(hidden.trainingAvatar, undefined); assert.deepEqual(hidden.cosmetics, []);
+  const refreshed = cleanProfile('a', { ...value, snapshotOnly: true }, hidden);
+  assert.equal(refreshed.trainingAvatar, undefined); assert.deepEqual(refreshed.cosmetics, []);
+  const anonymous = cleanProfile('a', { ...value, visibility: 'anonymous' }, publicProfile);
+  assert.equal(anonymous.trainingAvatar, undefined);
+  assert.equal(cleanProfile('a', { ...value, snapshotOnly: true }, anonymous).trainingAvatar, undefined);
+});
+
+test('training avatar payload rejects unsupported styles and invalid placement', () => {
+  for (const trainingAvatar of [{ style: 'unknown' }, { style: 'nailong', offsetX: 2 }, { style: 'doubao', scale: NaN },
+    { style: 'doubao', rotation: Infinity }, { style: 'nailong', scale: 0.1 }, 'nailong']) {
+    assert.throws(() => cleanProfile('a', { name: 'Owner', shareRank: true, trainingAvatar }));
+  }
+});

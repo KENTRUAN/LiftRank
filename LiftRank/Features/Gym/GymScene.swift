@@ -116,6 +116,13 @@ final class GymScene: SKScene, ObservableObject {
         world.addChild(coach); trainer = coach
     }
 
+    func syncTrainer(name: String, portrait: UIImage?) {
+        let previous = trainer
+        let node = makePerson(profile: SocialProfile(uid: "trainer", name: name, gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "star", color: "green")), portrait: portrait)
+        node.name = "trainer"; node.position = previous?.position ?? point(4, 7); node.zPosition = previous?.zPosition ?? 30
+        previous?.removeFromParent(); world.addChild(node); trainer = node
+    }
+
     private func floorTexture() -> SKTexture {
         let tileSize: CGFloat = 64
         let width = CGFloat(GymLayout.width) * tileSize

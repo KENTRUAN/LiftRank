@@ -28,6 +28,8 @@ struct RootTabView: View {
     @Query private var cardio: [CardioSession]
     @State private var app = AppState.shared
     @EnvironmentObject private var gym: GymStore
+    @AppStorage(TrainingAvatarAppearance.styleKey) private var trainingAvatarStyle = "nailong"
+    @AppStorage(TrainingAvatarAppearance.placementsKey) private var trainingAvatarPlacements = Data()
 
     var body: some View {
         @Bindable var app = app
@@ -57,10 +59,10 @@ struct RootTabView: View {
             #endif
         }
         .onOpenURL { url in
-            guard url.scheme == "liftrank", url.host == "cardio", let id = UUID(uuidString: url.lastPathComponent) else { return }
+            guard url.scheme == "liftrank", ["cardio", "workout"].contains(url.host ?? ""), let id = UUID(uuidString: url.lastPathComponent) else { return }
             app.perform(.openWorkout(id))
         }
-        .task(id: workouts.first(where: { !$0.isPublished })?.cardioClockRevision) { CardioLiveActivityManager.shared.refresh() }
+        .task(id: workouts.first(where: { !$0.isPublished })?.liveActivityRevision) { CardioLiveActivityManager.shared.refresh() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshDailyPlan(); handlePending(); CardioLiveActivityManager.shared.refresh() }
             if phase == .background { if gym.room?.isLocal != true { gym.suspend() }; OutdoorWorkoutTracker.shared.follow(nil, foreground: false) }
@@ -87,7 +89,8 @@ struct RootTabView: View {
          workouts.filter(\.isPublished).map { "\($0.id):\($0.completedSets.count):\($0.strengthScore)" }.sorted().joined(),
          cardio.map { "\($0.id):\($0.durationMinutes)" }.sorted().joined(),
          templates.filter(\.isPublic).map { "\($0.id):\($0.name):\((try? JSONEncoder().encode($0.items).base64EncodedString()) ?? "")" }.sorted().joined(),
-         profile.sharedCosmeticIDs.joined(), profile.name, Date().dayKey].joined(separator: "|")
+         profile.sharedCosmeticIDs.joined(), profile.name, trainingAvatarStyle, trainingAvatarPlacements.base64EncodedString(),
+         gym.me?.visibility ?? "public", Date().dayKey].joined(separator: "|")
     }
     private func syncSharedProfile() async {
         guard gym.connected, !gym.offlineSample, let me = gym.me else { return }

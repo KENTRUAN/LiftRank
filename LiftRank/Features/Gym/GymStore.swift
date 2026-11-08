@@ -156,7 +156,9 @@ final class GymStore: ObservableObject {
         if let existing = Auth.auth().currentUser { user = existing }
         else { user = try await Auth.auth().signInAnonymously().user }
         uid = user.uid
-        let profile: SocialProfile = try await api!.post("profile", body: ["name": name, "gsr": gsr, "cosmetics": cosmetics, "interests": interests, "shareRank": shareRank ?? (gsr > 0 || !cosmetics.isEmpty)])
+        let trainingAvatar = TrainingAvatarAppearance.current(accessory: AvatarSpec(ids: cosmetics).accessory)
+        let profile: SocialProfile = try await api!.post("profile", body: ["name": name, "gsr": gsr, "cosmetics": cosmetics, "interests": interests,
+            "shareRank": shareRank ?? (gsr > 0 || !cosmetics.isEmpty), "trainingAvatar": trainingAvatar.jsonObject])
         UserDefaults.standard.set(shareRank ?? (gsr > 0 || !cosmetics.isEmpty), forKey: "gym.shareRank.\(uid)")
         activate(profile)
     }
@@ -168,6 +170,7 @@ final class GymStore: ObservableObject {
         if let visibility { body["visibility"] = visibility }
         body["name"] = name; body["interests"] = interests
         body["gsr"] = shareRank ? gsr : 0; body["cosmetics"] = shareRank ? cosmetics : []
+        body["trainingAvatar"] = TrainingAvatarAppearance.current(accessory: AvatarSpec(ids: cosmetics).accessory).jsonObject
         body["snapshotOnly"] = snapshotOnly
         body["shareRank"] = shareRank
         body["muscleRanks"] = shareRank ? muscleRanks : [:]
@@ -248,7 +251,8 @@ final class GymStore: ObservableObject {
         stopObservers(); uid = "sample-me"; connected = false; offlineSample = true; prepared = true
         friends = []; blocked = []; muted = []
         profiles = [uid: SocialProfile(uid: uid, name: name, gsr: gsr, cosmetics: cosmetics, interests: L("Strength training"), avatar: AvatarAppearance())]
-        let sample = SocialProfile(uid: "sample-alex", name: L("Alex · sample"), gsr: 540, cosmetics: [], interests: L("Bench press and consistency"), avatar: AvatarAppearance(preset: "star", color: "blue"))
+        var sample = SocialProfile(uid: "sample-alex", name: L("Alex · sample"), gsr: 540, cosmetics: ["accessory.crown"], interests: L("Bench press and consistency"), avatar: AvatarAppearance(preset: "star", color: "blue"))
+        sample.trainingAvatar = TrainingAvatarAppearance(style: .doubao, placement: RankAccessoryPlacement(rotation: 15))
         profiles[sample.uid] = sample
         members = [RoomPresence(uid: uid, sessionId: "sample", x: 2, y: 7, station: "lounge", status: status, updatedAt: Date().timeIntervalSince1970 * 1000),
             RoomPresence(uid: sample.uid, sessionId: "sample", x: 4, y: 3, station: "bench", status: "Training", updatedAt: Date().timeIntervalSince1970 * 1000)]

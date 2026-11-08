@@ -55,6 +55,37 @@ final class GymTests: XCTestCase {
         let profile = try JSONDecoder().decode(SocialProfile.self, from: data)
         XCTAssertEqual(profile.cosmetics, [])
         XCTAssertEqual(profile.avatar.preset, "bolt")
+        XCTAssertNil(profile.trainingAvatar)
+    }
+
+    func testTrainingAvatarSnapshotUsesSelectedMascotAndAccessoryPlacement() throws {
+        let crown = RankAccessoryPlacement(offset: CGSize(width: 0.2, height: -0.1), rotation: 45, scale: 1.5)
+        let data = try JSONEncoder().encode(["doubao.crown": crown, "crown": RankAccessoryPlacement(rotation: 90)])
+        let selected = TrainingAvatarAppearance.snapshot(style: .doubao, accessory: "crown", savedPlacements: data)
+        XCTAssertEqual(selected.mascotStyle, .doubao)
+        XCTAssertEqual(selected.placement, crown)
+        XCTAssertEqual(TrainingAvatarAppearance.snapshot(style: .nailong, accessory: "crown", savedPlacements: data).rotation, 90)
+        XCTAssertEqual(TrainingAvatarAppearance.snapshot(style: .doubao, accessory: "glasses", savedPlacements: data).placement, RankAccessoryPlacement())
+        let oldData = try JSONEncoder().encode(["crown": CGSize(width: -0.2, height: 0.3)])
+        XCTAssertEqual(TrainingAvatarAppearance.snapshot(style: .nailong, accessory: "crown", savedPlacements: oldData).offsetX, -0.2)
+    }
+
+    func testSharedProfileCarriesOwnerAvatarAndHidesItWhenAnonymous() throws {
+        let data = Data(#"{"uid":"other","name":"Other lifter","gsr":540,"cosmetics":["accessory.crown"],"trainingAvatar":{"style":"doubao","offsetX":0.2,"offsetY":-0.1,"rotation":45,"scale":1.5}}"#.utf8)
+        var profile = try JSONDecoder().decode(SocialProfile.self, from: data)
+        XCTAssertEqual(profile.visibleTrainingAvatar?.mascotStyle, .doubao)
+        XCTAssertEqual(profile.visibleTrainingAvatar?.placement.offset.width, 0.2)
+        XCTAssertEqual(AvatarSpec(ids: profile.cosmetics).accessory, "crown")
+        let decoded = try JSONDecoder().decode(SocialProfile.self, from: JSONEncoder().encode(profile))
+        XCTAssertEqual(profile.trainingAvatar, decoded.trainingAvatar)
+        profile.visibility = "anonymous"
+        XCTAssertNil(profile.visibleTrainingAvatar)
+    }
+
+    func testAvatarSnapshotBoundsInvalidLocalPlacementValues() {
+        let appearance = TrainingAvatarAppearance(style: .nailong, placement: RankAccessoryPlacement(offset: CGSize(width: 3, height: -4), rotation: .infinity, scale: .nan))
+        XCTAssertEqual(appearance.offsetX, 1); XCTAssertEqual(appearance.offsetY, -1)
+        XCTAssertEqual(appearance.rotation, 0); XCTAssertEqual(appearance.scale, 1)
     }
     func testPathAvoidsEquipmentAndStaysOnGrid() {
         let start = GymLayout.Cell(x: 2, y: 7)

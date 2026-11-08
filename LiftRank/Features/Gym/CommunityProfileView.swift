@@ -31,6 +31,7 @@ struct CommunityProfileView: View {
     private var mine: SocialProfile {
         var me = SocialProfile(uid: store.uid, name: profile.name, gsr: gsr, cosmetics: profile.sharedCosmeticIDs, interests: interests, avatar: store.me?.avatar ?? AvatarAppearance())
         me.visibility = visibility
+        if shareRank { me.trainingAvatar = .current(accessory: profile.avatar.accessory) }
         return me
     }
 
@@ -48,7 +49,11 @@ struct CommunityProfileView: View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    GymAvatarView(profile: mine, image: portrait ?? store.portraits[store.uid], size: 64)
+                    if let appearance = mine.visibleTrainingAvatar {
+                        SharedTrainingAvatarView(profile: mine, appearance: appearance).frame(width: 100, height: 100)
+                    } else {
+                        GymAvatarView(profile: mine, image: portrait ?? store.portraits[store.uid], size: 64)
+                    }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(profile.name).font(.headline)
                         Text("昵称和形象与「我的」一致，健身房成员看到的就是这个。").font(.caption).foregroundStyle(.secondary)

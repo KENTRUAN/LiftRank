@@ -1,14 +1,14 @@
 import SwiftUI
 import SpriteKit
+import SwiftData
 
 private enum GymRoomSheet: Identifiable {
-    case member(String), chat(String), equipment(String), inbox, trainer, roomChat, workout(Workout), finish(Workout), setup(Workout), spaceSettings, cardioStart
+    case member(String), chat(String), equipment(String), trainer, roomChat, workout(Workout), finish(Workout), setup(Workout), spaceSettings, cardioStart
     var id: String {
         switch self {
         case .member(let id): "member-\(id)"
         case .chat(let id): "chat-\(id)"
         case .equipment(let station): "equipment-\(station)"
-        case .inbox: "inbox"
         case .trainer: "trainer"
         case .roomChat: "roomChat"
         case .workout: "workout"
@@ -28,6 +28,10 @@ struct GymRoomView: View {
     let workoutSummary: String
     let startSession: () -> Void
     @StateObject private var scene = GymScene(size: GymScene.roomSize)
+    @Environment(\.modelContext) private var context
+    @State private var confirmLeave = false
+    @AppStorage(CoachPortraitFile.revisionKey) private var coachPortraitRevision = 0
+    @AppStorage(CoachPortraitFile.enabledKey) private var coachPortraitEnabled = true
     @State private var sheet: GymRoomSheet?
     @State private var lastLogged: String?
     @State private var occupiedStation: String?
@@ -38,23 +42,7 @@ struct GymRoomView: View {
     private var active: Workout? { session.flatMap { $0.isPublished ? nil : $0 } }
 
     var body: some View {
-        roomPresentation
-        .onAppear { scene.configure(plain: plain); wireScene(); syncScene() }
-        .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
-        .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
-        .onReceive(store.$portraits) { _ in DispatchQueue.main.async { syncScene() } }
-        .onChange(of: AppState.shared.pending) { _, action in if case .openWorkout = action { sheet = nil } }
-        .onChange(of: store.blocked) { _, _ in syncScene() }
-        .onChange(of: store.station) { _, _ in walkToReservedStation() }
-        .onChange(of: store.equipment[store.station]?.ownerID) { _, _ in walkToReservedStation() }
-        .task(id: active?.id) {
-            if let active, !store.offlineSample {
-                if AppState.shared.prefersCardioStart && active.cardioTimerStartedAt == nil {
-                    AppState.shared.prefersCardioStart = false; sheet = .cardioStart
-                } else if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
-                else { await TrainingHealthManager.shared.start(active, context: active.modelContext) }
-            }
-        }
+        workoutPresentation
         .confirmationDialog("Equipment in use", isPresented: Binding(get: { occupiedStation != nil }, set: { if !$0 { occupiedStation = nil } }), titleVisibility: .visible) {
             if let station = occupiedStation, station != "cardio", store.occupants(station).count < 2 {
                 Button("Ask to work in") { requestWorkIn(station, mode: "workIn") }
@@ -72,6 +60,42 @@ struct GymRoomView: View {
             }
         }) { route in
             sheetContent(route).presentationDetents(detents(for: route)).presentationDragIndicator(.visible)
+        }
+    }
+    // Keep each modifier chain small enough for the Xcode 16 compiler.
+    private var trainerPresentation: some View {
+        roomPresentation
+        .onAppear { scene.configure(plain: plain); wireScene(); syncScene(); syncTrainer() }
+        .onChange(of: TrainerIdentity(profile: profile)) { _, _ in syncTrainer() }
+        .onChange(of: coachPortraitRevision) { _, _ in syncTrainer() }
+        .onChange(of: coachPortraitEnabled) { _, _ in syncTrainer() }
+    }
+    private var synchronizedPresentation: some View {
+        trainerPresentation
+        .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
+        .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
+        .onReceive(store.$portraits) { _ in DispatchQueue.main.async { syncScene() } }
+        .onChange(of: AppState.shared.pending) { _, action in if case .openWorkout = action { sheet = nil } }
+        .onChange(of: store.blocked) { _, _ in syncScene() }
+        .onChange(of: store.station) { _, _ in walkToReservedStation() }
+        .onChange(of: store.equipment[store.station]?.ownerID) { _, _ in walkToReservedStation() }
+    }
+    private var workoutPresentation: some View {
+        synchronizedPresentation
+        .confirmationDialog("Save workout before leaving?", isPresented: $confirmLeave, titleVisibility: .visible) {
+            Button("Save workout & leave") { leave(.save) }.accessibilityIdentifier("saveWorkoutAndLeave")
+            Button("Discard workout & leave", role: .destructive) { leave(.discard) }.accessibilityIdentifier("discardWorkoutAndLeave")
+            Button("Keep training", role: .cancel) {}
+        } message: {
+            Text("Save keeps completed sets or cardio time. Unlogged sets and unfinished todos are not saved. Discard deletes this workout.")
+        }
+        .task(id: active?.id) {
+            if let active, !store.offlineSample {
+                if AppState.shared.prefersCardioStart && active.cardioTimerStartedAt == nil {
+                    AppState.shared.prefersCardioStart = false; sheet = .cardioStart
+                } else if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
+                else { await TrainingHealthManager.shared.start(active, context: active.modelContext) }
+            }
         }
     }
     private var roomPresentation: some View {
@@ -153,10 +177,13 @@ struct GymRoomView: View {
             if plain {
                 if let active, active.isOutdoor { OutdoorWorkoutMap(workout: active) }
             }
-            if let active, !store.offlineSample { TrainingHealthStatusView(workout: active) }
+            if let active, !store.offlineSample {
+                TrainingHealthStatusView(workout: active)
+                if active.startOptionsChosen && active.endedAt == nil { WorkoutLiveActivityStatusView() }
+            }
             if let lastLogged { Label(lastLogged, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.teal).accessibilityIdentifier("gymSetSaved") }
             HStack {
-                Button { sheet = .trainer } label: { Label("AI trainer", systemImage: "sparkles") }
+                Button { sheet = .trainer } label: { Label(TrainerIdentity(profile: profile).name, systemImage: "sparkles") }
                 Spacer()
                 Button { sheet = .roomChat } label: { Label("Room chat", systemImage: "bubble.left.and.bubble.right") }.disabled(!online)
             }.buttonStyle(.bordered)
@@ -165,12 +192,15 @@ struct GymRoomView: View {
         }.padding(14)
     }
     @ToolbarContentBuilder private var roomToolbar: some ToolbarContent {
-        ToolbarItem(placement: .cancellationAction) { Button("Leave") { store.suspend() } }
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Leave") {
+                if active != nil, !store.offlineSample { confirmLeave = true }
+                else { store.suspend() }
+            }.accessibilityIdentifier("leaveGym")
+        }
         if plain { ToolbarItem(placement: .primaryAction) { Button { sheet = .spaceSettings } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("Workout space settings") } }
         ToolbarItem(placement: .primaryAction) {
-            Button { sheet = .inbox } label: {
-                Label(store.inboxCount > 0 ? "Inbox (\(store.inboxCount))" : "Inbox", systemImage: "tray.fill")
-            }.disabled(store.offlineSample).accessibilityIdentifier("gymInbox")
+            WorkoutHeartRateIndicator(workout: active)
         }
     }
     @ViewBuilder private var workoutControls: some View {
@@ -209,7 +239,7 @@ struct GymRoomView: View {
     private func openCardio() { sheet = .cardioStart }
     private func detents(for route: GymRoomSheet) -> Set<PresentationDetent> {
         switch route {
-        case .chat, .inbox, .trainer, .roomChat: [.medium, .large]
+        case .chat, .trainer, .roomChat: [.medium, .large]
         default: [.large]
         }
     }
@@ -303,7 +333,6 @@ struct GymRoomView: View {
         switch route {
         case .member(let id): GymMemberView(store: store, memberID: id, workout: workoutSummary)
         case .chat(let id): GymChatView(store: store, target: id, isRoom: false, title: store.profiles[id]?.name ?? L("Private chat"))
-        case .inbox: GymFriendsView(store: store, workout: workoutSummary)
         case .trainer: GymCompanionView(store: store, workout: workoutSummary)
         case .roomChat: GymChatView(store: store, target: gym.id, isRoom: true, title: L("Room chat"))
         case .spaceSettings: WorkoutSpaceSettings(store: store)
@@ -331,6 +360,20 @@ struct GymRoomView: View {
         if gym.isLocal == true { sheet = .spaceSettings; return }
         guard !id.hasPrefix("anon-"), store.members.first(where: { $0.uid == id })?.visibility != "anonymous" else { store.error = L("Anonymous lifter · profile hidden"); return }
         sheet = .member(id)
+    }
+    private func leave(_ decision: WorkoutExit.Decision) {
+        guard let active else { store.suspend(); return }
+        do {
+            if try WorkoutExit.resolve(decision, workout: active, profile: profile, context: context) {
+                sheet = nil
+                store.suspend()
+            }
+        } catch { store.error = L("Could not finish the workout: %@", error.localizedDescription) }
+    }
+    private func syncTrainer() {
+        let portrait = coachPortraitEnabled ? CoachPortraitFile.image() : nil
+        let fallback = ImageRenderer(content: AvatarFigureView(spec: profile.coachAvatar, bust: true, showBackdrop: false).frame(width: 96, height: 96)).uiImage
+        scene.syncTrainer(name: TrainerIdentity(profile: profile).name, portrait: portrait ?? fallback)
     }
     private func useEquipment(_ station: String) {
         guard !store.offlineSample else { return }

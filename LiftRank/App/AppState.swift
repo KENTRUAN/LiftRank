@@ -7,8 +7,14 @@ enum PendingAction: Equatable {
     case logBodyweight(kg: Double)
     case openCoach
     case openCardio
+    case startCardio
     case openWorkout(UUID)
     case openTab(Int)
+}
+
+enum TrainingHomeMode: Int {
+    case strength, cardio
+    var startAction: PendingAction { self == .cardio ? .startCardio : .startTodayWorkout }
 }
 
 /// Cross-tab navigation state shared by the tab bar, intents and the AI coach.
@@ -22,6 +28,7 @@ final class AppState {
     /// Incremented when something outside the workout tab asks it to start today's plan.
     var startTodayRequest = 0
     var showCoach = false
+    var showCardioStart = false
     var showRewards = false
     var communitySection = 0
     var prefersCardioStart = false
@@ -30,9 +37,16 @@ final class AppState {
     func perform(_ action: PendingAction) {
         switch action {
         case .startTodayWorkout:
+            prefersCardioStart = false
+            showCardioStart = false
+            pending = nil
             communitySection = 0
             tab = Self.communityTab
             startTodayRequest += 1
+        case .startCardio:
+            tab = 0
+            pending = .openCardio
+            showCardioStart = true
         case .openCoach:
             tab = 0
             showCoach = true

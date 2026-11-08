@@ -25,7 +25,7 @@ struct TrainerConversationView: View {
                 Button { showAvatar = true } label: {
                     HStack {
                         CoachFace(spec: profile.coachAvatar, size: 30)
-                        Label("Private AI trainer · \(profile.coachName)", systemImage: "sparkles")
+                        Label("Private AI trainer · \(TrainerIdentity(profile: profile).name)", systemImage: "sparkles")
                     }.font(.caption).foregroundStyle(.teal).padding(8)
                 }.buttonStyle(.plain).accessibilityLabel("Edit trainer appearance")
                 ScrollViewReader { proxy in
@@ -103,7 +103,7 @@ struct TrainerConversationView: View {
                 }
                 let reply: TrainerReply = try await api.post("trainer", body: ["messages": history, "localDate": today.dayKey, "language": AppLanguage.current.locale.identifier,
                     "catalog": exercises.map { ["key": $0.key, "name": $0.nameEn, "cardio": $0.isCardio] }, "activeWorkout": current as Any? ?? NSNull(),
-                    "schedule": schedule, "goals": profile.planGoal.name])
+                    "schedule": schedule, "goals": profile.planGoal.name, "trainer": TrainerIdentity(profile: profile).requestContext])
                 _ = try TrainerPlanEditor.apply(reply, workout: workout, expectedRevision: revision, exercises: exercises,
                                             plans: plans, context: context, today: today,
                                             expectedSchedule: expectedSchedule, recordReply: true)

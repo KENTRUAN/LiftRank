@@ -49,7 +49,7 @@ final class EquipmentRehearsal: XCTestCase {
         XCTAssertFalse(app.buttons["releaseEquipment"].isEnabled)
         app.buttons["workoutEndSet"].tap()
         app.buttons["Discard this set"].tap()
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
     }
     private func tapEquipment(_ station: String, in app: XCUIApplication) {
         let machine = app.buttons["gymEquipment.\(station)"]

@@ -9,10 +9,17 @@ final class TrainingHealthManager: NSObject, ObservableObject {
     static let shared = TrainingHealthManager()
     @Published private(set) var heartRate: Double?
     @Published private(set) var calories: Double?
+    @Published private(set) var heartRateReading: WorkoutHeartRate?
+    private var currentID: UUID?
     private let healthStore = HKHealthStore()
     private var session: HKWorkoutSession?
     private var builder: HKWorkoutBuilder?
-    private var current: Workout?
+    private var current: Workout? {
+        didSet {
+            if currentID != current?.id { heartRate = nil; calories = nil; heartRateReading = nil }
+            currentID = current?.id
+        }
+    }
     private var context: ModelContext?
     private var startingID: UUID?
     private var finishingIDs: Set<UUID> = []
@@ -25,6 +32,8 @@ final class TrainingHealthManager: NSObject, ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 self.session = mirrored; mirrored.delegate = self
+                if self.context == nil, let context = try? StoreLoader.shared.requireContext() { self.bind(context: context) }
+                if let workout = self.current, workout.healthOwner == "watch" { self.sendWatch(self.message("status", workout)) }
             }
         }
     }
@@ -40,15 +49,16 @@ final class TrainingHealthManager: NSObject, ObservableObject {
     nonisolated static func syncIdentifier(_ id: UUID) -> String { "liftrank.training.\(id.uuidString)" }
 
     func start(_ workout: Workout, context: ModelContext?) async {
-        guard !workout.isPublished, workout.endedAt == nil, workout.startOptionsChosen else { return }
+        guard !workout.isDeleted, !workout.isPublished, workout.endedAt == nil, workout.startOptionsChosen else { return }
         if let context { self.context = context }
+        CardioLiveActivityManager.shared.refresh()
         let requestedID = workout.id
         if startingID == requestedID { return }
         for _ in 0..<100 where startingID != nil { try? await Task.sleep(for: .milliseconds(100)) }
         guard startingID == nil else { fail(workout, L("Apple tracking is still switching activities. Retry shortly.")); return }
         for _ in 0..<100 where !finishingIDs.isEmpty { try? await Task.sleep(for: .milliseconds(100)) }
         guard finishingIDs.isEmpty else { fail(workout, L("The previous Apple workout is still saving. Retry shortly.")); return }
-        guard workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
+        guard !workout.isDeleted, workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
         if let previous = current, previous.id != workout.id, previous.healthOwner == "watch", previous.healthState != "saved" {
             sendWatch(message("finish", previous))
             fail(workout, L("Finish saving the previous workout on your Watch, then retry Apple Health."))
@@ -71,7 +81,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
             if healthStore.authorizationStatus(for: type) == .notDetermined {
                 try await HealthKitManager.shared.requestAuthorization()
             }
-            guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
+            guard currentID == requestedID, !workout.isDeleted, workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
             guard healthStore.authorizationStatus(for: type) == .sharingAuthorized else {
                 fail(workout, L("Allow LiftRank to write workouts in Settings → Health → Data Access & Devices."))
                 return
@@ -86,18 +96,18 @@ final class TrainingHealthManager: NSObject, ObservableObject {
                 for _ in 0..<10 where WCSession.default.activationState != .activated {
                     try? await Task.sleep(for: .milliseconds(100))
                 }
-                guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
+                guard currentID == requestedID, !workout.isDeleted, workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
                 if WCSession.default.isPaired && WCSession.default.isWatchAppInstalled {
                     workout.healthOwner = "watch"; workout.healthState = "startingWatch"; workout.healthError = ""; save()
                     sendWatch(message("start", workout))
                     do {
                         try await healthStore.startWatchApp(toHandle: workout.healthConfiguration)
-                        guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
+                        guard currentID == requestedID, !workout.isDeleted, workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
                         // The Watch acknowledges actual recording separately from app launch.
                         scheduleWatchTimeout(workout)
                         return
                     } catch {
-                        guard workout.id == requestedID, current?.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
+                        guard currentID == requestedID, !workout.isDeleted, workout.id == requestedID, !workout.isPublished, workout.endedAt == nil else { return }
                         sendWatch(message("cancel", workout))
                         workout.healthOwner = "phone"
                         workout.healthError = L("Watch unavailable. Recording on iPhone.")
@@ -105,18 +115,21 @@ final class TrainingHealthManager: NSObject, ObservableObject {
                 }
             }
             try await startPhone(workout)
-        } catch { fail(workout, error.localizedDescription) }
+        } catch { if currentID == requestedID { fail(workout, error.localizedDescription) } }
     }
 
     private func startPhone(_ workout: Workout) async throws {
         guard !workout.isDeleted, !workout.isPublished, current?.id == workout.id else { return }
+        let requestedID = workout.id
         workout.healthOwner = "phone"
         try await beginPhoneCollection(workout)
+        guard currentID == requestedID, !workout.isDeleted else { return }
         if workout.cardioIsPaused { session?.pause() }
         workout.healthState = "recordingPhone"; save()
     }
 
     private func beginPhoneCollection(_ workout: Workout) async throws {
+        let requestedID = workout.id
         // Xcode 16's SDK marks live builders unavailable on iOS; runtime availability alone is insufficient.
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
@@ -142,6 +155,7 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         let recorder = HKWorkoutBuilder(healthStore: healthStore, configuration: workout.healthConfiguration, device: .local())
         try await recorder.addMetadata(metadata(workout))
         try await recorder.beginCollection(at: workout.startedAt)
+        guard currentID == requestedID else { recorder.discardWorkout(); return }
         builder = recorder
     }
 
@@ -151,15 +165,17 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         #if DEBUG
         if ProcessInfo.processInfo.environment["LIFTRANK_SKIP_HEALTH"] == "1" { workout.healthState = "off"; return }
         #endif
-        guard UserDefaults.standard.object(forKey: "training.appleHealthEnabled") as? Bool != false || workout.healthState.hasPrefix("recording") else { return }
-        guard healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized else {
-            fail(workout, L("Workout saved locally. Apple Health permission is needed to sync.")); return
-        }
+        // The Watch owns its Health permissions. Always deliver Finish to an existing
+        // Watch recording, even if phone permissions/preferences changed mid-workout.
         if workout.healthOwner == "watch" {
             workout.healthState = "savingWatch"; save()
             sendWatch(message("finish", workout))
             scheduleWatchTimeout(workout)
             return
+        }
+        guard UserDefaults.standard.object(forKey: "training.appleHealthEnabled") as? Bool != false || workout.healthState.hasPrefix("recording") else { return }
+        guard healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized else {
+            fail(workout, L("Workout saved locally. Apple Health permission is needed to sync.")); return
         }
         finishingIDs.insert(workout.id)
         defer { finishingIDs.remove(workout.id) }
@@ -239,17 +255,24 @@ final class TrainingHealthManager: NSObject, ObservableObject {
     }
 
     func discard(_ workout: Workout) {
-        if workout.healthOwner == "watch" { sendWatch(message("cancel", workout)) }
+        discard(workoutID: workout.id, healthOwner: workout.healthOwner)
+    }
+    func discard(workoutID: UUID, healthOwner: String) {
+        if healthOwner == "watch" { sendWatch(WorkoutBridgeMessage(action: "cancel", workoutID: workoutID.uuidString)) }
+        guard currentID == workoutID else { return }
         watchTimeout?.cancel()
-        guard current?.id == workout.id else { return }
         session?.end(); builder?.discardWorkout(); session = nil; builder = nil; current = nil
+        heartRate = nil; calories = nil
     }
     private func message(_ action: String, _ workout: Workout) -> WorkoutBridgeMessage {
         WorkoutBridgeMessage(action: action, workoutID: workout.id.uuidString, activity: workout.activityRaw,
-                             startedAt: workout.startedAt, endedAt: workout.endedAt, outdoor: workout.isOutdoor, cardioPauses: workout.cardioPauses, controlVersion: workout.cardioPauses.count * 2 - (workout.cardioIsPaused ? 1 : 0))
+                             startedAt: workout.startedAt, endedAt: workout.endedAt, outdoor: workout.isOutdoor, cardioPauses: workout.cardioPauses, controlVersion: WorkoutBridgeRules.version(workout.cardioPauses))
     }
     private func sendWatch(_ message: WorkoutBridgeMessage) {
         guard WCSession.isSupported(), let data = message.data else { return }
+        if let session, current?.healthOwner == "watch", currentID?.uuidString == message.workoutID {
+            Task { try? await session.sendToRemoteWorkoutSession(data: data) }
+        }
         let link = WCSession.default
         guard link.activationState == .activated else { return }
         if link.isReachable {
@@ -259,29 +282,48 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         try? link.updateApplicationContext(["workout": data])
     }
     private func handle(_ message: WorkoutBridgeMessage) {
+        if context == nil, let context = try? StoreLoader.shared.requireContext() { bind(context: context) }
+        // A temporarily locked/unavailable store is not evidence that a workout was discarded.
         guard let id = message.workoutID, let context,
-              let workout = try? context.fetch(FetchDescriptor<Workout>()).first(where: { $0.id.uuidString == id }) else { return }
+              let records = try? context.fetch(FetchDescriptor<Workout>()) else { return }
+        guard let workout = records.first(where: { $0.id.uuidString == id }) else {
+            if message.action == "recording", let id = message.workoutID { sendWatch(WorkoutBridgeMessage(action: "cancel", workoutID: id)) }
+            return
+        }
+        guard workout.healthOwner == "watch" else {
+            if message.action == "recording" { sendWatch(self.message("cancel", workout)) }
+            return
+        }
+        if ["pauseRequest", "resumeRequest"].contains(message.action) {
+            do { _ = try WorkoutWatchSync.applyPauseRequest(message, workout: workout, context: context) }
+            catch { workout.healthError = error.localizedDescription }
+            var state = self.message(workout.isPublished || workout.endedAt != nil ? "finish" : "state", workout)
+            state.requestID = message.requestID
+            sendWatch(state); save(); return
+        }
         if message.action == "recording" {
-            guard workout.healthOwner == "watch" else { sendWatch(self.message("cancel", workout)); return }
+            guard workout.healthState != "saved" else { return }
             watchTimeout?.cancel()
-            workout.healthState = workout.isPublished ? "savingWatch" : "recordingWatch"
+            let stopped = workout.isPublished || workout.endedAt != nil
+            workout.healthState = stopped ? "savingWatch" : "recordingWatch"
             workout.healthError = ""
-            if workout.isPublished { sendWatch(self.message("finish", workout)) }
-        } else if message.action == "saved" {
-            guard workout.healthOwner == "watch" else { return }
+            if stopped { sendWatch(self.message("finish", workout)) }
+        } else if ["stopped", "saved"].contains(message.action) {
             watchTimeout?.cancel()
-            workout.healthState = "saved"; workout.healthWorkoutID = message.healthID ?? Self.syncIdentifier(workout.id); workout.healthError = ""
-            // Watch Finish stops the same local workout; it does not create another local record.
-            if !workout.isPublished, let ended = message.endedAt {
-                workout.endedAt = ended
-                CardioLiveActivityManager.shared.refresh()
-                if workout.hasPendingSet, workout.setEndedAt == nil { workout.setEndedAt = ended; workout.restUntil = nil }
+            do { try WorkoutWatchSync.applyCompletion(message, workout: workout, context: context) }
+            catch { workout.healthError = error.localizedDescription }
+            if workout.healthState == "saved", currentID == workout.id { session = nil }
+        } else if message.action == "error", workout.healthState != "saved" { fail(workout, message.error ?? "The Watch could not record this workout.") }
+        if currentID == workout.id, !workout.isPublished, workout.endedAt == nil, workout.healthOwner == "watch" {
+            if let bpm = message.heartRate, let measuredAt = message.metricsAt,
+               measuredAt >= (heartRateReading?.measuredAt ?? .distantPast) {
+                heartRateReading = WorkoutHeartRate(workoutID: workout.id, beatsPerMinute: bpm, measuredAt: measuredAt)
+                heartRate = heartRateReading?.value(for: workout.id)
             }
-            if current?.id == workout.id { session = nil }
-        } else if message.action == "error" { fail(workout, message.error ?? "The Watch could not record this workout.") }
-        heartRate = message.heartRate ?? heartRate
-        calories = message.calories ?? calories
-        save()
+            calories = message.calories ?? calories
+        }
+        if message.action == "metrics" { CardioLiveActivityManager.shared.refreshMetrics() }
+        else { save() }
     }
     private func scheduleWatchTimeout(_ workout: Workout) {
         watchTimeout?.cancel()
@@ -293,11 +335,18 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         }
     }
     private func fail(_ workout: Workout, _ message: String) { workout.healthState = "error"; workout.healthError = message; save() }
-    private func save() { try? context?.save() }
+    private func save() { try? context?.save(); CardioLiveActivityManager.shared.refresh() }
 }
 
 extension TrainingHealthManager: WCSessionDelegate {
-    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        guard activationState == .activated else { return }
+        Task { @MainActor in
+            if let workout = self.current, workout.healthOwner == "watch" {
+                self.sendWatch(self.message(workout.isPublished || workout.endedAt != nil ? "finish" : "status", workout))
+            }
+        }
+    }
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
     nonisolated func sessionDidDeactivate(_ session: WCSession) { session.activate() }
     nonisolated func session(_ session: WCSession, didReceiveMessageData messageData: Data) {
@@ -309,8 +358,9 @@ extension TrainingHealthManager: WCSessionDelegate {
     }
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         Task { @MainActor in
+            if self.context == nil, let context = try? StoreLoader.shared.requireContext() { self.bind(context: context) }
             if let workout = self.current {
-                let action = workout.healthOwner != "watch" || workout.isDeleted ? "cancel" : workout.isPublished ? "finish" : "start"
+                let action = workout.healthOwner != "watch" || workout.isDeleted ? "cancel" : (workout.isPublished || workout.endedAt != nil) ? "finish" : "start"
                 replyHandler(["workout": self.message(action, workout).data ?? Data()])
             } else { replyHandler([:]) }
         }
@@ -334,7 +384,14 @@ extension TrainingHealthManager: HKLiveWorkoutBuilderDelegate {
     nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
         let hr = workoutBuilder.statistics(for: HKQuantityType(.heartRate))?.mostRecentQuantity()?.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
         let energy = workoutBuilder.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie())
-        Task { @MainActor in self.heartRate = hr; self.calories = energy }
+        Task { @MainActor in
+            guard self.builder === workoutBuilder, let id = self.currentID else { return }
+            self.heartRate = hr; self.calories = energy
+            if collectedTypes.contains(HKQuantityType(.heartRate)) {
+                self.heartRateReading = hr.map { WorkoutHeartRate(workoutID: id, beatsPerMinute: $0, measuredAt: Date()) }
+                CardioLiveActivityManager.shared.refreshMetrics()
+            }
+        }
     }
 }
 #endif
@@ -359,16 +416,35 @@ struct TrainingHealthStatusView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Label(workout.cardioIsPaused && workout.healthState.hasPrefix("recording") ? label + " · paused" : label, systemImage: workout.healthState.contains("Watch") ? "applewatch" : "heart.fill").font(.caption).foregroundStyle(.secondary)
-            if let hr = health.heartRate, workout.healthState.hasPrefix("recording") { Text("\(Int(hr)) bpm").font(.caption.monospacedDigit()) }
+            TimelineView(.periodic(from: .now, by: 5)) { timeline in
+                if let hr = health.heartRateReading?.value(for: workout.id, now: timeline.date), workout.healthState.hasPrefix("recording"), !workout.isPublished, workout.endedAt == nil {
+                    Text("\(Int(hr)) bpm").font(.caption.monospacedDigit())
+                }
+            }
             if !workout.healthError.isEmpty { Text(workout.healthError).font(.caption).foregroundStyle(.orange) }
             if ["error", "savingWatch", "startingWatch"].contains(workout.healthState) {
                 Button("Retry Apple Health") {
                     Task {
-                        if workout.isPublished { await health.finish(workout, context: context) }
+                        if workout.isPublished || workout.endedAt != nil { await health.finish(workout, context: context) }
                         else { await health.start(workout, context: context) }
                     }
                 }.font(.caption)
             }
         }
+    }
+}
+
+struct WorkoutHeartRateIndicator: View {
+    let workout: Workout?
+    @ObservedObject private var health = TrainingHealthManager.shared
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 5)) { timeline in
+            if let workout, workout.healthOwner == "watch", workout.healthState == "recordingWatch", !workout.isPublished, workout.endedAt == nil,
+               let value = health.heartRateReading?.value(for: workout.id, now: timeline.date) {
+                Label("\(Int(value)) bpm", systemImage: "heart.fill").foregroundStyle(.red)
+            } else {
+                Label("Heart rate unavailable", systemImage: "heart")
+            }
+        }.accessibilityIdentifier("gymHeartRate")
     }
 }
