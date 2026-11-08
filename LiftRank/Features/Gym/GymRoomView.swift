@@ -42,33 +42,7 @@ struct GymRoomView: View {
     private var active: Workout? { session.flatMap { $0.isPublished ? nil : $0 } }
 
     var body: some View {
-        roomPresentation
-        .onAppear { scene.configure(plain: plain); wireScene(); syncScene(); syncTrainer() }
-        .onChange(of: TrainerIdentity(profile: profile)) { _, _ in syncTrainer() }
-        .onChange(of: coachPortraitRevision) { _, _ in syncTrainer() }
-        .onChange(of: coachPortraitEnabled) { _, _ in syncTrainer() }
-        .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
-        .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
-        .onReceive(store.$portraits) { _ in DispatchQueue.main.async { syncScene() } }
-        .onChange(of: AppState.shared.pending) { _, action in if case .openWorkout = action { sheet = nil } }
-        .onChange(of: store.blocked) { _, _ in syncScene() }
-        .onChange(of: store.station) { _, _ in walkToReservedStation() }
-        .onChange(of: store.equipment[store.station]?.ownerID) { _, _ in walkToReservedStation() }
-        .confirmationDialog("Save workout before leaving?", isPresented: $confirmLeave, titleVisibility: .visible) {
-            Button("Save workout & leave") { leave(.save) }.accessibilityIdentifier("saveWorkoutAndLeave")
-            Button("Discard workout & leave", role: .destructive) { leave(.discard) }.accessibilityIdentifier("discardWorkoutAndLeave")
-            Button("Keep training", role: .cancel) {}
-        } message: {
-            Text("Save keeps completed sets or cardio time. Unlogged sets and unfinished todos are not saved. Discard deletes this workout.")
-        }
-        .task(id: active?.id) {
-            if let active, !store.offlineSample {
-                if AppState.shared.prefersCardioStart && active.cardioTimerStartedAt == nil {
-                    AppState.shared.prefersCardioStart = false; sheet = .cardioStart
-                } else if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
-                else { await TrainingHealthManager.shared.start(active, context: active.modelContext) }
-            }
-        }
+        workoutPresentation
         .confirmationDialog("Equipment in use", isPresented: Binding(get: { occupiedStation != nil }, set: { if !$0 { occupiedStation = nil } }), titleVisibility: .visible) {
             if let station = occupiedStation, station != "cardio", store.occupants(station).count < 2 {
                 Button("Ask to work in") { requestWorkIn(station, mode: "workIn") }
@@ -86,6 +60,42 @@ struct GymRoomView: View {
             }
         }) { route in
             sheetContent(route).presentationDetents(detents(for: route)).presentationDragIndicator(.visible)
+        }
+    }
+    // Keep each modifier chain small enough for the Xcode 16 compiler.
+    private var trainerPresentation: some View {
+        roomPresentation
+        .onAppear { scene.configure(plain: plain); wireScene(); syncScene(); syncTrainer() }
+        .onChange(of: TrainerIdentity(profile: profile)) { _, _ in syncTrainer() }
+        .onChange(of: coachPortraitRevision) { _, _ in syncTrainer() }
+        .onChange(of: coachPortraitEnabled) { _, _ in syncTrainer() }
+    }
+    private var synchronizedPresentation: some View {
+        trainerPresentation
+        .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
+        .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
+        .onReceive(store.$portraits) { _ in DispatchQueue.main.async { syncScene() } }
+        .onChange(of: AppState.shared.pending) { _, action in if case .openWorkout = action { sheet = nil } }
+        .onChange(of: store.blocked) { _, _ in syncScene() }
+        .onChange(of: store.station) { _, _ in walkToReservedStation() }
+        .onChange(of: store.equipment[store.station]?.ownerID) { _, _ in walkToReservedStation() }
+    }
+    private var workoutPresentation: some View {
+        synchronizedPresentation
+        .confirmationDialog("Save workout before leaving?", isPresented: $confirmLeave, titleVisibility: .visible) {
+            Button("Save workout & leave") { leave(.save) }.accessibilityIdentifier("saveWorkoutAndLeave")
+            Button("Discard workout & leave", role: .destructive) { leave(.discard) }.accessibilityIdentifier("discardWorkoutAndLeave")
+            Button("Keep training", role: .cancel) {}
+        } message: {
+            Text("Save keeps completed sets or cardio time. Unlogged sets and unfinished todos are not saved. Discard deletes this workout.")
+        }
+        .task(id: active?.id) {
+            if let active, !store.offlineSample {
+                if AppState.shared.prefersCardioStart && active.cardioTimerStartedAt == nil {
+                    AppState.shared.prefersCardioStart = false; sheet = .cardioStart
+                } else if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
+                else { await TrainingHealthManager.shared.start(active, context: active.modelContext) }
+            }
         }
     }
     private var roomPresentation: some View {
