@@ -1,0 +1,5 @@
+// Shared identifiers; machine-specific signing is optional and stays out of Git.
+LIFTRANK_APP_BUNDLE_IDENTIFIER = com.liftrank.app
+LIFTRANK_TEST_BUNDLE_IDENTIFIER = com.liftrank.tests
+LIFTRANK_UI_TEST_BUNDLE_IDENTIFIER = com.liftrank.social-uitests
+#include? "Signing.local.xcconfig"

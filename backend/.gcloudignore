@@ -1,0 +1,8 @@
+# Upload only the files needed by the container build.
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!tsconfig.json
+!src/
+!src/**

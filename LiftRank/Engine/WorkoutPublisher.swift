@@ -27,14 +27,21 @@ enum WorkoutPublisher {
     }
 
     /// Finalises a workout: strips unfinished sets, scores it, pays the daily training reward and updates the streak.
+    @MainActor
     static func publish(_ workout: Workout, profile: UserProfile, exercises: [Exercise], workouts: [Workout],
                         cardio: [CardioSession] = [], claims: [QuestClaim] = [], context: ModelContext) -> PublishSummary {
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
         // Drop unfinished sets and empty exercises so history only holds real work.
         for we in workout.exercises {
-            for s in we.sets where !s.isCompleted { context.delete(s) }
+            let unfinished = we.sets.filter { !$0.isCompleted }
+            // Detach first: active SwiftUI rows can still observe these relationships during publication.
+            we.sets.removeAll { !$0.isCompleted }
+            for set in unfinished { context.delete(set) }
+            if we.sets.isEmpty {
+                workout.exercises.removeAll { $0 === we }
+                context.delete(we)
+            }
         }
-        for we in workout.exercises where we.sets.filter({ $0.isCompleted }).isEmpty { context.delete(we) }
 
         let old = previousBests(before: workout, workouts: workouts, exercises: exercises)
         var prs: [String] = []
@@ -62,6 +69,13 @@ enum WorkoutPublisher {
         let eggs = DailyTrainingEngine.claimIfEarned(profile: profile, workouts: all, cardio: cardio, claims: claims, gsr: gsr, context: context, today: now)
         workout.xpEarned = 0
         try? context.save()
+        if workout.startOptionsChosen, workout.healthState != "off" {
+            // Keep the store alive until the asynchronous Health write completes.
+            Task { [container = context.container] in
+                defer { withExtendedLifetime(container) {} }
+                await TrainingHealthManager.shared.finish(workout, context: context)
+            }
+        }
         return PublishSummary(eggs: eggs, bestScore: bestScore, overallScore: gsr, prs: prs, firstOfDay: eggs > 0, streakDays: streak.currentDays)
     }
 
@@ -84,7 +98,7 @@ enum WorkoutPublisher {
 
     /// Builds a workout from plan items, pre-filling weights from the last time each exercise was done.
     @MainActor
-    static func makeWorkout(title: String, items: [TemplateExercise], profile: UserProfile, exercises: [Exercise], workouts: [Workout], context: ModelContext) -> Workout {
+    static func makeWorkout(title: String, items: [TemplateExercise], profile: UserProfile, exercises: [Exercise], workouts: [Workout], context: ModelContext, save: Bool = true) -> Workout {
         let w = Workout(title: title, bodyweightKg: profile.bodyweightKg)
         context.insert(w)
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
@@ -98,7 +112,7 @@ enum WorkoutPublisher {
             }
             w.exercises.append(we)
         }
-        try? context.save()
+        if save { try? context.save() }
         return w
     }
 }

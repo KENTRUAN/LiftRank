@@ -1,0 +1,26 @@
+// New regression cases written before the specialist checkpoint is evaluated.
+import { readFileSync,writeFileSync } from 'node:fs';
+import { trainerRequest } from '../dist/providers.js';
+const source=readFileSync(new URL('eval.jsonl',import.meta.url),'utf8').trim().split('\n').map(JSON.parse);
+const from=(id,name)=>({...structuredClone(source.find(x=>x.id===id)),id:name});
+const flag=from('cardio-boundary','authoritative-readonly');
+flag.context.activeWorkout={activity:'Traditional strength training',allowsTodoEditing:false,remaining:[],completed:[]};
+flag.messages=[{role:'user',text:'Put three bench press sets into this session now.'}];
+const future=from('future','cardio-future-request');
+future.context.activeWorkout={activity:'Cycling',allowsTodoEditing:false,remaining:[],completed:[]};
+future.messages=[{role:'user',text:'Leave this ride alone. Three days from today, schedule four squat sets of seven reps with 100 seconds rest.'}];
+const history=from('question','history-context-question');
+history.messages=[{role:'user',text:'I would like a different plan later.'},{role:'assistant',text:'We can plan it when you are ready.'},{role:'user',text:'For now, which movement did I already log? Please only answer.'}];
+const noSession=from('no-session','no-session-short');
+noSession.messages=[{role:'user',text:'add deadlift'}];noSession.expectation={scheduled:[{offset:0,keys:['deadlift']}]};
+const thanks=from('greeting','history-thanks');
+thanks.context.activeWorkout={activity:'Traditional strength training',allowsTodoEditing:true,remaining:[{exerciseKey:'squat',sets:2,repsLow:7,repsHigh:7,restSeconds:75}],completed:[]};
+thanks.messages=[{role:'user',text:'Earlier I wanted to clear the list.'},{role:'assistant',text:'Your workout list is still available.'},{role:'user',text:'I’m keeping it. Just say good luck; no adjustments.'}];
+const pair=from('both','paired-addition');pair.messages=[{role:'user',text:'Include a deadlift exercise and a pull-up exercise as my two remaining movements.'}];
+const facts=from('question','different-completed-facts');
+facts.context.activeWorkout.completed=[{exerciseKey:'squat',sets:4},{exerciseKey:'pullup',sets:1}];
+facts.messages=[{role:'user',text:'Which exercises and how many sets have I already completed? Only answer; keep my plan.'}];
+facts.expectation={exact:true,replyMatches:['squat','pull.?up','4|four','1|one']};
+const cases=[flag,future,history,noSession,thanks,pair,facts];for(const c of cases)c.request=trainerRequest(c.messages,c.context);
+writeFileSync(new URL('fresh.jsonl',import.meta.url),cases.map(c=>JSON.stringify(c)).join('\n')+'\n');
+console.log(`Prepared ${cases.length} fresh checks.`);

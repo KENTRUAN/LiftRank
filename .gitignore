@@ -13,3 +13,30 @@ DerivedData/
 
 # Developer AI secrets (see Config/AI.local.example.xcconfig)
 Config/AI.local.xcconfig
+# Social gym development
+node_modules/
+backend/dist/
+.firebase/
+*-debug.log
+.env
+.env.local
+.env.*
+!.env.example
+GoogleService-Info.plist
+SocialConfig.plist
+configuration/Signing.local.xcconfig
+configuration/SocialConfig.device.plist
+backend/service-account*.json
+build-*.log
+
+# Local training environments and run artifacts
+backend/training/.venv/
+backend/training/runs/
+backend/training/train.jsonl
+backend/training/eval.jsonl
+backend/training/__pycache__/
+backend/training/rehearsal.jsonl
+backend/scripts/__pycache__/
+backend/training/corrections.jsonl
+backend/training/fresh.jsonl
+backend/training/specialist.jsonl

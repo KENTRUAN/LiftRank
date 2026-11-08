@@ -79,7 +79,7 @@ struct RanksView: View {
             }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
-                    NavigationLink { SocialView(profile: profile) } label: { Label("分享与好友", systemImage: "person.2.fill") }
+                    NavigationLink { SocialView(profile: profile) } label: { Label("Rank cards", systemImage: "person.2.fill") }
                     NavigationLink { RankCalculatorView(profile: profile) } label: { Label("评分计算器", systemImage: "function") }
                 }
             }
@@ -263,7 +263,7 @@ struct MuscleMapView: View {
     }
 }
 
-private struct BodySilhouette: Shape {
+struct BodySilhouette: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         path.addEllipse(in: CGRect(x: rect.width * 0.415, y: rect.height * 0.01,
@@ -280,7 +280,7 @@ private struct BodySilhouette: Shape {
     }
 }
 
-private struct BodyRegion: Shape {
+struct BodyRegion: Shape {
     let group: MuscleGroup
     let front: Bool
 

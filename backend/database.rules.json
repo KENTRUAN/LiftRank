@@ -1,0 +1,98 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (data.child('visibility').val() !== 'anonymous' && !root.child('social/blocks').child(auth.uid).child($uid).exists() && !root.child('social/blocks').child($uid).child(auth.uid).exists() && (root.child('social/friends').child(auth.uid).child($uid).exists() || (root.child('world/memberships').child(auth.uid).child('expiresAt').val() > now && root.child('world/memberships').child($uid).child('expiresAt').val() > now && root.child('world/memberships').child(auth.uid).child('roomId').val() === root.child('world/memberships').child($uid).child('roomId').val()))))"
+      }
+    },
+    "world": {
+      "memberships": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "rooms": {
+        "$room": {
+          "presence": {
+            ".read": "auth != null && root.child('world/memberships').child(auth.uid).child('roomId').val() === $room && root.child('world/memberships').child(auth.uid).child('expiresAt').val() > now",
+            "$uid": {
+              ".write": "auth != null && (root.child('world/memberships').child(auth.uid).child('publicID').val() === $uid || (!root.child('world/memberships').child(auth.uid).child('publicID').exists() && auth.uid === $uid)) && (!newData.exists() || (root.child('world/memberships').child(auth.uid).child('roomId').val() === $room && root.child('world/memberships').child(auth.uid).child('expiresAt').val() > now && newData.child('sessionId').val() === root.child('world/memberships').child(auth.uid).child('sessionId').val()))",
+              ".validate": "newData.hasChildren(['uid','sessionId','x','y','station','status','updatedAt']) && (root.child('world/memberships').child(auth.uid).child('visibility').val() !== 'anonymous' || newData.child('visibility').val() === 'anonymous')",
+              "uid": {
+                ".validate": "newData.val() === $uid"
+              },
+              "sessionId": {
+                ".validate": "newData.isString() && newData.val().length <= 100"
+              },
+              "x": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 11"
+              },
+              "y": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 9"
+              },
+              "station": {
+                ".validate": "newData.val() === 'lounge' || ((newData.val() === 'bench' || newData.val() === 'rack' || newData.val() === 'cardio' || newData.val() === 'platform') && root.child('world/rooms').child($room).child('equipment').child(newData.val()).child('members').child($uid).val() === newData.parent().child('sessionId').val())"
+              },
+              "status": {
+                ".validate": "newData.val() === 'Ready' || newData.val() === 'Training' || newData.val() === 'Resting' || newData.val() === 'Open to chat'"
+              },
+              "updatedAt": {
+                ".validate": "newData.isNumber() && newData.val() >= now - 5000 && newData.val() <= now + 5000"
+              },
+              "$other": {
+                ".validate": false
+              },
+              "openToChat": {
+                ".validate": "newData.isBoolean()"
+              },
+              "visibility": {
+                ".validate": "newData.val() === (root.child('world/memberships').child(auth.uid).child('visibility').exists() ? root.child('world/memberships').child(auth.uid).child('visibility').val() : 'public')"
+              },
+              "setCompletedAt": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= now + 5000"
+              }
+            }
+          },
+          "equipment": {
+            ".read": "auth != null && root.child('world/memberships').child(auth.uid).child('roomId').val() === $room && root.child('world/memberships').child(auth.uid).child('expiresAt').val() > now",
+            "$station": {
+              "members": {
+                "$uid": {
+                  ".write": "auth != null && (root.child('world/memberships').child(auth.uid).child('publicID').val() === $uid || (!root.child('world/memberships').child(auth.uid).child('publicID').exists() && auth.uid === $uid)) && !newData.exists()"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "social": {
+      "friends": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "blocks": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "chats": {
+        "$chat": {
+          ".read": "auth != null && data.child('members').child(auth.uid).val() === true",
+          "messages": {
+            ".indexOn": "createdAt"
+          }
+        }
+      }
+    },
+    "roomMessages": {
+      "$room": {
+        ".read": "auth != null && root.child('world/memberships').child(auth.uid).child('roomId').val() === $room && root.child('world/memberships').child(auth.uid).child('expiresAt').val() > now",
+        ".indexOn": "createdAt"
+      }
+    }
+  }
+}

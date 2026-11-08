@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>API_URL</key><string>http://127.0.0.1:8080</string>
+    <key>PROJECT_ID</key><string>demo-liftrank</string>
+    <key>API_KEY</key><string>demo-key</string>
+    <key>APP_ID</key><string>1:123456789:ios:abcdef123456</string>
+    <key>SENDER_ID</key><string>123456789</string>
+    <key>DATABASE_URL</key><string>https://demo-liftrank-default-rtdb.firebaseio.com</string>
+    <key>STORAGE_BUCKET</key><string>demo-liftrank.firebasestorage.app</string>
+    <key>EMULATOR_HOST</key><string>127.0.0.1</string>
+</dict>
+</plist>

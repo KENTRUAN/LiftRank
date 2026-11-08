@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>API_URL</key><string>https://REPLACE-WITH-CLOUD-RUN-URL</string>
+    <key>PROJECT_ID</key><string>liftrank-514018</string>
+    <key>API_KEY</key><string>REPLACE-WITH-FIREBASE-API-KEY</string>
+    <key>APP_ID</key><string>REPLACE-WITH-GOOGLE-APP-ID</string>
+    <key>SENDER_ID</key><string>REPLACE-WITH-GCM-SENDER-ID</string>
+    <key>DATABASE_URL</key><string>REPLACE-WITH-REALTIME-DATABASE-URL</string>
+    <key>STORAGE_BUCKET</key><string>REPLACE-WITH-STORAGE-BUCKET</string>
+</dict>
+</plist>

@@ -10,7 +10,7 @@ struct LiftRankApp: App {
         _store = StateObject(wrappedValue: StoreLoader {
             let schema = Schema([UserProfile.self, Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self,
                                  BodyMeasurement.self, FoodEntry.self, CustomMeal.self, QuestClaim.self, RewardEvent.self, WorkoutTemplate.self,
-                                 CardioSession.self, DailyPlan.self, Friend.self])
+                                 CardioSession.self, DailyPlan.self, Friend.self, TrainerMessage.self])
             let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema)])
             let context = container.mainContext
             ExerciseSeed.seed(into: context)
@@ -21,6 +21,8 @@ struct LiftRankApp: App {
             if let profile = try? context.fetch(FetchDescriptor<UserProfile>()).first {
                 DemoData.seedIfNeeded(context: context, profile: profile)
             }
+            TrainingHealthManager.shared.bind(context: context)
+            CardioLiveActivityManager.shared.bind(context: context)
             return container
         })
     }

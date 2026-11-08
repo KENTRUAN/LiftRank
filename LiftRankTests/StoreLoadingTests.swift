@@ -54,6 +54,34 @@ final class StoreLoadingTests: XCTestCase {
     }
 
     @MainActor
+    func testPendingSetAndHealthOwnerSurviveStoreReopen() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("session.store")
+        let schema = Schema([Workout.self, WorkoutExercise.self, WorkoutSet.self])
+        let configuration = ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
+        let now = Date()
+        func seed() throws -> UUID {
+            let container = try ModelContainer(for: schema, configurations: [configuration])
+            let workout = Workout(bodyweightKg: 75)
+            workout.startOptionsChosen = true
+            workout.healthOwner = "watch"; workout.healthState = "recordingWatch"
+            container.mainContext.insert(workout)
+            try WorkoutSession.beginSet(workout, exerciseKey: "bench_press", context: container.mainContext, now: now)
+            return workout.id
+        }
+        let id = try seed()
+        let reopened = try ModelContainer(for: schema, configurations: [configuration])
+        let workout = try XCTUnwrap(reopened.mainContext.fetch(FetchDescriptor<Workout>()).first)
+        XCTAssertEqual(workout.id, id)
+        XCTAssertTrue(workout.startOptionsChosen)
+        XCTAssertEqual(workout.trainingState(at: now), "Training")
+        XCTAssertEqual(workout.currentExerciseKey, "bench_press")
+        XCTAssertEqual(workout.healthOwner, "watch", "Relaunch must not start a second phone recording")
+    }
+
+    @MainActor
     private func seedStore(at url: URL) throws {
         let container = try makeContainer(at: url)
         let profile = UserProfile()

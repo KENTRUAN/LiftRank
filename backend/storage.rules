@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Source selfies are never uploaded here. The server owns generated assets.
+    match /avatars/{uid}/{asset} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /{path=**} { allow read, write: if false; }
+  }
+}

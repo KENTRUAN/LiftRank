@@ -7,6 +7,7 @@ struct AIAssistantView: View {
     @State private var status: String?
     @State private var testing = false
     @State private var showAvatar = false
+    @AppStorage(CoachHistory.key) private var previousConversation = Data()
 
     var body: some View {
         Form {
@@ -21,7 +22,7 @@ struct AIAssistantView: View {
                     Spacer()
                 }
                 Button { showAvatar = true } label: { Label("定义助手形象", systemImage: "wand.and.stars") }
-                Button { AppState.shared.perform(.openCoach) } label: { Label("和 \(profile.coachName) 聊天 / 语音指令", systemImage: "bubble.left.and.bubble.right.fill") }
+                Button { AppState.shared.perform(.openCoach) } label: { Label("Open private workout trainer", systemImage: "bubble.left.and.bubble.right.fill") }
             } header: {
                 Text("助手形象")
             }
@@ -31,14 +32,31 @@ struct AIAssistantView: View {
                 Button(testing ? "测试中…" : "测试连接") { testConnection() }.disabled(testing || !AIBackend.isConfigured)
                 if let status { Text(status).font(.footnote).foregroundStyle(status.contains("失败") ? .red : .secondary) }
             } header: {
-                Text("服务状态")
+                Text("General AI service")
             } footer: {
                 Text(AIBackend.isConfigured ? "AI 能力由开发者统一提供，无需填写 API Key。" : AIBackend.unavailableHint)
+            }
+            Section("Workout trainer") {
+                Text("Tinker handles workout plans and remaining sets. Its service is configured separately from general AI.")
+                    .font(.footnote)
+                Button("Open trainer") { AppState.shared.perform(.openCoach) }
+            }
+            if !CoachHistory.messages(from: previousConversation).isEmpty {
+                Section {
+                    NavigationLink("Previous assistant conversations") {
+                        List(CoachHistory.messages(from: previousConversation)) { message in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(message.role == .user ? "You" : "Assistant").font(.caption).foregroundStyle(.secondary)
+                                Text(message.text)
+                            }
+                        }.navigationTitle("Saved conversation")
+                    }
+                }
             }
             Section("用途") {
                 Label("身体综合数据分析（饮食 → 身体）", systemImage: "waveform.path.ecg")
                 Label("用自然语言修改今日训练（训练页 ✨）", systemImage: "sparkles")
-                Label("语音助手：说出指令即可开始训练、记录体重", systemImage: "mic.fill")
+                Label("Dictate trainer messages; review before sending", systemImage: "mic.fill")
                 Label("周 / 月 / 季 / 年总结点评", systemImage: "chart.xyaxis.line")
                 Label("用一句话改变助手的外观", systemImage: "person.crop.square")
             }

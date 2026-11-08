@@ -81,7 +81,7 @@ struct BodyAnalysisView: View {
     @Query private var cardio: [CardioSession]
     @Query private var measurements: [BodyMeasurement]
     @Query private var foods: [FoodEntry]
-    @AppStorage(AIProgram.combinedKey) private var combined = Data()
+    @AppStorage(AIProgram.nutritionKey) private var nutrition = Data()
     @AppStorage(CoachHistory.key) private var conversation = Data()
     @State private var loading = false
     @State private var error: String?
@@ -113,17 +113,21 @@ struct BodyAnalysisView: View {
                     }
                     if let error { Text(error).font(.footnote).foregroundStyle(.red) }
                     Button { analyze() } label: {
-                        Label(profile.lastBodyAnalysis.isEmpty ? "生成分析和四周方案" : "重新分析并更新方案", systemImage: "sparkles").frame(maxWidth: .infinity)
+                        Label(profile.lastBodyAnalysis.isEmpty ? "生成分析和四周饮食建议" : "重新分析并更新饮食建议", systemImage: "sparkles").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent).disabled(loading || !AIBackend.isConfigured)
                 }.card()
-                if let program = AIProgram.load(combined) {
+                if let program = AIProgram.load(nutrition) {
                     NavigationLink {
-                        AIProgramView(program: program, focus: .all, exercises: exercises)
+                        AIProgramView(program: program, focus: .nutrition, exercises: exercises)
                     } label: {
-                        Label("已同步四周方案到力量、有氧和饮食", systemImage: "calendar.badge.checkmark")
+                        Label("查看四周饮食建议", systemImage: "calendar.badge.checkmark")
                     }.card()
                 }
+                Button("Plan workouts with AI trainer") { AppState.shared.perform(.openCoach) }
+                    .buttonStyle(.bordered)
+                Text("Workout plans are managed by your private trainer. This analysis only updates nutrition guidance.")
+                    .font(.caption).foregroundStyle(.secondary)
                 DisclosureGroup("发送给模型的数据", isExpanded: $showData) {
                     Text(summary).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                     if !conversation.isEmpty {
@@ -141,16 +145,16 @@ struct BodyAnalysisView: View {
         guard let config = AIBackend.config else { return }
         loading = true; error = nil
         let data = summary
-        let planAtStart = combined
+        let planAtStart = nutrition
         let history = CoachHistory.context(from: conversation)
         Task {
             defer { loading = false }
             do {
-                let (text, program) = try await AIProgram.generate(scope: .combined, request: data, history: history,
+                let (text, program) = try await AIProgram.generateNutrition(request: data, history: history,
                                                                  profile: profile, exercises: exercises, config: config)
                 let encoded = try program.encoded()
-                guard combined == planAtStart else {
-                    self.error = "小段已更新四周方案，请重新分析以继续调整。"
+                guard nutrition == planAtStart else {
+                    self.error = "饮食建议已更新，请重新分析以继续调整。"
                     return
                 }
                 let previous = (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt)
@@ -158,7 +162,7 @@ struct BodyAnalysisView: View {
                 profile.lastBodyAnalysisAt = Date()
                 do {
                     try context.save()
-                    combined = encoded
+                    nutrition = encoded
                 } catch {
                     (profile.lastBodyAnalysis, profile.lastBodyAnalysisAt) = previous
                     throw error

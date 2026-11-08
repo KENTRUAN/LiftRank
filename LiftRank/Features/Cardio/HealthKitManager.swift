@@ -51,6 +51,8 @@ final class HealthKitManager {
         }
         var out: [CardioImport] = []
         for w in workouts {
+            // Unified LiftRank workouts already exist locally; never import them a second time.
+            if w.metadata?["LiftRankWorkoutID"] != nil || w.metadata?["LiftRankCardioID"] != nil { continue }
             guard let type = Self.cardioType(for: w.workoutActivityType) else { continue }
             let km = (w.statistics(for: HKQuantityType(.distanceWalkingRunning))?.sumQuantity()
                       ?? w.statistics(for: HKQuantityType(.distanceCycling))?.sumQuantity()
@@ -80,6 +82,7 @@ final class HealthKitManager {
         let config = HKWorkoutConfiguration()
         config.activityType = Self.activityType(for: session.type)
         let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: .local())
+        try await builder.addMetadata([HKMetadataKeySyncIdentifier: "liftrank.cardio.\(session.id.uuidString)", HKMetadataKeySyncVersion: 1, "LiftRankCardioID": session.id.uuidString])
         let start = session.date
         let end = start.addingTimeInterval(session.durationMinutes * 60)
         try await builder.beginCollection(at: start)
@@ -95,7 +98,8 @@ final class HealthKitManager {
         }
         if !samples.isEmpty { try await builder.addSamples(samples) }
         try await builder.endCollection(at: end)
-        _ = try await builder.finishWorkout()
+        let saved = try await builder.finishWorkout()
+        session.externalID = saved?.uuid.uuidString ?? session.externalID
     }
 
     static func cardioType(for t: HKWorkoutActivityType) -> CardioType? {

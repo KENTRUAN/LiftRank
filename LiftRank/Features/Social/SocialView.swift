@@ -38,113 +38,48 @@ struct RankCode: Codable {
 
 struct SocialView: View {
     @Bindable var profile: UserProfile
-    @Environment(\.modelContext) private var context
     @Query private var workouts: [Workout]
     @Query private var exercises: [Exercise]
     @Query private var cardio: [CardioSession]
     @Query(sort: \Friend.gsr, order: .reverse) private var friends: [Friend]
-    @State private var pasted = ""
-    @State private var message: String?
     @State private var cardImage: Image?
-
-    private var bests: [ExerciseBest] { RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex) }
-    private var muscles: [MuscleGroup: Int] { RankAggregator.muscleScores(bests: bests) }
+    private var muscles: [MuscleGroup: Int] { RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)) }
     private var gsr: Int { RankAggregator.overall(muscleScores: muscles) }
     private var streak: Int { StreakEngine.current(profile: profile, workouts: workouts, cardio: cardio).currentDays }
-    private var myCode: RankCode { RankCode.make(profile: profile, gsr: gsr, muscles: muscles, streak: streak) }
-
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
                 RankCardView(name: profile.name, gsr: gsr, muscles: muscles, streak: streak, cosmetics: profile.sharedCosmeticIDs)
-                HStack {
-                    if let cardImage {
-                        ShareLink(item: cardImage, preview: SharePreview("\(profile.name) 的段位卡", image: cardImage)) {
-                            Label("分享段位卡", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
-                        }.buttonStyle(.borderedProminent)
-                    }
-                    ShareLink(item: myCode.encode()) { Label("分享段位码", systemImage: "qrcode").frame(maxWidth: .infinity) }.buttonStyle(.bordered)
+                if let cardImage {
+                    ShareLink(item: cardImage, preview: SharePreview("My LiftRank card", image: cardImage)) {
+                        Label("Share rank image", systemImage: "square.and.arrow.up")
+                    }.buttonStyle(.borderedProminent)
                 }
-
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("我的段位码").font(.headline)
-                    HStack(alignment: .top, spacing: 12) {
-                        if let qr = QRCode.image(for: myCode.encode()) {
-                            Image(uiImage: qr).interpolation(.none).resizable().frame(width: 110, height: 110)
-                        }
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("把段位码发给好友，对方在下方粘贴即可把你加入排行榜；段位码包含昵称、GSR、肌群评分与外观，不包含训练明细。").font(.caption).foregroundStyle(.secondary)
-                            Button { UIPasteboard.general.string = myCode.encode(); message = "已复制段位码" } label: { Label("复制", systemImage: "doc.on.doc") }.font(.caption.bold())
-                        }
-                    }
+                    Text("Meet at your gym").font(.headline)
+                    Text("Connect with people checked into the same gym. Your friends and conversations stay in Community → Messages.").foregroundStyle(.secondary)
+                    Button("Open friends & messages") { AppState.shared.communitySection = 1; AppState.shared.tab = AppState.communityTab }
                 }.card()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("添加好友").font(.headline)
-                    HStack {
-                        TextField("粘贴好友的段位码 LR1.…", text: $pasted).textFieldStyle(.roundedBorder).autocorrectionDisabled().textInputAutocapitalization(.never)
-                        Button("添加") { addFriend() }.buttonStyle(.borderedProminent).disabled(pasted.isEmpty)
-                    }
-                    if let message { Text(message).font(.footnote).foregroundStyle(.secondary) }
-                }.card()
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("好友排行榜").font(.headline)
-                    let rows: [(String, String, Int, Int, [String], Bool)] = ([(profile.friendCode, profile.name, gsr, streak, profile.sharedCosmeticIDs, true)] + friends.map { ($0.code, $0.name, $0.gsr, $0.streakDays, $0.cosmetics, false) }).sorted { $0.2 > $1.2 }
-                    ForEach(Array(rows.enumerated()), id: \.element.0) { i, r in
-                        HStack(spacing: 10) {
-                            Text("\(i + 1)").font(.headline.monospacedDigit()).frame(width: 24)
-                            AvatarBadge(name: r.1, frame: CosmeticCatalog.item(r.4.first { $0.hasPrefix("frame.") } ?? "") ?? CosmeticCatalog.defaultItem(for: .frame), size: 36, spec: AvatarSpec(ids: r.4))
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text(r.1).font(.subheadline.bold())
-                                    if r.5 { Text("我").font(.caption2).padding(.horizontal, 5).background(Color.accentColor.opacity(0.15), in: Capsule()) }
-                                    if let t = CosmeticCatalog.item(r.4.first { $0.hasPrefix("title.") } ?? "") { TitleTag(cosmetic: t) }
-                                }
-                                Text("连续 \(r.3) 天").font(.caption2).foregroundStyle(.secondary)
+                if !friends.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Saved offline rank cards").font(.headline)
+                        Text("Previously saved snapshots. These are not live accounts or friendships.").font(.caption).foregroundStyle(.secondary)
+                        ForEach(friends) { friend in
+                            NavigationLink { FriendCompareView(friend: friend, myMuscles: muscles, myGSR: gsr, mySpec: profile.avatar) } label: {
+                                HStack { Text(friend.name); Spacer(); Text("\(friend.gsr) GSR") }
                             }
-                            Spacer()
-                            Text("\(r.2)").font(.headline.monospacedDigit()).foregroundStyle(RankTier.tier(for: r.2).color)
-                            TierBadge(tier: RankTier.tier(for: r.2), compact: true)
                         }
-                        if !r.5, let f = friends.first(where: { $0.code == r.0 }) {
-                            NavigationLink { FriendCompareView(friend: f, myMuscles: muscles, myGSR: gsr, mySpec: profile.avatar) } label: {
-                                Text("与 \(f.name) 对比肌群 · 更新于 \(f.updatedAt.shortString)").font(.caption).foregroundStyle(Color.accentColor)
-                            }
-                            .swipeActions { Button(role: .destructive) { context.delete(f); try? context.save() } label: { Label("删除", systemImage: "trash") } }
-                        }
-                        Divider()
-                    }
-                    Text("离线版本：好友数据来自对方分享的段位码，重新粘贴即可更新。实时同步与全球排行榜需要云端账号。").font(.caption2).foregroundStyle(.secondary)
-                }.card()
+                    }.card()
+                }
             }.padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("好友与段位卡")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: renderCard)
-    }
-
-    @MainActor
-    private func renderCard() {
-        let renderer = ImageRenderer(content: RankCardView(name: profile.name, gsr: gsr, muscles: muscles, streak: streak, cosmetics: profile.sharedCosmeticIDs).frame(width: 360))
-        renderer.scale = 3
-        if let ui = renderer.uiImage { cardImage = Image(uiImage: ui) }
-    }
-
-    private func addFriend() {
-        guard let code = RankCode.decode(pasted) else { message = "段位码无效，请检查是否完整。"; return }
-        guard code.uid != profile.friendCode else { message = "这是你自己的段位码。"; return }
-        let json = (try? JSONEncoder().encode(code.muscles)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-        if let existing = friends.first(where: { $0.code == code.uid }) {
-            existing.name = code.name; existing.gsr = code.gsr; existing.muscleScoresJSON = json; existing.cosmetics = code.cosmetics; existing.streakDays = code.streak; existing.updatedAt = code.at
-            message = "已更新 \(code.name) 的段位"
-        } else {
-            context.insert(Friend(code: code.uid, name: code.name, gsr: code.gsr, muscleScoresJSON: json, cosmetics: code.cosmetics, streakDays: code.streak, updatedAt: code.at))
-            message = "已添加好友 \(code.name)"
+        .navigationTitle("Rank cards").navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            let renderer = ImageRenderer(content: RankCardView(name: profile.name, gsr: gsr, muscles: muscles, streak: streak, cosmetics: profile.sharedCosmeticIDs).frame(width: 360))
+            renderer.scale = 3
+            if let ui = renderer.uiImage { cardImage = Image(uiImage: ui) }
         }
-        try? context.save()
-        pasted = ""
     }
 }
 
