@@ -448,9 +448,9 @@ private struct TrainingAvatarCard: View {
                 }
                 NavigationLink {
                     ShopView(profile: profile, gsr: overall, slots: [.accessory, .backdrop],
-                             title: L("形象工坊"), mascotStyle: mascotStyle)
+                             title: L("化身配饰"), mascotStyle: mascotStyle)
                 } label: {
-                    Label("修改形象", systemImage: "wand.and.stars")
+                    Label("化身配饰", systemImage: "wand.and.stars")
                 }
             }
             .font(.subheadline.weight(.semibold))

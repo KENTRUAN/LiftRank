@@ -65,7 +65,7 @@ struct SocialView: View {
                         Text("Saved offline rank cards").font(.headline)
                         Text("Previously saved snapshots. These are not live accounts or friendships.").font(.caption).foregroundStyle(.secondary)
                         ForEach(friends) { friend in
-                            NavigationLink { FriendCompareView(friend: friend, myMuscles: muscles, myGSR: gsr, mySpec: profile.avatar) } label: {
+                            NavigationLink { FriendCompareView(friend: friend, myMuscles: muscles, myGSR: gsr) } label: {
                                 HStack { Text(friend.name); Spacer(); Text("\(friend.gsr) GSR") }
                             }
                         }
@@ -99,7 +99,7 @@ struct RankCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                AvatarBadge(name: name, frame: frame, size: 56, spec: AvatarSpec(ids: cosmetics))
+                AvatarBadge(name: name, frame: frame, size: 56)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name).font(.title3.bold()).foregroundStyle(dark ? .white : .primary)
                     TitleTag(cosmetic: title)
@@ -134,22 +134,8 @@ struct FriendCompareView: View {
     let friend: Friend
     let myMuscles: [MuscleGroup: Int]
     let myGSR: Int
-    var mySpec = AvatarSpec()
     var body: some View {
         List {
-            Section {
-                HStack(spacing: 20) {
-                    VStack(spacing: 4) {
-                        AvatarFigureView(spec: mySpec, muscles: myMuscles).frame(height: 180)
-                        Text("我").font(.caption.bold())
-                    }.frame(maxWidth: .infinity)
-                    VStack(spacing: 4) {
-                        AvatarFigureView(spec: AvatarSpec(ids: friend.cosmetics), muscles: friend.muscleScores).frame(height: 180)
-                        Text(friend.name).font(.caption.bold())
-                    }.frame(maxWidth: .infinity)
-                }
-                .listRowBackground(Color.clear)
-            }
             Section("总体") {
                 HStack { Text("我"); Spacer(); Text("\(myGSR)").bold(); TierBadge(tier: RankTier.tier(for: myGSR), compact: true) }
                 HStack { Text(friend.name); Spacer(); Text("\(friend.gsr)").bold(); TierBadge(tier: RankTier.tier(for: friend.gsr), compact: true) }

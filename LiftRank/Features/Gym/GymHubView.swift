@@ -155,10 +155,6 @@ struct GymAvatarView: View {
     var body: some View {
         Group {
             if let image { Image(uiImage: image).resizable().scaledToFill() }
-            else if let profile, profile.visibility != "anonymous", profile.cosmetics.contains(where: { $0.hasPrefix("skin.") || $0.hasPrefix("hair.") }) {
-                AvatarFigureView(spec: AvatarSpec(ids: profile.cosmetics), bust: true, showBackdrop: false)
-                    .padding(size * 0.06).frame(width: size, height: size).background(profile.avatar.tint.opacity(0.12))
-            }
             else { Image(systemName: profile?.avatar.symbol ?? "person.fill").font(.system(size: size * 0.4)).frame(width: size, height: size).background((profile?.avatar.tint ?? .teal).opacity(0.2)) }
         }.frame(width: size, height: size).clipShape(Circle())
             .overlay(Circle().strokeBorder(profile?.avatar.tint ?? .teal, lineWidth: 2))

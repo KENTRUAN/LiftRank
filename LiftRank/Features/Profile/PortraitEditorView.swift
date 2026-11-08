@@ -36,13 +36,14 @@ struct PortraitEditorView: View {
                             if let image = preview?.image ?? current {
                                 Image(uiImage: image).resizable().scaledToFill()
                             } else {
-                                AvatarFigureView(spec: profile.avatar, bust: true, showBackdrop: false)
-                                    .padding(8).background(Color(.tertiarySystemGroupedBackground))
+                                Text(String(profile.name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
+                                    .font(.system(size: 56, weight: .bold, design: .rounded)).foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(.tertiarySystemGroupedBackground))
                             }
                         }
                         .frame(width: 150, height: 150).clipShape(Circle())
                         .overlay(Circle().stroke(preview == nil ? Color.secondary.opacity(0.25) : Color.accentColor, lineWidth: 3))
-                        Text(preview != nil ? "预览 · 尚未应用" : current != nil ? "当前肖像" : "当前使用小人形象").font(.headline)
+                        Text(preview != nil ? "预览 · 尚未应用" : current != nil ? "当前肖像" : "尚未生成肖像").font(.headline)
                         Text("肖像会出现在「我的」、段位页的训练化身，以及健身房里其他成员看到的你。")
                             .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }.frame(maxWidth: .infinity).padding(.vertical, 8)

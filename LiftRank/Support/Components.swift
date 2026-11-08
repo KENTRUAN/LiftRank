@@ -256,12 +256,11 @@ struct ProLockedNote: View {
     }
 }
 
-/// Avatar with the equipped frame cosmetic; shows the character's head when a spec is given, else the initial.
+/// Avatar with the equipped frame cosmetic; shows the AI portrait when there is one, else the initial.
 struct AvatarBadge: View {
     let name: String
     let frame: Cosmetic
     var size: CGFloat = 56
-    var spec: AvatarSpec? = nil
     var portrait: UIImage? = nil
     var body: some View {
         ZStack {
@@ -269,10 +268,6 @@ struct AvatarBadge: View {
             Circle().fill(Color(.secondarySystemGroupedBackground)).frame(width: size - 8, height: size - 8)
             if let portrait {
                 Image(uiImage: portrait).resizable().scaledToFill()
-                    .frame(width: size - 8, height: size - 8)
-                    .clipShape(Circle())
-            } else if let spec {
-                AvatarFigureView(spec: spec, bust: true, showBackdrop: false)
                     .frame(width: size - 8, height: size - 8)
                     .clipShape(Circle())
             } else {

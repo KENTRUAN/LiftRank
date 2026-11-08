@@ -55,7 +55,6 @@ struct CommunityProfileView: View {
                     }
                 }
                 Button { showPortrait = true } label: { Label("AI 肖像", systemImage: "photo") }
-                NavigationLink { ShopView(profile: profile, gsr: gsr, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象工坊", systemImage: "wand.and.stars") }
             } header: {
                 Text("形象")
             }
@@ -156,21 +155,5 @@ struct CommunityOnboardingCard: View {
             .buttonStyle(.borderedProminent).tint(.teal)
             .accessibilityIdentifier("createGuestProfile")
             .disabled(!consent || profile.name.trimmingCharacters(in: .whitespaces).isEmpty || store.busy || store.restoring)
-    }
-}
-
-/// Renders the character head once per look so the SpriteKit room can show it like a portrait.
-@MainActor
-enum BustRenderer {
-    private static var cache: [String: UIImage] = [:]
-    static func image(ids: [String], size: CGFloat = 64) -> UIImage? {
-        let key = ids.sorted().joined(separator: ",")
-        if let hit = cache[key] { return hit }
-        let renderer = ImageRenderer(content: AvatarFigureView(spec: AvatarSpec(ids: ids), bust: true, showBackdrop: false).frame(width: size, height: size))
-        renderer.scale = 2
-        guard let image = renderer.uiImage else { return nil }
-        if cache.count > 64 { cache.removeAll() }
-        cache[key] = image
-        return image
     }
 }

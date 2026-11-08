@@ -41,6 +41,8 @@ enum CosmeticSlot: String, CaseIterable, Identifiable {
     }
 
     static let badgeSlots: [CosmeticSlot] = [.frame, .title, .theme, .card]
+    /// What the shop sells: badges plus the parts the rank mascot can wear. The other character slots only dress the AI coach.
+    static let shopSlots: [CosmeticSlot] = badgeSlots + [.accessory, .backdrop]
     static let avatarSlots: [CosmeticSlot] = [.skin, .hair, .hairColor, .eyes, .outfit, .outfitColor, .accessory, .backdrop]
     var isAvatar: Bool { Self.avatarSlots.contains(self) }
     /// Head-only preview is enough to show the option.

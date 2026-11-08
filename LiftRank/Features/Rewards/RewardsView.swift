@@ -131,11 +131,10 @@ struct RewardsView: View {
             HStack {
                 Text("外观与商店").font(.headline)
                 Spacer()
-                NavigationLink { ShopView(profile: profile, gsr: gsr, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.subheadline.bold()) }
                 NavigationLink { ShopView(profile: profile, gsr: gsr) } label: { Label("商店", systemImage: "cart.fill").font(.subheadline.bold()) }
             }
             HStack(spacing: 14) {
-                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 60, spec: profile.avatar)
+                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 60)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         Text(profile.name).font(.subheadline.bold())

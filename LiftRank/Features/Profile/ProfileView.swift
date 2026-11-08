@@ -46,16 +46,14 @@ struct ProfileView: View {
             Form {
                 Section {
                     HStack(spacing: 14) {
-                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar, portrait: portrait ?? gym.portraits[gym.uid])
+                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, portrait: portrait ?? gym.portraits[gym.uid])
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                             HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
                         }
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 10) {
-                            NavigationLink { ShopView(profile: profile, gsr: gsr, muscles: muscles, slots: CosmeticSlot.avatarSlots, title: "形象工坊") } label: { Label("形象", systemImage: "wand.and.stars").font(.caption.bold()).labelStyle(.titleAndIcon) }
-                            Button { showPortrait = true } label: { Label("AI 肖像", systemImage: "photo").font(.caption.bold()).labelStyle(.titleAndIcon) }
-                        }.fixedSize()
+                        Button { showPortrait = true } label: { Label("AI 肖像", systemImage: "photo").font(.caption.bold()).labelStyle(.titleAndIcon) }
+                            .fixedSize()
                     }
                 }
                 Section("个人资料") {

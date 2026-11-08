@@ -269,12 +269,6 @@ struct GymRoomView: View {
         scene.onStation = { useEquipment($0) }
     }
     private func syncScene() {
-        let profiles = store.roomProfiles
-        // Members without an AI portrait show their character head, like everywhere else in the app.
-        var heads = store.portraits
-        for (id, member) in profiles where heads[id] == nil && member.visibility != "anonymous" && !member.cosmetics.isEmpty {
-            heads[id] = BustRenderer.image(ids: member.cosmetics)
-        }
-        scene.sync(uid: store.roomIdentity, members: store.members.filter { !store.blocked.contains($0.uid) }, profiles: profiles, portraits: heads)
+        scene.sync(uid: store.roomIdentity, members: store.members.filter { !store.blocked.contains($0.uid) }, profiles: store.roomProfiles, portraits: store.portraits)
     }
 }

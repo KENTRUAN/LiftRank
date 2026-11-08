@@ -1,24 +1,22 @@
 import SwiftUI
 import SwiftData
 
-/// Buy and equip cosmetics with Eggs. With `slots` limited to the character parts it doubles as the "形象工坊".
+/// Buy and equip cosmetics with Eggs. With `slots` limited to accessory/backdrop it doubles as the mascot accessory editor.
 struct ShopView: View {
     @Bindable var profile: UserProfile
     let gsr: Int
-    let muscles: [MuscleGroup: Int]
     let slots: [CosmeticSlot]
     let title: String
     let mascotStyle: RankMascotStyle?
+    @AppStorage("trainingAvatar.mascotStyle") private var storedMascotStyle: RankMascotStyle = .nailong
     @Environment(\.modelContext) private var context
     @State private var slot: CosmeticSlot
     @State private var toast: String?
-    @State private var front = true
 
-    init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases,
+    init(profile: UserProfile, gsr: Int, slots: [CosmeticSlot] = CosmeticSlot.shopSlots,
          title: String = L("商店"), mascotStyle: RankMascotStyle? = nil) {
         _profile = Bindable(wrappedValue: profile)
         self.gsr = gsr
-        self.muscles = muscles
         self.slots = slots
         self.title = title
         self.mascotStyle = mascotStyle
@@ -28,8 +26,9 @@ struct ShopView: View {
     private var tier: RankTier { RankTier.tier(for: gsr) }
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
+    /// Accessories and backdrops preview on the rank mascot shown on the rank page.
     private func mascotPreviewStyle(for slot: CosmeticSlot) -> RankMascotStyle? {
-        slot == .accessory || slot == .backdrop ? mascotStyle : nil
+        slot.isAvatar ? (mascotStyle ?? storedMascotStyle) : nil
     }
 
     var body: some View {
@@ -77,13 +76,8 @@ struct ShopView: View {
             if let style = mascotPreviewStyle(for: slot) {
                 RankMascotView(tier: tier, spec: profile.avatar, style: style)
                     .frame(width: 110, height: 130)
-            } else if slot.isAvatar {
-                AvatarFigureView(spec: profile.avatar, muscles: muscles, front: front)
-                    .frame(width: 110, height: 170)
-                    .contentShape(Rectangle())
-                    .onTapGesture { withAnimation { front.toggle() } }
             } else {
-                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, spec: profile.avatar)
+                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
             }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
@@ -91,8 +85,6 @@ struct ShopView: View {
                 HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
                 if mascotPreviewStyle(for: slot) != nil {
                     Text("装备后会显示在当前训练化身上。").font(.caption2).foregroundStyle(.secondary)
-                } else if slot.isAvatar {
-                    Text(muscles.isEmpty ? "小人的身体会按各肌群段位着色。点击小人翻转。" : "身体颜色 = 各肌群段位。点击小人翻转。").font(.caption2).foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -103,26 +95,19 @@ struct ShopView: View {
         let owned = profile.owns(item)
         let equipped = profile.equipped(item.slot) == item
         let locked = item.requiredTier.map { tier < $0 } ?? false
-        let previewHeight: CGFloat = item.slot.isAvatar && !item.slot.bustPreview ? 110 : 76
+        let previewHeight: CGFloat = item.slot.isAvatar ? 110 : 76
         return VStack(spacing: 8) {
             ZStack {
-                if item.slot.isAvatar {
+                if let style = mascotPreviewStyle(for: item.slot) {
                     RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemGroupedBackground)).frame(height: previewHeight)
-                    Group {
-                        if let style = mascotPreviewStyle(for: item.slot) {
-                            RankMascotView(tier: tier, spec: profile.avatar.applying(item), style: style)
-                        } else {
-                            AvatarFigureView(spec: profile.avatar.applying(item), muscles: muscles,
-                                             bust: item.slot.bustPreview, showBackdrop: item.slot == .backdrop)
-                        }
-                    }
+                    RankMascotView(tier: tier, spec: profile.avatar.applying(item), style: style)
                     .frame(height: previewHeight - 8)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     RoundedRectangle(cornerRadius: 12).fill(item.gradient).frame(height: previewHeight)
                     if item.slot == .frame {
-                        AvatarBadge(name: profile.name, frame: item, size: 48, spec: profile.avatar)
+                        AvatarBadge(name: profile.name, frame: item, size: 48)
                     } else if item.slot == .title {
                         TitleTag(cosmetic: item).padding(4).background(.regularMaterial, in: Capsule())
                     } else if item.slot == .card {

@@ -1,166 +1,6 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
-    "旋转配饰": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rotate accessory"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "旋转配饰"
-          }
-        }
-      }
-    },
-    "调整配饰大小": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Resize accessory"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "调整配饰大小"
-          }
-        }
-      }
-    },
-    "全段位演示": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "All ranks demo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全段位演示"
-          }
-        }
-      }
-    },
-    "%@ 豆包": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Doubao"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 豆包"
-          }
-        }
-      }
-    },
-    "奶龙": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nailong"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "奶龙"
-          }
-        }
-      }
-    },
-    "豆包": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Doubao"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "豆包"
-          }
-        }
-      }
-    },
-    "化身系列": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avatar style"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "化身系列"
-          }
-        }
-      }
-    },
-    "%@ 奶龙": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ Nailong"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 奶龙"
-          }
-        }
-      }
-    },
-    "装备后会显示在当前训练化身上。": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipped items appear on your selected avatar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "装备后会显示在当前训练化身上。"
-          }
-        }
-      }
-    },
-    "重置配饰": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset accessory"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重置配饰"
-          }
-        }
-      }
-    },
     " · 自定义": {
       "localizations": {
         "en": {
@@ -545,6 +385,22 @@
         }
       }
     },
+    "%@ 奶龙": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Nailong"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 奶龙"
+          }
+        }
+      }
+    },
     "%@ 属于 Pro 功能，且需要联网与后端服务。当前版本未接入。": {
       "localizations": {
         "en": {
@@ -589,6 +445,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 第 %lld 季度"
+          }
+        }
+      }
+    },
+    "%@ 豆包": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Doubao"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 豆包"
           }
         }
       }
@@ -8401,6 +8273,22 @@
         }
       }
     },
+    "全段位演示": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All ranks demo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全段位演示"
+          }
+        }
+      }
+    },
     "全蛋 1 个": {
       "localizations": {
         "en": {
@@ -9165,6 +9053,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "助手的形象不需要购买，所有部件都可以使用。"
+          }
+        }
+      }
+    },
+    "化身系列": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avatar style"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "化身系列"
+          }
+        }
+      }
+    },
+    "化身配饰": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mascot Accessories"
           }
         }
       }
@@ -10305,6 +10219,22 @@
         }
       }
     },
+    "奶龙": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nailong"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "奶龙"
+          }
+        }
+      }
+    },
     "好": {
       "localizations": {
         "en": {
@@ -10621,6 +10551,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "小麦"
+          }
+        }
+      }
+    },
+    "尚未生成肖像": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No portrait yet"
           }
         }
       }
@@ -12205,6 +12145,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "新手上路"
+          }
+        }
+      }
+    },
+    "旋转配饰": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rotate accessory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旋转配饰"
           }
         }
       }
@@ -17249,6 +17205,22 @@
         }
       }
     },
+    "装备后会显示在当前训练化身上。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Equipped items appear on your selected avatar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "装备后会显示在当前训练化身上。"
+          }
+        }
+      }
+    },
     "要点：": {
       "localizations": {
         "en": {
@@ -17965,6 +17937,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "请选择一张小一点的照片。"
+          }
+        }
+      }
+    },
+    "调整配饰大小": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resize accessory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调整配饰大小"
+          }
+        }
+      }
+    },
+    "豆包": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doubao"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "豆包"
           }
         }
       }
@@ -18973,6 +18977,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新选择"
+          }
+        }
+      }
+    },
+    "重置配饰": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset accessory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置配饰"
           }
         }
       }
