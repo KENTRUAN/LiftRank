@@ -10,6 +10,7 @@ struct ShopView: View {
     let mascotStyle: RankMascotStyle?
     @AppStorage("trainingAvatar.mascotStyle") private var storedMascotStyle: RankMascotStyle = .nailong
     @Environment(\.modelContext) private var context
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var slot: CosmeticSlot
     @State private var toast: String?
 
@@ -70,25 +71,52 @@ struct ShopView: View {
         .toast($toast)
     }
 
-    @ViewBuilder
     private var header: some View {
-        HStack(spacing: 14) {
-            if let style = mascotPreviewStyle(for: slot) {
-                RankMascotView(tier: tier, spec: profile.avatar, style: style)
-                    .frame(width: 110, height: 130)
-            } else {
-                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
-                HStack(spacing: 6) { TierBadge(tier: tier, compact: true); Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary) }
-                HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
-                if mascotPreviewStyle(for: slot) != nil {
-                    Text("装备后会显示在当前训练化身上。").font(.caption2).foregroundStyle(.secondary)
+        let style = mascotPreviewStyle(for: slot)
+        let previewHeight: CGFloat = style == nil ? 64 : 126
+        return VStack(alignment: .trailing, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                if let style {
+                    RankMascotView(tier: tier, spec: profile.avatar, style: style)
+                        .frame(width: 92, height: previewHeight)
+                        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
                 }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    TitleTag(cosmetic: profile.equipped(.title))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(profile.name).font(.headline)
+                    if style != nil {
+                        Spacer(minLength: 6)
+                        Text("装备后会显示在当前训练化身上。")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: previewHeight, alignment: .topLeading)
+
+                if !dynamicTypeSize.isAccessibilitySize { shopMetrics }
             }
-            Spacer()
-        }.card()
+            if dynamicTypeSize.isAccessibilitySize { shopMetrics }
+        }
+        .card()
+    }
+
+    private var shopMetrics: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("GSR \(gsr)").font(.caption.bold()).monospacedDigit()
+                TierBadge(tier: tier, compact: true)
+            }
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("余额").font(.caption2).foregroundStyle(.secondary)
+                EggAmount(amount: profile.eggs).font(.subheadline.bold())
+            }
+        }
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private func cosmeticCell(_ item: Cosmetic) -> some View {

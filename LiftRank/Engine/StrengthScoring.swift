@@ -77,6 +77,66 @@ struct MuscleRankSnapshot: Identifiable, Equatable {
     var id: Date { date }
 }
 
+enum RankHistoryRange: String, CaseIterable, Identifiable {
+    case month, quarter, year, all
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .month: L("最近 30 天")
+        case .quarter: L("最近 90 天")
+        case .year: L("最近 365 天")
+        case .all: L("全部历史")
+        }
+    }
+
+    var days: Int? {
+        switch self {
+        case .month: 30
+        case .quarter: 90
+        case .year: 365
+        case .all: nil
+        }
+    }
+}
+
+struct RankHistoryTimeline {
+    let start: Date
+    let end: Date
+    let daySpan: Int
+    private let history: [MuscleRankSnapshot]
+    private let calendar: Calendar
+
+    init?(history: [MuscleRankSnapshot], range: RankHistoryRange, today: Date = .now, calendar: Calendar = .current) {
+        guard let first = history.first, let last = history.last else { return nil }
+        self.history = history
+        self.calendar = calendar
+        let end = calendar.startOfDay(for: max(today, last.date))
+        self.end = end
+        if let days = range.days {
+            start = calendar.date(byAdding: .day, value: 1 - days, to: end) ?? end
+        } else {
+            start = calendar.startOfDay(for: first.date)
+        }
+        daySpan = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+    }
+
+    func offset(for date: Date) -> Int {
+        let days = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? 0
+        return min(daySpan, max(0, days))
+    }
+
+    func date(at offset: Int) -> Date {
+        calendar.date(byAdding: .day, value: offset, to: start) ?? start
+    }
+
+    func score(on date: Date) -> Int {
+        guard let snapshot = history.last(where: { calendar.startOfDay(for: $0.date) <= date }) else { return 0 }
+        return RankAggregator.overall(muscleScores: snapshot.scores)
+    }
+}
+
 enum RankAggregator {
     /// Best score per ranked exercise across published workouts.
     static func exerciseBests(workouts: [Workout], exercises: [Exercise], sex: Sex) -> [ExerciseBest] {
@@ -88,22 +148,22 @@ enum RankAggregator {
         return best.values.sorted { $0.bestScore > $1.bestScore }
     }
 
-    /// End-of-day ranks for the most recent training days, including earlier bests.
+    /// Historical rank changes after each day of published training.
     static func muscleHistory(workouts: [Workout], exercises: [Exercise], sex: Sex) -> [MuscleRankSnapshot] {
         let calendar = Calendar.current
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
         let published = workouts.filter(\.isPublished)
         let byDay = Dictionary(grouping: published) { calendar.startOfDay(for: $0.publishedAt ?? $0.startedAt) }
         let days = byDay.keys.sorted()
-        let recentDays = Set(days.suffix(30))
         var best: [String: ExerciseBest] = [:]
         var history: [MuscleRankSnapshot] = []
         for day in days {
             for workout in byDay[day, default: []] {
                 recordBests(for: workout, exercises: byKey, sex: sex, into: &best)
             }
-            if recentDays.contains(day) {
-                history.append(MuscleRankSnapshot(date: day, scores: muscleScores(bests: Array(best.values))))
+            let scores = muscleScores(bests: Array(best.values))
+            if !scores.isEmpty, scores != history.last?.scores {
+                history.append(MuscleRankSnapshot(date: day, scores: scores))
             }
         }
         return history

@@ -7873,6 +7873,22 @@
         }
       }
     },
+    "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starts with your first scored workout. Dates without a new score show your previous rank."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。"
+          }
+        }
+      }
+    },
     "休息 %@": {
       "localizations": {
         "en": {
@@ -8669,6 +8685,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        }
+      }
+    },
+    "全部历史": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All history"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部历史"
           }
         }
       }
@@ -10135,6 +10167,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "器械"
+          }
+        }
+      }
+    },
+    "回看范围": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History range"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回看范围"
           }
         }
       }
@@ -11893,6 +11941,22 @@
         }
       }
     },
+    "所选天数包含今天。没有新评分时，沿用此前的段位。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The range includes today. Dates without a new score show your previous rank."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所选天数包含今天。没有新评分时，沿用此前的段位。"
+          }
+        }
+      }
+    },
     "打开 AI 训练助手": {
       "localizations": {
         "en": {
@@ -13045,6 +13109,38 @@
         }
       }
     },
+    "最近 30 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 30 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 30 天"
+          }
+        }
+      }
+    },
+    "最近 365 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 365 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 365 天"
+          }
+        }
+      }
+    },
     "最近 8 周": {
       "localizations": {
         "en": {
@@ -13057,6 +13153,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近 8 周"
+          }
+        }
+      }
+    },
+    "最近 90 天": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 90 days"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 90 天"
           }
         }
       }

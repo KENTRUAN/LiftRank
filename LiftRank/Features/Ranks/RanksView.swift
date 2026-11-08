@@ -361,14 +361,17 @@ private struct TrainingAvatarCard: View {
     let history: [MuscleRankSnapshot]
 
     @AppStorage("trainingAvatar.mascotStyle") private var mascotStyle: RankMascotStyle = .nailong
-    @State private var position = DemoData.showsMascotDemo ? 0.0 : 1.0
-
-    private var dates: [Date] { history.map(\.date) }
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var range: RankHistoryRange = .all
+    @State private var selectedDate: Date?
 
     var body: some View {
-        let points = positions
-        let frame = frame(at: position, positions: points)
-        let tier = RankTier.tier(for: frame.score)
+        let timeline = RankHistoryTimeline(history: history, range: range)
+        let date = timeline.map { timeline in
+            timeline.date(at: timeline.offset(for: selectedDate ?? (DemoData.showsMascotDemo ? timeline.start : timeline.end)))
+        }
+        let score = timeline.flatMap { timeline in date.map { timeline.score(on: $0) } } ?? overall
+        let tier = RankTier.tier(for: score)
         VStack(alignment: .leading, spacing: 12) {
             heading
             Picker("化身系列", selection: $mascotStyle) {
@@ -383,58 +386,8 @@ private struct TrainingAvatarCard: View {
                 .background(Color(.tertiarySystemGroupedBackground).gradient)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            if let first = history.first, let last = history.last {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(frame.caption)
-                        .font(.subheadline.weight(.semibold))
-                        .accessibilityAddTraits(.updatesFrequently)
-                    Spacer(minLength: 4)
-                    if frame.score > 0 {
-                        Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(tier.color)
-                    } else {
-                        Text("待评分").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                if history.count > 1 {
-                    Slider(value: $position, in: 0...1) { editing in
-                        if !editing, let closest = points.min(by: { abs($0 - position) < abs($1 - position) }) {
-                            position = closest
-                        }
-                    }
-                    .accessibilityLabel("训练日期")
-                    .accessibilityValue(frame.caption)
-                    .accessibilityIdentifier("rankMascotTimeline")
-                    .accessibilityAdjustableAction { direction in
-                        switch direction {
-                        case .increment: position = points.first { $0 > position + 0.00001 } ?? 1
-                        case .decrement: position = points.last { $0 < position - 0.00001 } ?? 0
-                        @unknown default: break
-                        }
-                    }
-
-                    Canvas { context, size in
-                        for point in points {
-                            let x = 2 + (size.width - 4) * point
-                            let dot = CGRect(x: x - 1.5, y: 0, width: 3, height: 3)
-                            context.fill(Path(ellipseIn: dot), with: .color(.secondary.opacity(0.65)))
-                        }
-                    }
-                    .frame(height: 3)
-                    .accessibilityHidden(true)
-
-                    HStack {
-                        Text(first.date.shortString)
-                        Spacer()
-                        Text(last.date.shortString)
-                    }
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                } else {
-                    Text("记录更多训练后即可滑动回看。").font(.caption).foregroundStyle(.secondary)
-                }
+            if let timeline, let date {
+                historyControls(timeline, date: date, score: score, tier: tier)
             } else {
                 Text("发布训练后，这里会出现可以回看的训练日期。")
                     .font(.caption)
@@ -457,7 +410,6 @@ private struct TrainingAvatarCard: View {
             .buttonStyle(.bordered)
         }
         .card()
-        .onChange(of: dates) { _, _ in position = DemoData.showsMascotDemo ? 0 : 1 }
     }
 
     private var heading: some View {
@@ -475,34 +427,77 @@ private struct TrainingAvatarCard: View {
         }
     }
 
-    private var positions: [Double] {
-        guard history.count > 1, let start = history.first?.date, let end = history.last?.date else { return [1] }
-        let duration = end.timeIntervalSince(start)
-        return history.map { $0.date.timeIntervalSince(start) / duration }
+    private func historyControls(_ timeline: RankHistoryTimeline, date: Date, score: Int, tier: RankTier) -> some View {
+        let caption = date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("回看范围").font(.subheadline.weight(.semibold))
+                Spacer()
+                Picker("回看范围", selection: $range) {
+                    ForEach(RankHistoryRange.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("rankHistoryRange")
+            }
+            HStack(alignment: .firstTextBaseline) {
+                Text(caption).font(.subheadline.weight(.semibold))
+                Spacer()
+                if score > 0 {
+                    Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(tier.color)
+                } else {
+                    Text("待评分").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if timeline.daySpan > 0 {
+                Slider(value: Binding(
+                    get: { Double(timeline.offset(for: date)) },
+                    set: { selectedDate = timeline.date(at: Int($0.rounded())) }
+                ), in: 0...Double(timeline.daySpan), step: 1)
+                .accessibilityLabel("训练日期")
+                .accessibilityValue(caption)
+                .accessibilityIdentifier("rankMascotTimeline")
+
+                HStack {
+                    tick(timeline.start, timeline: timeline, alignment: .leading)
+                    Spacer()
+                    tick(timeline.end, timeline: timeline, alignment: .trailing)
+                }
+                .overlay {
+                    if timeline.daySpan >= 4, !dynamicTypeSize.isAccessibilitySize {
+                        let middle = timeline.daySpan / 2
+                        GeometryReader { geometry in
+                            tick(timeline.date(at: middle), timeline: timeline, alignment: .center)
+                                .position(x: geometry.size.width * CGFloat(middle) / CGFloat(timeline.daySpan),
+                                          y: geometry.size.height / 2)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .accessibilityHidden(true)
+            }
+            Text("\(timeline.daySpan + 1) 天")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            if !DemoData.showsMascotDemo {
+                Text(range == .all ? "从首次获得力量评分的训练日算起。没有新评分时，沿用此前的段位。" : "所选天数包含今天。没有新评分时，沿用此前的段位。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
-    private func frame(at position: Double, positions: [Double]) -> (score: Int, caption: String) {
-        func frame(for snapshot: MuscleRankSnapshot) -> (Int, String) {
-            let score = RankAggregator.overall(muscleScores: snapshot.scores)
-            let caption = snapshot.date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
-            return (score, caption)
+    private func tick(_ date: Date, timeline: RankHistoryTimeline, alignment: HorizontalAlignment) -> some View {
+        let style = Date.FormatStyle().month(.abbreviated).day().locale(AppLanguage.current.locale)
+        let crossesYears = !Calendar.current.isDate(timeline.start, equalTo: timeline.end, toGranularity: .year)
+        return VStack(alignment: alignment, spacing: 3) {
+            Rectangle().fill(.secondary.opacity(0.55)).frame(width: 1, height: 5)
+            Text(date.formatted(crossesYears ? style.year(.twoDigits) : style))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
-        guard let last = history.last else {
-            return (overall, "")
-        }
-        guard let rightIndex = positions.firstIndex(where: { $0 >= position }), rightIndex > 0 else {
-            return frame(for: position >= 1 ? last : history[0])
-        }
-        let right = history[rightIndex]
-        let rightPosition = positions[rightIndex]
-        if abs(rightPosition - position) < 0.00001 { return frame(for: right) }
-
-        let left = history[rightIndex - 1]
-        let leftPosition = positions[rightIndex - 1]
-        let fraction = (position - leftPosition) / (rightPosition - leftPosition)
-        let leftScore = Double(RankAggregator.overall(muscleScores: left.scores))
-        let rightScore = Double(RankAggregator.overall(muscleScores: right.scores))
-        let score = Int((leftScore + (rightScore - leftScore) * fraction).rounded())
-        return (score, "\(left.date.shortString) → \(right.date.shortString)")
     }
 }

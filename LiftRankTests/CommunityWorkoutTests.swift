@@ -3,6 +3,33 @@ import SwiftData
 @testable import LiftRank
 
 final class CommunityWorkoutTests: XCTestCase {
+    func testRankTimelineKeepsPriorScoreAndUsesCalendarDayOffsets() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let today = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 10)))
+        let first = try XCTUnwrap(calendar.date(byAdding: .day, value: -120, to: today))
+        let change = try XCTUnwrap(calendar.date(byAdding: .day, value: -3, to: today))
+        let snapshots = [
+            MuscleRankSnapshot(date: first, scores: [.chest: 250]),
+            MuscleRankSnapshot(date: change, scores: [.chest: 450]),
+        ]
+
+        let recent = try XCTUnwrap(RankHistoryTimeline(history: snapshots, range: .month, today: today, calendar: calendar))
+        XCTAssertEqual(recent.daySpan, 29)
+        XCTAssertEqual(recent.score(on: recent.start), 250)
+        XCTAssertEqual(recent.score(on: recent.date(at: 25)), 250)
+        XCTAssertEqual(recent.score(on: recent.date(at: 26)), 450)
+        XCTAssertEqual(recent.date(at: 29), today)
+        XCTAssertEqual(recent.offset(for: first), 0)
+        XCTAssertEqual(recent.offset(for: today), 29)
+
+        let all = try XCTUnwrap(RankHistoryTimeline(history: snapshots, range: .all, today: today, calendar: calendar))
+        XCTAssertEqual(all.start, first)
+        XCTAssertEqual(all.daySpan, 120)
+        let beforeFirstWorkout = try XCTUnwrap(RankHistoryTimeline(history: snapshots, range: .year, today: today, calendar: calendar))
+        XCTAssertEqual(beforeFirstWorkout.score(on: beforeFirstWorkout.start), 0)
+    }
+
     @MainActor private func container() throws -> ModelContainer {
         let schema = Schema([UserProfile.self, Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self,
                              DailyPlan.self, RewardEvent.self, QuestClaim.self, CardioSession.self, Friend.self])
