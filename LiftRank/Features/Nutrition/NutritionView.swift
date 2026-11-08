@@ -4,6 +4,7 @@ import SwiftData
 struct NutritionView: View {
     @Bindable var profile: UserProfile
     @Environment(\.modelContext) private var context
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Query(sort: \FoodEntry.date, order: .reverse) private var foods: [FoodEntry]
     @Query private var customMeals: [CustomMeal]
     @State private var mode = 0
@@ -43,7 +44,8 @@ struct NutritionView: View {
         return List {
             Section {
                 DatePicker("日期", selection: $day, displayedComponents: .date)
-                HStack(spacing: 16) {
+                let columnCount = dynamicTypeSize.isAccessibilitySize ? 2 : 4
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount), spacing: 16) {
                     MacroRing(title: L("热量"), value: kcal, target: t.kcal, unit: "kcal", color: .orange)
                     MacroRing(title: L("蛋白"), value: p, target: t.protein, unit: "g", color: .red)
                     MacroRing(title: L("脂肪"), value: f, target: t.fat, unit: "g", color: .yellow)
@@ -101,7 +103,7 @@ struct MacroRing: View {
                 Text(value.fmt(0)).font(.caption.bold().monospacedDigit())
             }.frame(width: 58, height: 58)
             Text(title).font(.caption2)
-            Text("/ \(target.fmt(0)) \(unit)").font(.system(size: 9)).foregroundStyle(.secondary)
+            Text("/ \(target.fmt(0)) \(unit)").font(.caption2).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity)
     }
 }

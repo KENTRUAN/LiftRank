@@ -5,6 +5,7 @@ import SwiftData
 @MainActor
 struct LiftRankApp: App {
     @StateObject private var store: StoreLoader
+    @StateObject private var gym = GymStore()
     @State private var languageSettings = LanguageSettings.shared
 
     init() {
@@ -38,6 +39,7 @@ struct LiftRankApp: App {
                     // Rebuild the whole interface in the selected language.
                     .id(languageSettings.language)
                     .environment(\.locale, languageSettings.language.locale)
+                    .environmentObject(gym)
             } else {
                 VStack(spacing: 16) {
                     Image(systemName: "exclamationmark.triangle")

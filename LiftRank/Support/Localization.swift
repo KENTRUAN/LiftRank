@@ -97,7 +97,8 @@ enum WorkoutLabels {
     private static let splits = ["全身 A", "全身 B", "全身 C", "上肢 A", "上肢 B", "下肢 A", "下肢 B",
                                  "推", "拉", "腿", "上肢", "下肢核心", "弱项补强"]
     private static let goals = ["力量", "增肌", "综合体能", "减脂"]
-    private static let stock = ["训练", "今日训练", "晨间训练", "午后训练", "夜间训练", "推力日", "拉力日", "腿部日", "推拉日（进行中）"]
+    private static let stock = ["训练", "今日训练", "晨间训练", "午后训练", "夜间训练", "推力日", "拉力日", "腿部日", "推拉日（进行中）", "Cardio workout"]
+        + TrainingActivity.allCases.map(\.name)
 
     private static let keys: [String: String] = {
         let bundles = AppLanguage.allCases.compactMap {
@@ -135,16 +136,32 @@ extension WorkoutTemplate {
 
 /// A picker for the interface language; the two options stay in their own scripts.
 struct LanguagePicker: View {
-    @State private var selection = AppLanguage.current
+    @State private var settings = LanguageSettings.shared
+
     var body: some View {
-        Picker(selection: $selection) {
-            ForEach(AppLanguage.allCases) { language in Text(verbatim: language.nativeName).tag(language) }
+        let current = settings.language
+        Menu {
+            ForEach(AppLanguage.allCases) { language in
+                Button {
+                    if language != current { AppLanguage.current = language }
+                } label: {
+                    if language == current {
+                        Label { Text(verbatim: language.nativeName) } icon: { Image(systemName: "checkmark") }
+                    } else {
+                        Text(verbatim: language.nativeName)
+                    }
+                }
+            }
         } label: {
-            Label("语言 / Language", systemImage: "globe")
+            HStack {
+                Label("语言 / Language", systemImage: "globe").foregroundStyle(.primary)
+                Spacer()
+                Text(verbatim: current.nativeName)
+                Image(systemName: "chevron.up.chevron.down").font(.caption2)
+            }
         }
-        .onChange(of: selection) { _, language in
-            guard language != AppLanguage.current else { return }
-            withAnimation { AppLanguage.current = language }
-        }
+        .accessibilityLabel("语言 / Language")
+        .accessibilityValue(current.nativeName)
+        .accessibilityIdentifier("appLanguageMenu")
     }
 }

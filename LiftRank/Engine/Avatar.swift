@@ -11,7 +11,6 @@ struct AvatarSpec: Equatable {
     var outfit = "tank"
     var outfitColor: Color = AvatarPalette.cloth["gray"]!
     var accessory = "none"
-    var accessoryColor: Color = .red
     var backdrop = "none"
 
     init() {}
@@ -34,7 +33,7 @@ struct AvatarSpec: Equatable {
         case .eyes: eyes = key
         case .outfit: outfit = key
         case .outfitColor: outfitColor = item.primaryColor
-        case .accessory: accessory = key; accessoryColor = item.primaryColor
+        case .accessory: accessory = key
         case .backdrop: backdrop = key
         default: break
         }
@@ -111,7 +110,7 @@ enum RankMascotStyle: String, CaseIterable {
     }
 
     func accessibilityLabel(for tier: RankTier) -> String {
-        let rank = AppLanguage.current.isEnglish ? tier.name : tier.nameZh
+        let rank = tier.displayName
         return self == .nailong ? L("%@ 奶龙", rank) : L("%@ 豆包", rank)
     }
 }
@@ -128,29 +127,36 @@ struct RankAccessoryLayout {
     let scale: CGFloat
 
     init(base: CGSize, scale requestedScale: CGFloat, rotation: Double, center requestedCenter: CGPoint,
-         viewport: CGSize, editing: Bool) {
+         viewport: CGSize, cornerRadius: CGFloat = 0) {
         let angle = CGFloat(rotation) * .pi / 180
         let cosine = abs(cos(angle))
         let sine = abs(sin(angle))
         let width = base.width * cosine + base.height * sine
         let height = base.width * sine + base.height * cosine
-        let inset: CGFloat = 10
-        let handleWidth: CGFloat = editing ? 38 : 0
-        let availableWidth = max(0, viewport.width - 2 * inset - handleWidth)
-        let availableHeight = max(0, viewport.height - 2 * inset)
-        scale = min(requestedScale, availableWidth / max(1, width), availableHeight / max(1, height))
+        scale = min(requestedScale, viewport.width / max(1, width), viewport.height / max(1, height))
         bounds = CGSize(width: width * scale, height: height * scale)
 
-        let horizontalExtent = max(editing ? 22 : 0, bounds.width / 2)
-        let left = min(viewport.width / 2, horizontalExtent + inset)
-        let right = min(viewport.width - left, horizontalExtent + handleWidth + inset)
-        let vertical = min(viewport.height / 2, max(editing ? 48 : 0, bounds.height / 2 + inset))
-        center = CGPoint(x: min(viewport.width - right, max(left, requestedCenter.x)),
-                         y: min(viewport.height - vertical, max(vertical, requestedCenter.y)))
+        // Only the rotated artwork limits its travel. The editor controls have their own position.
+        let halfWidth = bounds.width / 2
+        let halfHeight = bounds.height / 2
+        let x = min(viewport.width - halfWidth, max(halfWidth, requestedCenter.x))
+        let y = min(viewport.height - halfHeight, max(halfHeight, requestedCenter.y))
+        let radius = min(cornerRadius, (viewport.width - bounds.width) / 2, (viewport.height - bounds.height) / 2)
+        let edgeX = min(x, viewport.width - x) - halfWidth
+        let edgeY = min(y, viewport.height - y) - halfHeight
+        let dx = max(0, radius - edgeX)
+        let dy = max(0, radius - edgeY)
+        let distance = hypot(dx, dy)
+        // Follow the card's rounded corner so the item stays visible at the edge.
+        let correction = distance > radius && distance > 0 ? 1 - radius / distance : 0
+        center = CGPoint(x: x + (x < viewport.width / 2 ? dx : -dx) * correction,
+                         y: y + (y < viewport.height / 2 ? dy : -dy) * correction)
     }
 }
 
 struct RankMascotView: View {
+    static let editorCornerRadius: CGFloat = 16
+
     private enum Edit { case move, rotate, resize }
 
     let tier: RankTier
@@ -201,6 +207,9 @@ struct RankMascotView: View {
                     if allowsAccessoryPlacement {
                         editor(placement, layout: layout, saved: saved, side: side, in: size)
                             .position(layout.center)
+                        if selected {
+                            controls(layout: layout, saved: saved, side: side, in: size)
+                        }
                     } else {
                         transformedAccessory(placement, scale: layout.scale, side: side)
                             .position(layout.center)
@@ -216,11 +225,16 @@ struct RankMascotView: View {
     private func editor(_ placement: RankAccessoryPlacement, layout: RankAccessoryLayout, saved: RankAccessoryPlacement,
                         side: CGFloat, in size: CGSize) -> some View {
         let bounds = layout.bounds
+        let hitSize = CGSize(width: max(44, bounds.width), height: max(44, bounds.height))
+        let card = CGRect(x: hitSize.width / 2 - layout.center.x, y: hitSize.height / 2 - layout.center.y,
+                          width: size.width, height: size.height)
+        let hitArea = CGRect(origin: .zero, size: hitSize).intersection(card)
         return transformedAccessory(placement, scale: layout.scale, side: side)
-            .frame(width: max(44, bounds.width), height: max(44, bounds.height))
-            .contentShape(Rectangle())
+            .frame(width: hitSize.width, height: hitSize.height)
+            .contentShape(Path(hitArea))
             .onTapGesture { selected = true }
-            .highPriorityGesture(editGesture(.move, saved: saved, side: side, in: size), including: selected ? .all : .subviews)
+            .highPriorityGesture(editGesture(.move, saved: saved, side: side, in: size))
+            .accessibilityIdentifier("rankAccessory")
             .accessibilityAction { selected = true }
             .accessibilityAction(named: "重置配饰") { save(RankAccessoryPlacement()) }
             .overlay {
@@ -232,49 +246,56 @@ struct RankMascotView: View {
                         .accessibilityHidden(true)
                 }
             }
-            .overlay(alignment: .trailing) {
-                if selected {
-                    VStack(spacing: 4) {
-                        Button {
-                            var rotated = saved
-                            rotated.rotation += 15
-                            save(rotated)
-                        } label: {
-                            handle("arrow.clockwise")
-                        }
-                        .accessibilityLabel("旋转配饰")
-                        .highPriorityGesture(editGesture(.rotate, saved: saved, side: side, in: size))
-
-                        handle("arrow.up.left.and.arrow.down.right")
-                            .accessibilityLabel("调整配饰大小")
-                            .accessibilityValue("\(Int(layout.scale * 100))%")
-                            .accessibilityAdjustableAction { direction in
-                                var resized = saved
-                                resized.scale = layout.scale
-                                switch direction {
-                                case .increment: resized.scale += 0.1
-                                case .decrement: resized.scale -= 0.1
-                                @unknown default: return
-                                }
-                                resized.scale = min(2, max(0.5, resized.scale))
-                                save(resized)
-                            }
-                            .highPriorityGesture(editGesture(.resize, saved: saved, side: side, in: size))
-                    }
-                    .buttonStyle(.plain)
-                    .offset(x: 20)
-                }
-            }
     }
 
-    private func handle(_ symbol: String) -> some View {
+    private func controls(layout: RankAccessoryLayout, saved: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> some View {
+        let handleSize: CGFloat = 36
+        let spacing: CGFloat = 4
+        let reach = max(22, layout.bounds.width / 2) + handleSize / 2 + 6
+        let right = layout.center.x + reach
+        let preferredX = right <= size.width - handleSize / 2 ? right : layout.center.x - reach
+        let x = min(size.width - handleSize / 2, max(handleSize / 2, preferredX))
+        let halfHeight = handleSize + spacing / 2
+        let y = min(size.height - halfHeight, max(halfHeight, layout.center.y))
+
+        return VStack(spacing: spacing) {
+            Button {
+                var rotated = saved
+                rotated.rotation += 15
+                save(rotated)
+            } label: {
+                handle("arrow.clockwise", size: handleSize)
+            }
+            .accessibilityLabel("旋转配饰")
+            .highPriorityGesture(editGesture(.rotate, saved: saved, side: side, in: size))
+
+            handle("arrow.up.left.and.arrow.down.right", size: handleSize)
+                .accessibilityLabel("调整配饰大小")
+                .accessibilityValue("\(Int(layout.scale * 100))%")
+                .accessibilityAdjustableAction { direction in
+                    var resized = saved
+                    switch direction {
+                    case .increment: resized.scale = layout.scale + 0.1
+                    case .decrement: resized.scale = layout.scale - 0.1
+                    @unknown default: return
+                    }
+                    resized.scale = min(2, max(0.5, resized.scale))
+                    save(resized)
+                }
+                .highPriorityGesture(editGesture(.resize, saved: saved, side: side, in: size))
+        }
+        .buttonStyle(.plain)
+        .position(x: x, y: y)
+    }
+
+    private func handle(_ symbol: String, size: CGFloat) -> some View {
         Image(systemName: symbol)
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Color.accentColor)
             .frame(width: 28, height: 28)
             .background(.regularMaterial, in: Circle())
             .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 1))
-            .frame(width: 36, height: 36)
+            .frame(width: size, height: size)
             .contentShape(Rectangle())
     }
 
@@ -292,6 +313,7 @@ struct RankMascotView: View {
             }
             .onEnded { value in
                 save(editedPlacement(edit, drag: value, saved: saved, layout: layout, side: side, in: size))
+                if edit == .move { selected = true }
             }
     }
 
@@ -322,16 +344,19 @@ struct RankMascotView: View {
     }
 
     private func accessoryAnchor(side: CGFloat, in size: CGSize) -> CGPoint {
-        CGPoint(x: size.width / 2, y: (size.height - side) / 2 + side * accessoryHeight)
+        let fit = accessoryFit
+        return CGPoint(x: size.width / 2 + side * (fit.xOffset ?? 0),
+                       y: (size.height - side) / 2 + side * fit.y)
     }
 
     private func accessoryLayout(_ placement: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> RankAccessoryLayout {
         let anchor = accessoryAnchor(side: side, in: size)
+        let fit = accessoryFit
         let center = CGPoint(x: anchor.x + placement.offset.width * side,
                              y: anchor.y + placement.offset.height * side)
-        return RankAccessoryLayout(base: CGSize(width: side * accessoryWidth, height: side * accessoryCanvasHeight),
+        return RankAccessoryLayout(base: CGSize(width: side * fit.width, height: side * fit.height),
                                    scale: placement.scale, rotation: placement.rotation, center: center,
-                                   viewport: size, editing: selected)
+                                   viewport: size, cornerRadius: allowsAccessoryPlacement ? Self.editorCornerRadius : 0)
     }
 
     private func save(_ placement: RankAccessoryPlacement) {
@@ -343,97 +368,54 @@ struct RankMascotView: View {
     }
 
     private func accessoryLayer(side: CGFloat) -> some View {
-        let color = spec.accessoryColor
+        let fit = accessoryFit
         return Canvas { context, size in
-            let x = size.width * 0.5
-            let center = CGPoint(x: x, y: size.height * 0.5)
-            func band(_ point: CGPoint, width: CGFloat, height: CGFloat, color: Color) {
-                let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
-                context.fill(Path(roundedRect: rect, cornerRadius: height * 0.35), with: .color(color))
-            }
-            func symbol(_ name: String, width: CGFloat, color: Color) {
-                var image = context.resolve(Image(systemName: name))
-                guard image.size.width > 0, image.size.height > 0 else { return }
-                image.shading = .color(color)
-                let scale = min(width / image.size.width, size.height * 0.9 / image.size.height)
-                let bounds = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-                context.draw(image, in: CGRect(x: center.x - bounds.width / 2, y: center.y - bounds.height / 2,
-                                               width: bounds.width, height: bounds.height))
-            }
-            switch spec.accessory {
-            case "headband":
-                band(center, width: side * (style == .doubao ? 0.15 : 0.18), height: side * 0.027, color: color)
-            case "wristbands":
-                let distance = size.width / 2 - side * 0.035
-                for direction in [-1.0, 1.0] {
-                    band(CGPoint(x: x + direction * distance, y: center.y), width: side * 0.07, height: side * 0.023, color: color)
-                }
-            case "glasses": symbol("eyeglasses", width: side * glassesWidth, color: AvatarPalette.ink)
-            case "sunglasses": symbol("sunglasses.fill", width: side * glassesWidth, color: AvatarPalette.ink)
-            case "cap": symbol("baseball.cap.fill", width: side * (style == .doubao ? 0.18 : 0.20), color: color)
-            case "beard": symbol("mustache.fill", width: side * 0.11, color: spec.hairColor)
-            case "crown": symbol("crown.fill", width: side * 0.13, color: AvatarPalette.gold)
-            case "halo":
-                let rect = CGRect(x: x - side * 0.08, y: center.y - side * 0.016, width: side * 0.16, height: side * 0.032)
-                context.stroke(Path(ellipseIn: rect), with: .color(AvatarPalette.gold), lineWidth: side * 0.012)
-            default: break
-            }
+            let sprite = context.resolve(Image("accessory_\(spec.accessory)"))
+            drawCosmetic(sprite, in: CGRect(origin: .zero, size: size), using: context)
         }
-        .frame(width: side * accessoryWidth, height: side * accessoryCanvasHeight)
+        .frame(width: side * fit.width, height: side * fit.height)
         .contentShape(Rectangle())
         .accessibilityLabel(CosmeticCatalog.item("accessory.\(spec.accessory)")?.name ?? CosmeticSlot.accessory.name)
     }
 
-    private var accessoryWidth: CGFloat {
+    // Measurements are fractions of the full square portrait, including its transparent margins.
+    private var accessoryFit: (width: CGFloat, height: CGFloat, y: CGFloat, xOffset: CGFloat?) {
+        let doubao = style == .doubao
+        let eyeLine: CGFloat = doubao ? (tier >= .titan ? 0.173 : 0.192)
+            : (tier <= .bronze ? 0.176 : tier >= .titan ? 0.111 : 0.137)
+        let eyewearWidth: CGFloat = doubao ? 0.148 : (tier <= .bronze || tier >= .titan ? 0.181 : 0.205)
         switch spec.accessory {
-        case "glasses", "sunglasses": return glassesWidth + 0.02
-        case "headband": return style == .doubao ? 0.17 : 0.20
-        case "cap": return 0.22
-        case "beard": return 0.13
-        case "crown": return 0.15
-        case "halo": return 0.18
-        case "wristbands": break
-        default: return 0.18
-        }
-        if style == .doubao {
-            switch tier {
-            case .wood, .bronze, .silver, .gold, .platinum: return 0.27
-            case .diamond: return 0.30
-            case .champion, .titan: return 0.34
-            case .olympian: return 0.38
+        case "glasses", "sunglasses", "visor": return (eyewearWidth, 0.081, eyeLine, nil)
+        case "headband": return (doubao ? 0.172 : 0.195, 0.042, doubao ? 0.134 : 0.106, nil)
+        case "cap": return (doubao ? 0.182 : 0.205, 0.175, 0.084, nil)
+        case "beard": return (0.145, 0.08, doubao ? 0.253 : (tier <= .bronze ? 0.26 : 0.229), nil)
+        case "crown": return (0.153, 0.085, 0.072, nil)
+        case "halo": return (0.174, 0.045, 0.048, nil)
+        case "headphones": return (doubao ? 0.224 : 0.246, 0.223, 0.154, nil)
+        case "medal": return (0.105, 0.126, doubao ? 0.411 : 0.351, nil)
+        case "antlers": return (0.208, 0.170, 0.093, nil)
+        case "wristbands":
+            if doubao {
+                let xOffset: CGFloat = tier < .diamond ? -0.102 : tier == .diamond ? -0.118 : tier == .olympian ? -0.157 : -0.132
+                return (tier < .champion ? 0.040 : 0.055, 0.038, 0.565, xOffset)
             }
-        }
-        return tier < .champion ? 0.50 : 0.55
-    }
-
-    private var accessoryCanvasHeight: CGFloat {
-        switch spec.accessory {
-        case "headband", "wristbands", "halo": 0.06
-        default: 0.105
+            return (0.060, 0.045, tier < .platinum ? 0.596 : 0.579, tier >= .titan ? -0.237 : -0.209)
+        default: return (0.18, 0.10, 0.1, nil)
         }
     }
 
-    private var glassesWidth: CGFloat { style == .doubao ? 0.13 : 0.18 }
+}
 
-    private var accessoryHeight: CGFloat {
-        if style == .doubao {
-            switch spec.accessory {
-            case "headband": return 0.14
-            case "glasses", "sunglasses": return tier >= .champion ? 0.17 : 0.195
-            case "wristbands": return 0.55
-            default: break
-            }
-        }
-        return switch spec.accessory {
-        case "headband": 0.11
-        case "glasses", "sunglasses": tier >= .titan ? 0.11 : (tier <= .bronze ? 0.17 : 0.14)
-        case "beard": 0.25
-        case "cap", "crown": 0.07
-        case "halo": 0.045
-        case "wristbands": 0.59
-        default: 0.05
-        }
-    }
+/// Preserves the raster's aspect ratio in both fitted overlays and clipped backdrops.
+private func drawCosmetic(_ image: GraphicsContext.ResolvedImage, in bounds: CGRect,
+                          using context: GraphicsContext, fill: Bool = false) {
+    guard image.size.width > 0, image.size.height > 0 else { return }
+    let horizontal = bounds.width / image.size.width
+    let vertical = bounds.height / image.size.height
+    let scale = fill ? max(horizontal, vertical) : min(horizontal, vertical)
+    let width = image.size.width * scale
+    let height = image.size.height * scale
+    context.draw(image, in: CGRect(x: bounds.midX - width / 2, y: bounds.midY - height / 2, width: width, height: height))
 }
 
 // MARK: - Painter
@@ -494,34 +476,12 @@ struct AvatarPainter {
     // MARK: Layers
 
     func drawBackdrop(_ ctx: inout GraphicsContext, size: CGSize) {
+        guard spec.backdrop != "none" else { return }
         let rect = CGRect(origin: .zero, size: size)
-        let path = Path(roundedRect: rect, cornerRadius: min(size.width, size.height) * 0.12)
-        let colors: [Color]
-        switch spec.backdrop {
-        case "gym": colors = [Color(red: 0.30, green: 0.32, blue: 0.38), Color(red: 0.14, green: 0.15, blue: 0.19)]
-        case "sunset": colors = [Color(red: 0.98, green: 0.62, blue: 0.30), Color(red: 0.55, green: 0.25, blue: 0.55)]
-        case "dojo": colors = [Color(red: 0.93, green: 0.85, blue: 0.70), Color(red: 0.72, green: 0.45, blue: 0.30)]
-        case "galaxy": colors = [Color(red: 0.08, green: 0.06, blue: 0.22), Color(red: 0.30, green: 0.10, blue: 0.45)]
-        default: return
-        }
-        ctx.fill(path, with: .linearGradient(Gradient(colors: colors), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
-        switch spec.backdrop {
-        case "galaxy":
-            var seed: UInt32 = 7
-            for _ in 0..<28 {
-                seed = seed &* 1_103_515_245 &+ 12345
-                let x = Double((seed >> 8) % 1000) / 1000 * size.width
-                seed = seed &* 1_103_515_245 &+ 12345
-                let y = Double((seed >> 8) % 1000) / 1000 * size.height
-                let r = Double((seed >> 4) % 3) * 0.5 + 0.8
-                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r, height: r)), with: .color(.white.opacity(0.7)))
-            }
-        case "dojo":
-            ctx.fill(Path(CGRect(x: 0, y: size.height * 0.78, width: size.width, height: size.height * 0.06)), with: .color(Color(red: 0.55, green: 0.15, blue: 0.12).opacity(0.6)))
-        case "sunset":
-            ctx.fill(Path(ellipseIn: CGRect(x: size.width * 0.6, y: size.height * 0.08, width: size.width * 0.22, height: size.width * 0.22)), with: .color(.yellow.opacity(0.75)))
-        default: break
-        }
+        var background = ctx
+        background.clip(to: Path(roundedRect: rect, cornerRadius: min(size.width, size.height) * 0.12))
+        let image = background.resolve(Image("backdrop_\(spec.backdrop)"))
+        drawCosmetic(image, in: rect, using: background, fill: true)
     }
 
     private func hairBack(_ ctx: inout GraphicsContext) {
@@ -734,39 +694,26 @@ struct AvatarPainter {
         default: mouth.move(to: P(x: 45, y: 45)); mouth.addQuadCurve(to: P(x: 55, y: 45), control: P(x: 50, y: 50))
         }
         ctx.stroke(mouth, with: .color(ink), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-        if spec.accessory == "beard" { fill(&ctx, rounded(36, 43, 28, 12, 6), spec.hairColor) }
     }
 
     private func accessory(_ ctx: inout GraphicsContext) {
-        let c = spec.accessoryColor
+        let bounds: CGRect
         switch spec.accessory {
-        case "headband": fill(&ctx, rounded(26, 23, 48, 5, 1.5), c, outlined: false)
-        case "cap":
-            fill(&ctx, ellipse(25, 2, 50, 26), c)
-            if front { fill(&ctx, rounded(26, 23, 48, 5, 2), c.darkened(0.2)) }
-            fill(&ctx, Path(ellipseIn: CGRect(x: 48, y: 0, width: 4, height: 4)), c.darkened(0.3), outlined: false)
-        case "glasses" where front:
-            var g = Path()
-            g.addEllipse(in: CGRect(x: 34, y: 28.5, width: 14, height: 13)); g.addEllipse(in: CGRect(x: 52, y: 28.5, width: 14, height: 13))
-            g.move(to: P(x: 48, y: 35)); g.addLine(to: P(x: 52, y: 35))
-            ctx.stroke(g, with: .color(AvatarPalette.ink), lineWidth: 1.4)
-        case "sunglasses" where front:
-            fill(&ctx, rounded(33, 30, 15, 9, 3), AvatarPalette.ink, outlined: false); fill(&ctx, rounded(52, 30, 15, 9, 3), AvatarPalette.ink, outlined: false)
-            var b = Path(); b.move(to: P(x: 48, y: 33)); b.addLine(to: P(x: 52, y: 33)); ctx.stroke(b, with: .color(AvatarPalette.ink), lineWidth: 1.6)
+        case "headband": bounds = CGRect(x: 25, y: 17, width: 50, height: 12)
+        case "cap": bounds = CGRect(x: 24, y: 0, width: 52, height: 29)
+        case "glasses" where front, "sunglasses" where front, "visor" where front:
+            bounds = CGRect(x: 30, y: 26, width: 40, height: 17)
+        case "beard" where front: bounds = CGRect(x: 34, y: 41, width: 32, height: 18)
         case "wristbands":
-            for side in [false, true] {
-                let p = m(P(x: 16, y: 113), side)
-                ctx.stroke(Path(ellipseIn: CGRect(x: p.x - 5.5, y: p.y - 5.5, width: 11, height: 11)), with: .color(c), lineWidth: 3)
-            }
-        case "crown":
-            fill(&ctx, smooth([(34, 12), (34, -2), (42, 5), (50, -8), (58, 5), (66, -2), (66, 12)]), AvatarPalette.gold)
-            for (x, col) in [(42.0, Color.red), (50.0, Color.blue), (58.0, Color.green)] {
-                ctx.fill(Path(ellipseIn: CGRect(x: x - 1.6, y: 5, width: 3.2, height: 3.2)), with: .color(col))
-            }
-        case "halo":
-            ctx.stroke(ellipse(33, -10, 34, 10), with: .color(AvatarPalette.gold), lineWidth: 2.2)
-        default: break
+            bounds = CGRect(x: front ? 10 : 78, y: 107, width: 12, height: 9)
+        case "crown": bounds = CGRect(x: 29, y: -10, width: 42, height: 24)
+        case "halo": bounds = CGRect(x: 29, y: -12, width: 42, height: 12)
+        case "headphones": bounds = CGRect(x: 22, y: 2, width: 56, height: 48)
+        case "medal" where front: bounds = CGRect(x: 36, y: 55, width: 28, height: 30)
+        case "antlers": bounds = CGRect(x: 23, y: -12, width: 54, height: 28)
+        default: return
         }
+        drawCosmetic(ctx.resolve(Image("accessory_\(spec.accessory)")), in: bounds, using: ctx)
     }
 
     // MARK: Primitives

@@ -27,7 +27,7 @@ struct RootTabView: View {
     @Query private var plans: [DailyPlan]
     @Query private var cardio: [CardioSession]
     @State private var app = AppState.shared
-    @StateObject private var gym = GymStore()
+    @EnvironmentObject private var gym: GymStore
 
     var body: some View {
         @Bindable var app = app
@@ -46,7 +46,6 @@ struct RootTabView: View {
         }
         .tint(profile.accentColor)
         .environment(app)
-        .environmentObject(gym)
         .toast($app.toast)
         .sheet(isPresented: $app.showRewards) { RewardsView(profile: profile) }
         .onAppear {

@@ -68,7 +68,7 @@ struct Cosmetic: Identifiable, Hashable {
     var name: String { L(nameKey) }
     var detail: String {
         if !detailKey.isEmpty { return L(detailKey) }
-        if let requiredTier { return L("达到 %@ 后可购买", requiredTier.name) }
+        if let requiredTier { return L("达到 %@ 后可购买", requiredTier.displayName) }
         return price == 0 ? L("免费") : L("形象部件")
     }
 
@@ -152,11 +152,19 @@ enum CosmeticCatalog {
             item(.accessory, "beard", "胡子", "", 50), item(.accessory, "glasses", "眼镜", "", 60), item(.accessory, "cap", "棒球帽", "", 70, color: Color(red: 0.2, green: 0.3, blue: 0.6)),
             item(.accessory, "sunglasses", "墨镜", "", 100, .gold), item(.accessory, "crown", "王冠", "", 400, .titan, color: AvatarPalette.gold),
             item(.accessory, "halo", "光环", "", 600, .olympian, color: AvatarPalette.gold),
+            item(.accessory, "headphones", "霓虹耳机", "", 90, color: .cyan),
+            item(.accessory, "medal", "闪电奖牌", "", 75, color: AvatarPalette.gold),
+            item(.accessory, "visor", "脉冲护目镜", "", 130, color: .teal),
+            item(.accessory, "antlers", "琥珀鹿角", "", 105, color: .orange),
         ]
         items += [
             item(.backdrop, "none", "无"), item(.backdrop, "gym", "健身房", "", 80, color: Color(red: 0.25, green: 0.27, blue: 0.33)),
             item(.backdrop, "sunset", "夕阳", "", 120, color: .orange), item(.backdrop, "dojo", "道场", "", 150, .platinum, color: Color(red: 0.8, green: 0.6, blue: 0.4)),
             item(.backdrop, "galaxy", "星空", "", 350, .diamond, color: Color(red: 0.2, green: 0.1, blue: 0.4)),
+            item(.backdrop, "rooftop", "霓虹天台", "", 150, color: .purple),
+            item(.backdrop, "alpine", "极光雪山", "", 135, color: .mint),
+            item(.backdrop, "arcade", "复古街机厅", "", 110, color: .pink),
+            item(.backdrop, "aquarium", "深海观景台", "", 170, color: .teal),
         ]
         return items
     }()
@@ -167,6 +175,7 @@ enum CosmeticCatalog {
 }
 
 extension UserProfile {
+    // Both rank mascot styles share this inventory and equipped items. Their saved placements are separate.
     func owns(_ cosmetic: Cosmetic) -> Bool { cosmetic.price == 0 || ownedCosmetics.contains(cosmetic.id) }
 
     func equipped(_ slot: CosmeticSlot) -> Cosmetic {

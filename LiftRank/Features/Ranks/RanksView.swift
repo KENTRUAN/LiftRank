@@ -6,6 +6,7 @@ struct RanksView: View {
     @Query private var workouts: [Workout]
     @Query private var exercises: [Exercise]
     @State private var front = true
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         let bests = RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)
@@ -21,7 +22,10 @@ struct RanksView: View {
                     if DemoData.showsMascotDemo { trainingAvatar }
 
                     VStack(spacing: 12) {
-                        HStack(spacing: 20) {
+                        let layout = dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                            : AnyLayout(HStackLayout(spacing: 20))
+                        layout {
                             ScoreGauge(score: overall, size: 130)
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("总体力量评分 GSR").font(.caption).foregroundStyle(.secondary)
@@ -118,7 +122,7 @@ struct TierLegend: View {
                 ForEach(RankTier.allCases) { t in
                     HStack(spacing: 4) {
                         Circle().fill(t.color).frame(width: 8, height: 8)
-                        Text("\(t.name) \(t.minScore)+").font(.caption2)
+                        Text("\(t.displayName) \(t.minScore)+").font(.caption2)
                     }
                 }
             }
@@ -385,7 +389,7 @@ private struct TrainingAvatarCard: View {
                 .frame(height: 230)
                 .frame(maxWidth: .infinity)
                 .background(Color(.tertiarySystemGroupedBackground).gradient)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: RankMascotView.editorCornerRadius))
 
             if let timeline, let date {
                 historyControls(timeline, date: date)
@@ -468,7 +472,7 @@ private struct TrainingAvatarCard: View {
     }
 
     private func rankLabel(_ tier: RankTier) -> some View {
-        Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
+        Label(tier.displayName, systemImage: tier.icon)
     }
 
     private func historyControls(_ timeline: RankHistoryTimeline, date: Date) -> some View {

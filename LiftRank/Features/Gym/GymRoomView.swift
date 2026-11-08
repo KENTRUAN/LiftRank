@@ -78,7 +78,7 @@ struct GymRoomView: View {
         roomContent
             .accessibilityIdentifier("gymRoomScroll")
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(gym.name).navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(gym.isDemo ? L("Demo Gym") : gym.isLocal == true ? L("Private workout") : gym.name).navigationBarTitleDisplayMode(.inline)
             .toolbar { roomToolbar }
             .safeAreaInset(edge: .top, spacing: 0) { socialBanner }
             .safeAreaInset(edge: .bottom, spacing: 0) { workoutControls }

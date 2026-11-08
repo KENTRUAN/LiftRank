@@ -30,6 +30,42 @@ final class CommunityWorkoutTests: XCTestCase {
         XCTAssertEqual(beforeFirstWorkout.score(on: beforeFirstWorkout.start), 0)
     }
 
+    func testAccessoryTravelReachesAllCardEdgesAtItsRotatedSize() {
+        let viewport = CGSize(width: 350, height: 230)
+        let base = CGSize(width: 80, height: 24)
+        for x in [CGFloat(0), viewport.width] {
+            for y in [CGFloat(0), viewport.height] {
+                let layout = RankAccessoryLayout(base: base, scale: 1.5, rotation: 90,
+                                                 center: CGPoint(x: x, y: y), viewport: viewport)
+                XCTAssertEqual(layout.scale, 1.5)
+                XCTAssertEqual(layout.bounds.width, 36, accuracy: 0.001)
+                XCTAssertEqual(layout.bounds.height, 120, accuracy: 0.001)
+                XCTAssertEqual(abs(layout.center.x - x), layout.bounds.width / 2, accuracy: 0.001)
+                XCTAssertEqual(abs(layout.center.y - y), layout.bounds.height / 2, accuracy: 0.001)
+            }
+        }
+
+        let radius: CGFloat = 16
+        let corner = RankAccessoryLayout(base: base, scale: 1, rotation: 0,
+                                         center: .zero, viewport: viewport, cornerRadius: radius)
+        let cornerInset = radius * (1 - 1 / sqrt(2.0))
+        XCTAssertEqual(corner.center.x, corner.bounds.width / 2 + cornerInset, accuracy: 0.001)
+        XCTAssertEqual(corner.center.y, corner.bounds.height / 2 + cornerInset, accuracy: 0.001)
+    }
+
+    func testBodyAnalysisDoesNotCountTimedCardioAsStrength() {
+        let strength = Workout(title: "strength-sentinel", bodyweightKg: 75)
+        let running = Workout(title: "running-sentinel", bodyweightKg: 75)
+        running.activity = .running
+        strength.isPublished = true
+        running.isPublished = true
+        let effort = CardioSession(date: Date(), type: .running, durationMinutes: 20)
+        let summary = FitnessDataSummary.build(profile: UserProfile(), workouts: [strength, running],
+                                               exercises: [], cardio: [effort], measurements: [], foods: [])
+        XCTAssertTrue(summary.contains("strength-sentinel"))
+        XCTAssertFalse(summary.contains("running-sentinel"))
+    }
+
     @MainActor private func container() throws -> ModelContainer {
         let schema = Schema([UserProfile.self, Exercise.self, Workout.self, WorkoutExercise.self, WorkoutSet.self,
                              DailyPlan.self, RewardEvent.self, QuestClaim.self, CardioSession.self, Friend.self])
