@@ -10,10 +10,10 @@ extension XCUIApplication {
 
 /// Offline session/navigation checks; no community backend or Watch is required.
 final class WorkoutFlowRehearsal: XCTestCase {
-    private func launch() -> XCUIApplication {
+    private func launch(language: String = "en") -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-appLanguage", "en"]
+        app.launchArguments = ["-appLanguage", language]
         app.launchEnvironment["LIFTRANK_DEMO"] = "1"
         app.launchEnvironment["LIFTRANK_SKIP_HEALTH"] = "1"
         app.launch()
@@ -40,6 +40,21 @@ final class WorkoutFlowRehearsal: XCTestCase {
         if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 3) { app.buttons["keepWorkoutBlank"].tap() }
         XCTAssertTrue(leave.waitForExistence(timeout: 10)); leave.tap()
         app.buttons["Save workout & leave"].tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+    }
+
+    func testChineseLeavePromptCanKeepTrainingAndDiscard() {
+        let app = launch(language: "zh-Hans")
+        app.buttons["openSocialGym"].tap()
+        let start = app.buttons["startPrivateWorkout"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15)); start.tap()
+        if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 3) { app.buttons["keepWorkoutBlank"].tap() }
+        let leave = app.buttons["leaveGym"]
+        XCTAssertTrue(leave.waitForExistence(timeout: 10)); leave.tap()
+        XCTAssertTrue(app.buttons["保存训练并离开"].waitForExistence(timeout: 5))
+        app.buttons["继续训练"].tap()
+        XCTAssertTrue(leave.waitForExistence(timeout: 5)); leave.tap()
+        app.buttons["放弃训练并离开"].tap()
         XCTAssertTrue(start.waitForExistence(timeout: 10))
     }
 
