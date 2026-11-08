@@ -2,7 +2,7 @@ import SpriteKit
 import SwiftUI
 
 @MainActor
-final class GymScene: SKScene, ObservableObject {
+final class GymScene: SKScene, ObservableObject, UIGestureRecognizerDelegate {
     static let roomSize = CGSize(width: 780, height: 520)
     private static let floorOrigin = CGPoint(x: 360, y: 421)
     var onMove: ((Double, Double) -> Void)?
@@ -19,6 +19,7 @@ final class GymScene: SKScene, ObservableObject {
     private var trainer: SKNode?
     private let world = SKNode()
     private weak var zoomGesture: UIPinchGestureRecognizer?
+    private weak var panGesture: UIPanGestureRecognizer?
     private var zoomAnchor = CGPoint.zero
     private var startingZoom: CGFloat = 1
 
@@ -43,13 +44,44 @@ final class GymScene: SKScene, ObservableObject {
         view.isMultipleTouchEnabled = true
         guard zoomGesture == nil else { return }
         let pinch = UIPinchGestureRecognizer(target: self, action: #selector(zoomRoom(_:)))
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(panRoom(_:)))
+        pan.maximumNumberOfTouches = 1
+        pan.delegate = self
         view.addGestureRecognizer(pinch)
+        view.addGestureRecognizer(pan)
         zoomGesture = pinch
+        panGesture = pan
     }
 
     override func willMove(from view: SKView) {
         if let zoomGesture { view.removeGestureRecognizer(zoomGesture) }
+        if let panGesture { view.removeGestureRecognizer(panGesture) }
         zoomGesture = nil
+        panGesture = nil
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        gestureRecognizer !== panGesture || world.xScale > 1
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+        // A drag on the zoomed map takes priority over the surrounding page's scroll.
+        gestureRecognizer === panGesture && (other.view as? UIScrollView)?.panGestureRecognizer === other
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        gestureRecognizer === panGesture && other === zoomGesture
+    }
+
+    @objc private func panRoom(_ pan: UIPanGestureRecognizer) {
+        guard let view = pan.view, pan.state == .began || pan.state == .changed else { return }
+        let translation = pan.translation(in: view)
+        pan.setTranslation(.zero, in: view)
+        guard pan.numberOfTouches == 1, zoomGesture?.state != .began, zoomGesture?.state != .changed else { return }
+        dragged = true
+        let end = convertPoint(fromView: translation)
+        let start = convertPoint(fromView: .zero)
+        moveWorld(to: CGPoint(x: world.position.x + end.x - start.x, y: world.position.y + end.y - start.y))
     }
 
     @objc private func zoomRoom(_ pinch: UIPinchGestureRecognizer) {
@@ -65,13 +97,18 @@ final class GymScene: SKScene, ObservableObject {
             let scale = min(max(startingZoom * pinch.scale, 1), 2.4)
             world.setScale(scale)
             // Hold the same point of the floor between the fingers while scaling or panning.
-            world.position = CGPoint(
-                x: min(0, max(size.width * (1 - scale), center.x - zoomAnchor.x * scale)),
-                y: min(0, max(size.height * (1 - scale), center.y - zoomAnchor.y * scale))
-            )
+            moveWorld(to: CGPoint(x: center.x - zoomAnchor.x * scale, y: center.y - zoomAnchor.y * scale))
         default:
             break
         }
+    }
+
+    private func moveWorld(to position: CGPoint) {
+        let scale = world.xScale
+        world.position = CGPoint(
+            x: min(0, max(size.width * (1 - scale), position.x)),
+            y: min(0, max(size.height * (1 - scale), position.y))
+        )
     }
 
     func resetZoom() {

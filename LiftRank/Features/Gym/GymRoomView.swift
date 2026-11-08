@@ -120,7 +120,7 @@ struct GymRoomView: View {
                 }
                 Spacer(minLength: 0)
                 Button { scene.resetZoom() } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
                         .font(.subheadline.bold())
                         .frame(width: 44, height: 44)
                         .background(.white.opacity(0.10), in: Circle())
