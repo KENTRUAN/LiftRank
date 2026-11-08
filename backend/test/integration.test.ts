@@ -36,6 +36,11 @@ before(async () => {
 });
 after(async () => { server?.closeAllConnections(); await new Promise<void>(resolve => server?.close(() => resolve())); getDatabase().goOffline(); });
 
+const near = () => ({ latitude: 35.995, longitude: -78.94, accuracy: 20, timestamp: Date.now() });
+async function spaceGuest(name: string) {
+  const user = await guest(); await post(user, 'profile', { name }); return user;
+}
+
 test('two guests share Demo Gym, stale sessions cannot renew or leave the replacement session', async () => {
   const first = await post(a, 'rooms/join', { roomId: 'demo-gym' });
   const second = await post(b, 'rooms/join', { roomId: 'demo-gym' });
@@ -50,14 +55,14 @@ test('friend acceptance, private messages, duplicate retries and blocking run th
   await post(a, `messages/private/${b.uid}`, { id: 'before', text: 'not yet' }, 403);
   await post(a, `friends/${b.uid}/request`, {}, 403);
   for (const user of [a, b]) {
-    const lease = (await getDatabase().ref(`world/memberships/${user.uid}`).get()).val();
+    const lease = (await getDatabase().ref(`world/access/memberships/${user.uid}`).get()).val();
     await getDatabase().ref(`world/rooms/demo-gym/presence/${user.uid}`).set({ uid: user.uid, sessionId: lease.sessionId, x: 2, y: 7, station: 'lounge', status: 'Ready', openToChat: true, updatedAt: Date.now() });
   }
   await post(c, `friends/${b.uid}/request`, {}, 403);
   await post(a, `friends/${b.uid}/request`);
   await post(a, `friends/${b.uid}/accept`, {}, 409);
   const accepted = await post(b, `friends/${a.uid}/accept`);
-  const bLease = (await getDatabase().ref(`world/memberships/${b.uid}`).get()).val();
+  const bLease = (await getDatabase().ref(`world/access/memberships/${b.uid}`).get()).val();
   await post(b, 'rooms/leave', { sessionId: bLease.sessionId });
   await post(a, `messages/private/${b.uid}`, { id: 'hello', text: 'Want to train?' });
   await post(a, `messages/private/${b.uid}`, { id: 'hello', text: 'Want to train?' });
@@ -127,7 +132,7 @@ test('authenticated AI routes separate provider quotas and block social drafts b
     }
     if(host==='tinker.thinkingmachines.dev'){
       trainerCalls++;assert.equal(new Headers(init?.headers).get('x-api-key'),'integration-training-key');
-      return Response.json({content:[{type:'tool_use',name:'reply_to_lifter',input:{reply:'Hello lifter.',todoAction:'keep',todos:null,schedule:[]}}]});
+      return Response.json({content:[{type:'text',text:'Hello lifter.'}]});
     }
     return oldFetch(input,init);
   };
@@ -149,4 +154,119 @@ test('authenticated AI routes separate provider quotas and block social drafts b
     await post(d,'companion',{targetID:e.uid,messages:[{role:'user',text:'intro'}]},403);
     assert.equal(genericCalls,1);
   }finally{globalThis.fetch=oldFetch;process.env=oldEnv;}
+});
+
+test('nearby public spaces require approval, hide coordinates, and survive the creator leaving', async () => {
+  const owner = await spaceGuest('Space owner'), member = await spaceGuest('Space member'), outsider = await spaceGuest('Space outsider');
+  const created = await post(owner, 'spaces/create', { name: 'Open floor', visibility: 'public', location: near() });
+  const id = created.gym.id;
+  const found = await post(member, 'spaces/nearby', { location: near() });
+  assert.ok(found.spaces.some((s: any) => s.id === id));
+  assert.equal(JSON.stringify(found.spaces).includes('latitude'), false);
+  assert.equal(JSON.stringify(found).includes(owner.uid), false);
+  await post(member, 'rooms/join', { roomId: id, location: near() }, 403);
+  await post(member, `spaces/${id}/request`, { location: near() });
+  const request = (await post(owner, 'spaces/inbox')).requests.find((r: any) => r.roomId === id);
+  await post(outsider, `spaces/${id}/respond`, { requestID: request.id, action: 'accept' }, 403);
+  await post(owner, `spaces/${id}/respond`, { requestID: request.id, action: 'accept' });
+  await post(member, 'rooms/join', { roomId: id, location: { ...near(), latitude: 40 } }, 403);
+  const lease = await post(member, 'rooms/join', { roomId: id, location: near() });
+  await post(outsider, `spaces/${id}/request`, { location: near() });
+  const next = (await post(member, 'spaces/inbox')).requests.find((r: any) => r.roomId === id);
+  // A member can approve even while the creator is still there.
+  await post(member, `spaces/${id}/respond`, { requestID: next.id, action: 'accept' });
+  await post(owner, 'rooms/leave', { sessionId: created.membership.sessionId });
+  assert.equal((await post(member, 'spaces/inbox')).room.isHost, true);
+  const second = await post(outsider, 'rooms/join', { roomId: id, location: near() });
+  await post(member, 'rooms/leave', { sessionId: lease.sessionId });
+  assert.equal((await post(outsider, 'spaces/inbox')).room.id, id);
+  await post(outsider, 'rooms/leave', { sessionId: second.sessionId });
+  await post(member, 'rooms/join', { roomId: id, location: near() }, 404);
+  assert.equal((await getDatabase().ref(`world/access/spaces/${id}`).get()).exists(), false);
+});
+
+test('private spaces only admit invited nearby friends and never appear in discovery', async () => {
+  const owner = await spaceGuest('Private owner'), friend = await spaceGuest('Invited friend'), stranger = await spaceGuest('Stranger');
+  const { gym } = await post(owner, 'spaces/create', { name: 'Private floor', visibility: 'private', location: near() });
+  const id = gym.id;
+  assert.ok(!(await post(friend, 'spaces/nearby', { location: near() })).spaces.some((s: any) => s.id === id));
+  await post(friend, `spaces/${id}/request`, { location: near() }, 403);
+  await post(friend, 'rooms/join', { roomId: id, location: near() }, 403);
+  await post(owner, `spaces/${id}/invite`, { targetID: stranger.uid }, 403);
+  for (const [a, b] of [[owner, friend], [friend, owner]]) await getDatabase().ref(`social/friends/${a!.uid}/${b!.uid}`).set({ uid: b!.uid, status: 'accepted', updatedAt: Date.now() });
+  await post(owner, `spaces/${id}/invite`, { targetID: friend.uid });
+  assert.equal((await post(friend, 'spaces/inbox')).invitations[0].gym.id, id);
+  assert.equal((await post(stranger, 'spaces/inbox')).invitations.length, 0);
+  await post(stranger, `spaces/${id}/visibility`, { visibility: 'public' }, 403);
+  await post(friend, 'rooms/join', { roomId: id, location: { ...near(), accuracy: 101 } }, 400);
+  await post(friend, 'rooms/join', { roomId: id, location: { ...near(), timestamp: Date.now() - 61_000 } }, 400);
+  await post(friend, 'rooms/join', { roomId: id }, 400);
+  await post(friend, 'rooms/join', { roomId: id, location: near() });
+  await post(friend, 'equipment/bench/claim', {}, 400);
+});
+
+test('privacy changes revoke public approvals; blocks prevent requests, invitations and admission', async () => {
+  const owner = await spaceGuest('Privacy owner'), joiner = await spaceGuest('Privacy joiner');
+  const { gym } = await post(owner, 'spaces/create', { name: 'Changing space', visibility: 'public', location: near() });
+  await post(joiner, `spaces/${gym.id}/request`, { location: near() });
+  const request = (await post(owner, 'spaces/inbox')).requests.find((r: any) => r.roomId === gym.id);
+  await post(owner, `spaces/${gym.id}/respond`, { requestID: request.id, action: 'accept' });
+  await post(owner, `spaces/${gym.id}/visibility`, { visibility: 'private' });
+  await post(joiner, 'rooms/join', { roomId: gym.id, location: near() }, 403);
+  await post(owner, `spaces/${gym.id}/visibility`, { visibility: 'public' });
+  await post(owner, `friends/${joiner.uid}/block`);
+  assert.ok(!(await post(joiner, 'spaces/nearby', { location: near() })).spaces.some((s: any) => s.id === gym.id));
+  await post(joiner, `spaces/${gym.id}/request`, { location: near() }, 403);
+  await post(owner, `spaces/${gym.id}/invite`, { targetID: joiner.uid }, 403);
+  await post(joiner, 'rooms/join', { roomId: gym.id, location: near() }, 403);
+  await post(owner, 'spaces/registered-not-a-space/visibility', { visibility: 'private' }, 404);
+});
+
+test('creation requires a precise fresh location; expired members do not keep a space alive', async () => {
+  const owner = await spaceGuest('Expiry owner');
+  const input = { name: 'Temporary space', visibility: 'public' };
+  for (const location of [null, { ...near(), accuracy: 500 }, { ...near(), timestamp: Date.now() - 61_000 }]) {
+    await post(owner, 'spaces/create', { ...input, location }, 400);
+  }
+  const { gym } = await post(owner, 'spaces/create', { ...input, location: near() });
+  await getDatabase().ref(`world/access/memberships/${owner.uid}/expiresAt`).set(Date.now() - 1);
+  assert.ok(!(await post(owner, 'spaces/nearby', { location: near() })).spaces.some((s: any) => s.id === gym.id));
+  assert.equal((await getDatabase().ref(`world/access/spaces/${gym.id}`).get()).exists(), false);
+});
+
+test('Wilson preset is public and requires a fresh nearby check-in without Places', async () => {
+  const user = await spaceGuest('Wilson visitor');
+  const point = { ...near(), latitude: 35.997085, longitude: -78.940951 };
+  const result = await post(user, 'spaces/nearby', { location: point });
+  const gym = result.gyms.find((g: any) => g.id === 'registered-duke-wilson');
+  assert.equal(gym.name, 'Duke Wilson Recreation Center'); assert.equal(gym.visibility, 'public');
+  await post(user, 'rooms/join', { roomId: gym.id, location: { ...point, latitude: 36.1 } }, 403);
+  await post(user, 'rooms/join', { roomId: gym.id, location: { ...point, accuracy: 101 } }, 400);
+  await post(user, 'rooms/join', { roomId: gym.id, location: { ...point, timestamp: Date.now() - 61000 } }, 400);
+  const joined = await post(user, 'rooms/join', { roomId: gym.id, location: point });
+  assert.equal(joined.roomId, gym.id);
+  await post(user, `spaces/${gym.id}/visibility`, { visibility: 'private' }, 404);
+});
+
+test('home greeting uses the workout model without changing workouts or generating a plan', async () => {
+  const oldFetch = globalThis.fetch, oldEnv = { ...process.env };
+  process.env.TINKER_API_KEY = 'test-only-key'; delete process.env.TINKER_REQUIRE_FINE_TUNED;
+  let calls = 0;
+  globalThis.fetch = async (input, init) => {
+    if (new URL(String(input)).hostname === 'tinker.thinkingmachines.dev') {
+      calls++; const body = JSON.parse(String(init?.body)); assert.ok(body.system.includes('3 sets completed'));
+      assert.equal(body.model, 'thinkingmachines/Inkling'); assert.equal(body.tools, undefined);
+      return Response.json({ content: [{ type: 'text', text: 'Three sets down. Take a steady rest before the next one.' }] });
+    }
+    return oldFetch(input, init);
+  };
+  try {
+    const user = await spaceGuest('Welcome reader');
+    const welcome = await post(user, 'trainer/greeting', { localDate: '2026-11-07', language: 'en', status: 'Strength, 3 sets completed', plan: 'No requested plan today' });
+    assert.deepEqual(Object.keys(welcome), ['reply']); assert.ok(welcome.reply.includes('Three sets')); assert.equal(calls, 1);
+    assert.equal((await getDatabase().ref(`world/access/memberships/${user.uid}`).get()).exists(), false);
+    process.env.GREETING_GLOBAL_LIMIT = '0';
+    await post(user, 'trainer/greeting', { localDate: '2026-11-07', status: 'No active workout', plan: 'No plan' }, 429);
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = oldFetch; process.env = oldEnv; }
 });

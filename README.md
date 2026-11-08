@@ -1,5 +1,7 @@
 # 段位健身（LiftRank）iOS
 
+The [workout spaces guide](docs/GYM_SPACES.md) documents the unified Start workout flow, pinch zoom, nearby public/private spaces and trainer welcomes.
+
 ## Demo on a new Mac
 
 Follow the [new Mac setup guide](docs/NEW_MAC_SETUP.md) to connect to the existing hosted demo without copying local files from another laptop. Install Xcode, Python 3.9+ and Node 22+, then run from the checkout:

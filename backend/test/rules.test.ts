@@ -10,7 +10,7 @@ before(async () => {
 after(async () => { await env?.cleanup(); });
 beforeEach(async () => { await env.clearDatabase(); });
 const db = (uid: string) => env.authenticatedContext(uid).database();
-async function seed(value: any) { await env.withSecurityRulesDisabled(async ctx => { await set(ref(ctx.database()), value); }); }
+async function seed(value: any) { await env.withSecurityRulesDisabled(async ctx => { if (value.world?.memberships) { value.world.access = { memberships: value.world.memberships }; delete value.world.memberships; } await set(ref(ctx.database()), value); }); }
 const lease = (roomId = 'demo-gym') => ({ roomId, sessionId: 'session-a', expiresAt: Date.now() + 90_000 });
 const presence = () => ({ uid: 'a', sessionId: 'session-a', x: 2, y: 7, station: 'lounge', status: 'Resting', updatedAt: Date.now() });
 
@@ -18,7 +18,7 @@ test('room presence is private to active room members; clients cannot forge memb
   await seed({ world: { memberships: { a: lease() }, rooms: { 'demo-gym': { presence: { a: presence() } } } } });
   await assertSucceeds(get(ref(db('a'), 'world/rooms/demo-gym/presence')));
   await assertFails(get(ref(db('b'), 'world/rooms/demo-gym/presence')));
-  await assertFails(set(ref(db('b'), 'world/memberships/b'), lease()));
+  await assertFails(set(ref(db('b'), 'world/access/memberships/b'), lease()));
   await assertFails(get(ref(env.unauthenticatedContext().database(), 'profiles/a')));
 });
 test('movement only updates the authenticated member, validates session and bounds', async () => {
@@ -97,4 +97,18 @@ test('clients cannot occupy or approve equipment directly and cannot publish an 
   await assertFails(set(ref(db('b'), 'world/rooms/demo-gym/equipment/bench/members/b'), 'session-a'));
   await assertFails(remove(ref(db('b'), 'world/rooms/demo-gym/equipment/bench/members/a')));
   await assertSucceeds(remove(ref(db('a'), 'world/rooms/demo-gym/equipment/bench/members/a')));
+});
+
+test('space coordinates, invitations and admission grants are server-only, even to a room member', async () => {
+  await seed({ world: { access: { memberships: { a: lease('space-private') }, spaces: {
+    'space-private': { ownerID: 'a', latitude: 35, longitude: -78, visibility: 'private', requests: { b: { status: 'invited' } } }
+  } }, rooms: { 'space-private': { presence: { a: presence() } } } } });
+  for (const uid of ['a', 'b', 'c']) {
+    await assertFails(get(ref(db(uid), 'world/access/spaces')));
+    await assertFails(get(ref(db(uid), 'world/access/spaces/space-private')));
+    await assertFails(set(ref(db(uid), 'world/access/spaces/space-private/requests/b/status'), 'approved'));
+  }
+  await assertSucceeds(get(ref(db('a'), 'world/rooms/space-private/presence')));
+  await assertFails(get(ref(db('b'), 'world/rooms/space-private/presence')));
+  await assertFails(get(ref(db('b'), 'roomMessages/space-private')));
 });

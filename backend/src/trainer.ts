@@ -53,7 +53,7 @@ export function cleanTrainerReply(raw: string | unknown, catalog: Set<string>) {
 }
 
 /** At most two attempts; no raw prompts/responses are persisted or logged. */
-export async function validatedTrainerReply(catalog: Set<string>, generate: (repair?: string) => Promise<unknown>, charge: () => Promise<void>, policy?: { allowsTodoEditing: boolean }) {
+export async function validatedTrainerReply(catalog: Set<string>, generate: (repair?: string) => Promise<unknown>, charge: () => Promise<void>, policy?: { allowsTodoEditing: boolean; allowsScheduleEditing?: boolean }) {
   let repair: string | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     await charge();
@@ -63,6 +63,7 @@ export async function validatedTrainerReply(catalog: Set<string>, generate: (rep
       if (policy?.allowsTodoEditing === false && result.todos !== null) {
         invalid('this session cannot edit current-workout todos; use todoAction=keep and todos=null, with only explicitly requested schedule edits');
       }
+      if (policy?.allowsScheduleEditing === false && result.schedule.length) invalid('this editor only changes current-workout todos; return schedule=[]');
       return result;
     }
     catch (error) {

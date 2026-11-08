@@ -9,7 +9,7 @@
     "build": "tsc",
     "dev": "node --env-file-if-exists=.env --import tsx src/server.ts",
     "start": "node dist/server.js",
-    "test": "tsx --test test/core.test.ts test/interactions.test.ts test/providers.test.ts",
+    "test": "tsx --test test/core.test.ts test/interactions.test.ts test/providers.test.ts test/coach.test.ts",
     "test:rules": "firebase emulators:exec --project demo-liftrank --only database 'tsx --test test/rules.test.ts'",
     "test:integration": "firebase emulators:exec --project demo-liftrank --only auth,database 'tsx --test test/integration.test.ts'",
     "training:dataset": "npm run build && node training/build-dataset.mjs && node training/build-rehearsal.mjs && node training/build-corrections.mjs && node training/build-fresh-checks.mjs"

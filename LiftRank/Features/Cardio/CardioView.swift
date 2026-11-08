@@ -12,9 +12,6 @@ struct CardioView: View {
     @State private var healthStatus: String?
     @State private var importing = false
     @State private var activeWorkout: Workout?
-    @State private var outdoor = false
-    @State private var showStart = false
-    @State private var pendingCardio: Workout?
 
     private var week: [CardioSession] { sessions.filter { $0.date.weekKey == Date().weekKey } }
 
@@ -39,11 +36,6 @@ struct CardioView: View {
                 }
             }
             Section {
-                Picker("Location", selection: $outdoor) { Text("Indoor").tag(false); Text("Outdoor").tag(true) }.pickerStyle(.segmented)
-                Button("Start cardio") {
-                    if let current = workouts.first(where: { !$0.isPublished && $0.cardioTimerStartedAt != nil }) { activeWorkout = current }
-                    else { showStart = true }
-                }
                 if let active = workouts.first(where: { !$0.isPublished && $0.isOutdoor }), active.startOptionsChosen { OutdoorWorkoutMap(workout: active) }
             }
             Section {
@@ -65,7 +57,7 @@ struct CardioView: View {
                 Button { importFromHealth() } label: { Label(importing ? "导入中…" : "从健康 App 导入最近 90 天运动", systemImage: "square.and.arrow.down") }.disabled(importing)
                 if let healthStatus { Text(healthStatus).font(.footnote).foregroundStyle(.secondary) }
             } header: { Text("Apple Watch 与 Fitness") } footer: {
-                Text("Start cardio begins timing and Apple Health tracking when enabled. End saves the elapsed time. You can also import workouts recorded with Apple Watch.")
+                Text("Start workout opens your gym space. Choose Cardio to begin timing and Apple Health tracking. End saves elapsed time.")
             }
 
             Section(sessions.isEmpty ? "记录" : "记录 · \(sessions.count) 次") {
@@ -88,11 +80,6 @@ struct CardioView: View {
                 }
                 .onDelete { idx in idx.map { sessions[$0] }.filter { $0.sourceRaw != "timer" }.forEach(context.delete); try? context.save() }
             }
-        }
-        .sheet(isPresented: $showStart, onDismiss: {
-            if let pendingCardio { activeWorkout = pendingCardio; self.pendingCardio = nil }
-        }) {
-            CardioStartView(profile: profile, initialOutdoor: outdoor) { pendingCardio = $0; showStart = false }
         }
         .fullScreenCover(item: $activeWorkout) { ActiveWorkoutView(workout: $0, profile: profile) }
         .sheet(item: $editing) { s in CardioEditor(profile: profile, session: s) { _ in try? context.save() } }

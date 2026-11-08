@@ -2,6 +2,54 @@ import XCTest
 @testable import LiftRank
 
 final class GymTests: XCTestCase {
+    @MainActor func testEquipmentRulesApplyToSceneAndReviewButNotOpenSpaces() throws {
+        let store = GymStore()
+        store.uid = "lifter"; store.room = .demo; store.station = "bench"
+        store.members = [RoomPresence(uid: "lifter", sessionId: "session", x: 4, y: 3, station: "bench", status: "Ready", updatedAt: Date().timeIntervalSince1970 * 1000)]
+        store.equipment["bench"] = try JSONDecoder().decode(GymEquipmentOccupancy.self, from: Data(#"{"ownerID":"lifter","members":{"lifter":"session"}}"#.utf8))
+        XCTAssertTrue(store.requiresEquipmentForSets)
+        XCTAssertNoThrow(try store.validateExerciseAtStation("bench_press"))
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"))
+        XCTAssertThrowsError(try store.validateExerciseAtStation("squat"))
+        store.station = "rack"
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"), "Must reserve the rack by tapping it first")
+        store.equipment["rack"] = store.equipment["bench"]
+        XCTAssertNoThrow(try store.validateExerciseAtStation("pullup"))
+        store.members = []
+        XCTAssertThrowsError(try store.validateExerciseAtStation("pullup"), "Expired/disconnected ownership cannot start a new set")
+        store.startPrivateSpace(name: "Solo", gsr: 0, cosmetics: [])
+        XCTAssertFalse(store.requiresEquipmentForSets)
+        XCTAssertNoThrow(try store.validateExerciseAtStation("pullup"))
+    }
+    func testPlainSpaceHasNoInvisibleEquipmentObstacles() {
+        let start = GymLayout.Cell(x: 2, y: 7), target = GymLayout.Cell(x: 4, y: 2)
+        XCTAssertTrue(GymLayout.path(from: start, to: target).isEmpty)
+        XCTAssertEqual(GymLayout.path(from: start, to: target, plain: true).last, target)
+        XCTAssertTrue(GymLayout.path(from: start, to: .init(x: 12, y: 5), plain: true).isEmpty)
+    }
+    func testCameraFitsSmallScreensAndBoundsPinchZoom() {
+        XCTAssertEqual(GymCamera.fitScale(CGSize(width: 390, height: 360)), 2)
+        XCTAssertEqual(GymCamera.zoom(0), 0.8)
+        XCTAssertEqual(GymCamera.zoom(20), 3)
+        XCTAssertEqual(GymCamera.zoom(.nan), 1)
+    }
+    @MainActor func testAllStartActionsGoToTheGymAndSelectItsTab() {
+        let app = AppState(); app.communitySection = 1
+        app.perform(.startTodayWorkout)
+        XCTAssertEqual(app.tab, AppState.communityTab)
+        XCTAssertEqual(app.communitySection, 0)
+    }
+    @MainActor func testOfflinePrivateSpacePublishesNoMembershipAndRetainsMovementAndState() {
+        let store = GymStore()
+        store.startPrivateSpace(name: "Solo", gsr: 400, cosmetics: [])
+        XCTAssertTrue(store.room?.isLocal == true)
+        XCTAssertNil(store.membership)
+        XCTAssertFalse(store.offlineSample)
+        store.move(x: 5, y: 4); store.setTrainingState("Training")
+        XCTAssertEqual(store.members.first?.x, 5)
+        XCTAssertEqual(store.members.first?.status, "Training")
+        XCTAssertFalse(store.canRequestFriend("other"))
+    }
     func testProfileDecodesRealtimeDatabaseOmittedEmptyArrays() throws {
         let data = Data(#"{"uid":"a","name":"Guest","gsr":0,"interests":"","avatar":{"preset":"bolt","color":"orange"}}"#.utf8)
         let profile = try JSONDecoder().decode(SocialProfile.self, from: data)

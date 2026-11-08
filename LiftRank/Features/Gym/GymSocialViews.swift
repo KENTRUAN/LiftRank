@@ -6,12 +6,22 @@ struct GymFriendsView: View {
     let workout: String
     var embedded = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @Query private var localProfiles: [UserProfile]
     @State private var showTrainer = false
     @State private var selected: SocialProfile?
     @State private var chat: SocialProfile?
     var body: some View {
         NavigationStack {
             List {
+                if !store.spaceInvitations.isEmpty {
+                    Section("Workout invitations") {
+                        SpaceInvitationList(store: store) {
+                            guard let profile = localProfiles.first else { throw GymFailure.message(L("Complete your profile first.")) }
+                            _ = try WorkoutSession.startOrResume(profile: profile, context: context)
+                        }
+                    }
+                }
                 Section {
                     Button { showTrainer = true } label: {
                         HStack { Image(systemName: "sparkles").font(.title2).foregroundStyle(.teal); VStack(alignment: .leading) { Text("AI trainer").font(.headline); Text("Private · plans & workout todos").font(.caption).foregroundStyle(.secondary) } }

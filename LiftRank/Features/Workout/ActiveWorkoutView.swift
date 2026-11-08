@@ -71,7 +71,7 @@ struct ActiveWorkoutView: View {
             .navigationTitle("进行中")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("收起") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button("收起") { dismiss() }.accessibilityIdentifier("collapseWorkout") }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("完成") { showFinish = true }.bold().disabled(workout.hasPendingSet)
                 }
@@ -245,6 +245,7 @@ private struct ExerciseSection: View {
 }
 
 struct SetRowView: View {
+    @EnvironmentObject private var gym: GymStore
     @Bindable var set: WorkoutSet
     let exercise: Exercise?
     let profile: UserProfile
@@ -304,6 +305,8 @@ struct SetRowView: View {
 
             Button {
                 guard !set.isCompleted, set.reps > 0, set.weightKg.isFinite, set.weightKg >= 0 else { return }
+                do { try gym.validateExerciseAtStation(exercise?.key ?? "") }
+                catch { saveError = error.localizedDescription; return }
                 set.isCompleted = true; set.completedAt = Date()
                 do { try context.save(); onComplete(); focus = nil }
                 catch { set.isCompleted = false; set.completedAt = nil; saveError = error.localizedDescription }

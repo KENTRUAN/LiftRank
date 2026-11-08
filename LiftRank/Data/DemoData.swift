@@ -36,6 +36,7 @@ enum DemoData {
     @MainActor
     static func seedIfNeeded(context: ModelContext, profile: UserProfile) {
         guard isEnabled else { return }
+        seedTodayPlanRehearsal(context: context)
         let published = (try? context.fetch(FetchDescriptor<Workout>()))?.filter { $0.isPublished } ?? []
         guard published.isEmpty else { return }
         let exercises = (try? context.fetch(FetchDescriptor<Exercise>())) ?? []
@@ -105,6 +106,25 @@ enum DemoData {
         context.insert(FoodEntry(date: Date(), meal: .breakfast, name: "全蛋 2 个", kcal: 144, protein: 12.6, fat: 9.6, carbs: 0.8))
         context.insert(FoodEntry(date: Date(), meal: .lunch, name: "鸡胸肉 150g", kcal: 248, protein: 46, fat: 5.4, carbs: 0))
         context.insert(FoodEntry(date: Date(), meal: .lunch, name: "白米饭 1 碗", kcal: 230, protein: 4.5, fat: 0.5, carbs: 50))
+        try? context.save()
+    }
+
+    /// Deterministic navigation fixtures, restricted to the opt-in demo app above.
+    @MainActor private static func seedTodayPlanRehearsal(context: ModelContext) {
+        guard let fixture = ProcessInfo.processInfo.environment["LIFTRANK_TODAY_PLAN"],
+              ["planned", "none", "rest", "other-day", "automatic"].contains(fixture) else { return }
+        for plan in (try? context.fetch(FetchDescriptor<DailyPlan>())) ?? [] { context.delete(plan) }
+        if fixture != "none" {
+            let day = Date().adding(days: fixture == "other-day" ? 1 : 0)
+            let items = fixture == "rest" ? [] : [
+                TemplateExercise(exerciseKey: "bench_press", exerciseName: "Bench Press", sets: 3, repsLow: 8, repsHigh: 12, restSeconds: 90),
+                TemplateExercise(exerciseKey: "pullup", exerciseName: "Pull-Up", sets: 2, repsLow: 6, repsHigh: 8, restSeconds: 120)
+            ]
+            let plan = DailyPlan(dayKey: day.dayKey, title: "Requested strength day", items: items,
+                                 source: fixture == "automatic" ? "auto" : "ai")
+            plan.requestedByUser = fixture != "automatic"
+            context.insert(plan)
+        }
         try? context.save()
     }
 }

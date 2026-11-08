@@ -106,6 +106,7 @@ struct WorkoutSetControl: View {
     let profile: UserProfile
     let onStart: () -> Void
     let onLog: () -> Void
+    var onCardio: (() -> Void)? = nil
     @Environment(\.modelContext) private var context
     @ObservedObject private var pulse = TrainingPulse.shared
     @State private var error: String?
@@ -115,6 +116,10 @@ struct WorkoutSetControl: View {
                 Label(workout.trainingState(at: pulse.now), systemImage: workout.trainingState(at: pulse.now) == "Training" ? "dumbbell.fill" : "timer")
                     .font(.headline).foregroundStyle(.teal)
                 Spacer()
+                if let onCardio {
+                    Button(action: onCardio) { Label("Cardio", systemImage: "figure.run") }
+                        .font(.caption.bold()).disabled(workout.hasPendingSet).accessibilityIdentifier("spaceChooseCardio")
+                }
                 if let started = workout.setStartedAt, workout.setEndedAt == nil { Text(started, style: .timer).monospacedDigit() }
                 else if let until = workout.restUntil, until > pulse.now {
                     Text("Rest \(until.timeIntervalSince(pulse.now).clockString)").monospacedDigit()

@@ -64,9 +64,16 @@ struct RootTabView: View {
         .task(id: workouts.first(where: { !$0.isPublished })?.cardioClockRevision) { CardioLiveActivityManager.shared.refresh() }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshDailyPlan(); handlePending(); CardioLiveActivityManager.shared.refresh() }
-            if phase == .background { gym.suspend(); OutdoorWorkoutTracker.shared.follow(nil, foreground: false) }
+            if phase == .background { if gym.room?.isLocal != true { gym.suspend() }; OutdoorWorkoutTracker.shared.follow(nil, foreground: false) }
         }
         .task(id: sharedProfileRevision) { await syncSharedProfile() }
+        .task(id: gym.connected) {
+            guard gym.connected else { return }
+            while !Task.isCancelled {
+                if scenePhase == .active { await gym.refreshSpaceInbox() }
+                try? await Task.sleep(for: .seconds(10))
+            }
+        }
         .onChange(of: app.pending) { _, _ in handlePending() }
         .onReceive(TrainingPulse.shared.$now) { now in
             let active = workouts.first(where: { !$0.isPublished })

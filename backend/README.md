@@ -1,5 +1,7 @@
 # Live social gym setup
 
+See [nearby workout spaces](../docs/GYM_SPACES.md) for the unified workout flow, Wilson preset, private invitations, new APIs and coordinated backend/rules rollout.
+
 See [feature documentation](../docs/FEATURE_BRANCH.md) for the complete implemented behavior and main-integration decisions. [AI APIs and workout fine-tuning](../docs/AI_SETUP.md) lists provider boundaries, required keys, training commands and budget controls.
 
 The iOS client uses Firebase anonymous Auth, Realtime Database and Storage. The TypeScript API runs on Cloud Run; **no VM is needed**. The intended development project is `liftrank-514018`.
@@ -69,7 +71,7 @@ gcloud run deploy liftrank-social \
   --allow-unauthenticated \
   --max-instances 2 \
   --memory 512Mi \
-  --timeout 180 \
+  --timeout 300 \
   --set-env-vars 'GOOGLE_CLOUD_PROJECT=liftrank-514018,FIREBASE_DATABASE_URL=YOUR_DATABASE_URL,FIREBASE_STORAGE_BUCKET=YOUR_BUCKET,AVATAR_GLOBAL_LIMIT=30,COMPANION_GLOBAL_LIMIT=300,SEARCH_GLOBAL_LIMIT=2000' \
   --set-secrets 'GOOGLE_PLACES_API_KEY=liftrank-places-key:latest,TINKER_API_KEY=liftrank-tinker-key:latest'
 ```
@@ -93,7 +95,7 @@ The Cloud Run endpoint accepts public HTTPS connections, but every route except 
 - Outdoor cardio has a private MapKit minimap with a local route. Location updates run only while the app is in the foreground; background/locked-screen route recording and HealthKit route export are not implemented. Location denial leaves workout timing usable. These route coordinates are never included in social snapshots or trainer context.
 - Image previews are returned to the device; only approval writes an avatar to Storage. Selfies are processed in request memory. Replacing an approved image deletes its prior asset. Image assets are readable to authenticated app members; request photos are not.
 - Daily limits: 3 image generations / guest, 30 trainer attempts / guest and 30 generic-text attempts / guest. Project-wide defaults: 30 images, 300 trainer calls, 300 generic text calls and 2,000 Places requests. Failed provider attempts consume quota to prevent retry storms. Server limits reject requests; billing alerts alone are not hard caps. Guest identities can be recreated, so project-wide limits remain necessary.
-- Tinker and Gemini model IDs are separate server environment settings. Workout inference supports an evaluated `tinker://.../sampler_weights/...` checkpoint through the Anthropic-compatible API. Generic introduction drafts and avatar previews use your separate Gemini Developer API key; see [AI setup](../docs/AI_SETUP.md).
+- Tinker and Gemini model IDs are separate server environment settings. `TINKER_COACH_MODEL` (full Inkling) handles conversation/programming; `TINKER_TRAINER_MODEL` is the specialized remaining-list editor. Workout inference supports an evaluated `tinker://.../sampler_weights/...` checkpoint through the Anthropic-compatible API. Generic introduction drafts and avatar previews use your separate Gemini Developer API key; see [AI setup](../docs/AI_SETUP.md).
 - Persist only Google Place IDs. Names, addresses and locations are fetched live and displayed with Google Maps and returned provider attribution. The room drawing is LiftRank's own design.
 
 ## Validation
@@ -114,10 +116,10 @@ The iOS unit suite includes shared Home/gym session reuse, planned-set completio
 For an opt-in cloud rehearsal, run this from the repository root after configuring the cloud plist and signing into gcloud:
 
 ```sh
-python3 backend/scripts/cloud-smoke.py --ai
+python3 backend/scripts/cloud-smoke.py
 ```
 
-This creates three temporary guests, checks real database access rules, friendship/private chat, blocking, station updates, Places and rejected check-ins, then deletes its accounts and assets. `--trainer` verifies live structured todo edits and a complete week using two trainer requests (a validation repair, if needed, consumes one more attempt). To test ordinary English/Chinese chat, full-catalog todo edits, deletion and a seven-day plan directly with the configured provider, run `node --env-file=backend/.env backend/scripts/trainer-rehearsal.mjs` from the repository root. This opt-in provider diagnostic uses synthetic context and does not mutate the database; provider usage is billed normally. Run cloud smoke separately from simulator rehearsal because they share the preset gym equipment. `--ai` spends one avatar generation and two companion requests and verifies that introductions stay unsent. Omit it for the social/discovery checks alone. Project quota usage remains recorded after cleanup.
+This creates three temporary guests, checks real database access rules, friendship/private chat, blocking, station updates, Wilson check-in validation and nearby spaces, then deletes its accounts and assets. Space checks cover public requests/approval, private visibility, host succession, nearby friend invitations and last-member closure. Locations are synthetic; this does not replace a physical proximity rehearsal. Default checks make no AI or Places calls. `--greeting` adds one live read-only Home welcome, `--places` adds optional Google Places search, and `--trainer` verifies structured todo edits and a complete week using four trainer requests (validation repairs may consume extra attempts). To test ordinary English/Chinese chat, full-catalog todo edits, deletion and a seven-day plan directly with the configured provider, run `node --env-file=backend/.env backend/scripts/trainer-rehearsal.mjs` from the repository root. This opt-in provider diagnostic uses synthetic context and does not mutate the database; provider usage is billed normally. Run cloud smoke separately from simulator rehearsal because they share the preset gym equipment. `--ai` spends one avatar generation and two companion requests and verifies that introductions stay unsent. Project quota usage remains recorded after cleanup.
 
 From the repository root:
 

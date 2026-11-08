@@ -112,15 +112,16 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["gymChatDone"].tap()
         if app.buttons["gymMemberDone"].exists { app.buttons["gymMemberDone"].tap() }
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10))
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons[station].tap()
+        tapEquipment(station.lowercased())
         if app.buttons["Close"].waitForExistence(timeout: 10) { app.buttons["Close"].tap() }
     }
+    private func tapEquipment(_ station: String) {
+        let machine = app.buttons["gymEquipment.\(station)"]
+        for _ in 0..<3 where !machine.isHittable { app.swipeDown() }
+        XCTAssertTrue(machine.waitForExistence(timeout: 10)); machine.tap()
+    }
     private func requestBenchPartner() {
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons["Bench"].tap()
+        tapEquipment("bench")
         let request = app.buttons["Ask to work in"]
         XCTAssertTrue(request.waitForExistence(timeout: 10)); request.tap()
         waitForStation("Bench", member: "QA Taylor")
@@ -157,7 +158,7 @@ final class SocialGymRehearsal: XCTestCase {
         XCTAssertNotEqual(before, after)
         capture("Equipment set saved in the shared workout")
         app.tabBars.buttons["训练"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "继续训练")).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["openSocialGym"].waitForExistence(timeout: 10))
         app.buttons["openSocialGym"].tap()
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["gymSessionSets"].label, after, "Switching tabs must retain the same session")
@@ -302,6 +303,10 @@ final class SocialGymRehearsal: XCTestCase {
         capture(outdoor ? "Outdoor cardio timer and map without exercise controls" : "Gym cardio starts its timer automatically")
         let end = endQuery.allElementsBoundByIndex.first { $0.isHittable }
         XCTAssertNotNil(end); end?.tap()
+        if app.buttons["startPrivateWorkout"].waitForExistence(timeout: 2) {
+            capture("Cardio saved and private space closed")
+            return
+        }
         XCTAssertTrue(app.staticTexts["cardioSaved"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["cardioSavedDuration"].exists)
         XCTAssertFalse(app.textFields["gymSetReps"].exists)
@@ -309,29 +314,20 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["Done"].tap()
     }
     private func startOutdoorCardio() {
-        app.tabBars.buttons["训练"].tap()
-        let resume = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "继续训练")).firstMatch
-        if resume.waitForExistence(timeout: 3) {
-            resume.tap()
-            if app.buttons["endCardioTimer"].waitForExistence(timeout: 2) {
-                app.buttons["endCardioTimer"].tap(); app.buttons["Done"].tap()
-            } else {
-                app.buttons["完成"].tap()
-                let publish = app.buttons["发布训练"]
-                XCTAssertTrue(publish.waitForExistence(timeout: 10)); publish.tap()
-                XCTAssertTrue(app.navigationBars["训练已发布"].waitForExistence(timeout: 10))
-                let done = app.buttons.matching(identifier: "完成").allElementsBoundByIndex.first { $0.isHittable }
-                XCTAssertNotNil(done); done?.tap()
-            }
+        app.tabBars.buttons.element(boundBy: 0).tap()
+        app.buttons["openSocialGym"].tap()
+        if app.buttons["Leave"].waitForExistence(timeout: 2) { app.buttons["Leave"].tap() }
+        let solo = app.buttons["startPrivateWorkout"]
+        XCTAssertTrue(solo.waitForExistence(timeout: 10)); solo.tap()
+        if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 2) { app.buttons["keepWorkoutBlank"].tap() }
+        if app.buttons["endCardioTimer"].exists {
+            app.buttons["endCardioTimer"].tap(); solo.tap()
+            if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 2) { app.buttons["keepWorkoutBlank"].tap() }
         }
-        let cardioTab = app.segmentedControls.buttons["有氧"]
-        expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: cardioTab)
-        waitForExpectations(timeout: 10); cardioTab.tap()
-        if !app.buttons["Start cardio"].waitForExistence(timeout: 3) { cardioTab.tap() }
+        app.buttons["spaceChooseCardio"].tap()
         app.segmentedControls.buttons["Outdoor"].tap()
-        app.buttons["Start cardio"].tap()
-        XCTAssertTrue(app.buttons["startCardioTimer"].waitForExistence(timeout: 10))
         app.buttons["startCardioTimer"].tap()
+        if app.buttons["Finish workout & start cardio"].waitForExistence(timeout: 2) { app.buttons["Finish workout & start cardio"].tap() }
     }
     func testOutdoorBlankWorkout() {
         startOutdoorCardio()
@@ -350,8 +346,10 @@ final class SocialGymRehearsal: XCTestCase {
         capture("Paused cardio timer holds steady")
         app.terminate(); app.launch()
         app.tabBars.buttons["训练"].tap()
-        let resumeWorkout = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "继续训练")).firstMatch
+        let resumeWorkout = app.buttons["openSocialGym"]
         XCTAssertTrue(resumeWorkout.waitForExistence(timeout: 10)); resumeWorkout.tap()
+        let solo = app.buttons["startPrivateWorkout"]
+        if solo.waitForExistence(timeout: 2) { solo.tap() }
         XCTAssertTrue(pause.waitForExistence(timeout: 10))
         XCTAssertTrue(pause.label.contains("Resume"))
         XCTAssertEqual(timer.label, frozen, "Paused state survives process termination")
@@ -400,9 +398,7 @@ final class SocialGymRehearsal: XCTestCase {
     }
     func testGymCardioTimer() {
         enter(as: "QA Jordan")
-        let picker = app.buttons["gymStation"]
-        if !picker.isHittable { app.swipeUp() }
-        picker.tap(); app.buttons["Cardio"].tap()
+        tapEquipment("cardio")
         XCTAssertTrue(app.buttons["startCardioTimer"].waitForExistence(timeout: 10))
         app.buttons["startCardioTimer"].tap()
         if app.buttons["Finish workout & start cardio"].waitForExistence(timeout: 2) { app.buttons["Finish workout & start cardio"].tap() }

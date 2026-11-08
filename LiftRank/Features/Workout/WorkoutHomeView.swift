@@ -26,8 +26,16 @@ struct WorkoutHomeView: View {
     var body: some View {
         @Bindable var app = app
         NavigationStack {
-            Group {
-                if mode == 0 { strengthList } else { CardioView(profile: profile) }
+            VStack(spacing: 10) {
+                TrainerWelcomeView(workout: unpublished, plan: todayPlan).padding(.horizontal)
+                Button {
+                    app.prefersCardioStart = mode == 1
+                    app.perform(.startTodayWorkout)
+                } label: {
+                    Label(unpublished == nil ? "Start workout" : "Continue workout", systemImage: "play.circle.fill")
+                        .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
+                }.buttonStyle(.borderedProminent).tint(.teal).padding(.horizontal).accessibilityIdentifier("openSocialGym")
+                Group { if mode == 0 { strengthList } else { CardioView(profile: profile) } }
             }
             .navigationTitle(mode == 0 ? "训练" : "有氧")
             .toolbar {
@@ -37,6 +45,7 @@ struct WorkoutHomeView: View {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button { showSummary = true } label: { Image(systemName: "chart.xyaxis.line") }
                     Button { app.showCoach = true } label: { Image(systemName: "sparkles") }
+                        .accessibilityLabel("AI trainer").accessibilityIdentifier("openHomeTrainer")
                 }
             }
             .fullScreenCover(item: $activeWorkout) { w in
@@ -49,7 +58,6 @@ struct WorkoutHomeView: View {
                 WorkoutSetupView(title: target.title, items: target.items, isNew: target.isNew) { name, items in save(target, name: name, items: items) }
             }
             .onAppear { if DemoData.autoOpenActive, activeWorkout == nil { activeWorkout = unpublished }; openRequestedWorkout() }
-            .onChange(of: app.startTodayRequest) { _, _ in startToday() }
             .onChange(of: app.pending) { _, action in
                 if action == .openCardio { mode = 1; app.pending = nil }; openRequestedWorkout()
             }
@@ -75,49 +83,14 @@ struct WorkoutHomeView: View {
 
     private var strengthList: some View {
         List {
-            Section {
-                Button { app.tab = AppState.communityTab } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.2.wave.2.fill").font(.title2).foregroundStyle(.teal)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Enter Gym").font(.headline)
-                        }
-                        Spacer()
-                        Image(systemName: "arrow.up.right").foregroundStyle(.teal)
-                    }.padding(.vertical, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("openSocialGym")
-            }
-            if let w = unpublished {
-                Section {
-                    Button { activeWorkout = w } label: {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("继续训练：\(w.title)").bold()
-                                Text("已进行 \(w.duration.clockString) · \(w.completedSets.count) 组已完成").font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "play.circle.fill").font(.title).foregroundStyle(.green)
-                        }
-                    }
-                }
-            } else {
-                Section {
-                    Button { startToday() } label: { Label("Start workout", systemImage: "play.circle.fill").font(.headline) }
-                        .accessibilityIdentifier("startBlankWorkout")
-                }
-            }
-
-            if let p = todayPlan {
+            if let p = todayPlan, !p.items.isEmpty {
                 Section("Today") {
-                    HStack {
+                    NavigationLink { TodayTrainingListView(plan: p) } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(p.title).font(.headline)
-                            Text(p.items.isEmpty ? "Rest day" : "\(p.items.count) exercises").font(.caption).foregroundStyle(.secondary)
+                            Text("\(p.items.count) exercises").font(.caption).foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Button { app.showCoach = true } label: { Image(systemName: "sparkles") }
-                        Button { setup = SetupTarget(plan: p) } label: { Image(systemName: "slider.horizontal.3") }
-                    }
+                    }.accessibilityIdentifier("todayTraining")
                 }
             }
 
@@ -176,11 +149,8 @@ struct WorkoutHomeView: View {
     }
 
     private func startToday() {
-        guard unpublished == nil else { activeWorkout = unpublished; return }
-        do {
-            activeWorkout = try WorkoutSession.startOrResume(profile: profile, context: context)
-            mode = 0
-        } catch { sessionError = error.localizedDescription }
+        app.prefersCardioStart = false
+        app.perform(.startTodayWorkout)
     }
 
     private func start(title: String, items: [TemplateExercise]) {
@@ -194,8 +164,6 @@ struct WorkoutHomeView: View {
             context.insert(WorkoutTemplate(name: name, items: items))
         case .template(let t):
             t.name = name; t.items = items
-        case .plan(let p):
-            p.title = name; p.items = items; p.sourceRaw = "manual"
         }
         try? context.save()
     }
@@ -207,7 +175,7 @@ struct WorkoutHomeView: View {
 }
 
 struct SetupTarget: Identifiable {
-    enum Kind { case newTemplate, template(WorkoutTemplate), plan(DailyPlan) }
+    enum Kind { case newTemplate, template(WorkoutTemplate) }
     let id = UUID()
     let kind: Kind
     let title: String
@@ -217,7 +185,6 @@ struct SetupTarget: Identifiable {
     static func newTemplate() -> SetupTarget { SetupTarget(kind: .newTemplate, title: "", items: []) }
     init(kind: Kind, title: String, items: [TemplateExercise]) { self.kind = kind; self.title = title; self.items = items }
     init(template: WorkoutTemplate) { self.init(kind: .template(template), title: template.name, items: template.items) }
-    init(plan: DailyPlan) { self.init(kind: .plan(plan), title: plan.title, items: plan.items) }
 }
 
 struct WorkoutRow: View {
