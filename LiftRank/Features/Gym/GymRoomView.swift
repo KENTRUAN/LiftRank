@@ -29,6 +29,7 @@ struct GymRoomView: View {
     @State private var sheet: GymRoomSheet?
     @State private var lastLogged: String?
     @State private var occupiedStation: String?
+    @ScaledMetric(relativeTo: .caption) private var memberCardWidth: CGFloat = 90
     private var active: Workout? { session.flatMap { $0.isPublished ? nil : $0 } }
 
     var body: some View {
@@ -185,16 +186,18 @@ struct GymRoomView: View {
     }
     private var memberList: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 ForEach(store.members.filter { !store.blocked.contains($0.uid) }) { member in
                     if let p = store.roomProfile(member.uid) {
                         Button { openMember(p.uid) } label: {
                             VStack(spacing: 4) {
                                 GymAvatarView(profile: p, image: member.visibility == "anonymous" ? nil : store.portraits[p.uid], size: 38)
-                                Text(p.name).font(.caption).lineLimit(1)
+                                Text(p.name).font(.caption)
                                 Text(L(member.station.capitalized)).font(.caption2).foregroundStyle(.secondary)
                                 Text(L(member.status)).font(.caption2).foregroundStyle(.teal)
-                            }.frame(width: 90)
+                            }
+                            .multilineTextAlignment(.center)
+                            .frame(width: memberCardWidth)
                         }.buttonStyle(.plain).accessibilityIdentifier("gymMember.\(p.name)")
                     }
                 }

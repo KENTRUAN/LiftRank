@@ -135,13 +135,26 @@ struct ShopView: View {
                     }
                 }
                 if locked {
-                    RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.35)).frame(height: previewHeight)
-                    Image(systemName: "lock.fill").foregroundStyle(.white)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.black.opacity(0.18))
+                        .frame(height: previewHeight)
+                        .overlay(alignment: .topTrailing) {
+                            Image(systemName: "lock.fill")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(.black.opacity(0.65), in: Circle())
+                                .padding(6)
+                        }
+                        .accessibilityHidden(true)
                 }
             }
             VStack(spacing: 2) {
                 Text(item.name).font(.subheadline.bold())
-                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             if equipped {
                 Button("已装备") { if item.price > 0 { profile.unequip(item.slot); try? context.save() } }

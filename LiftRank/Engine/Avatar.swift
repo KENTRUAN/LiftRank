@@ -122,6 +122,32 @@ private struct RankAccessoryPlacement: Codable {
     var scale = 1.0
 }
 
+struct RankAccessoryLayout {
+    let center: CGPoint
+    let bounds: CGSize
+    let scale: CGFloat
+
+    init(base: CGSize, scale requestedScale: CGFloat, rotation: Double, center requestedCenter: CGPoint,
+         viewport: CGSize, editing: Bool) {
+        let angle = rotation * .pi / 180
+        let width = abs(base.width * cos(angle)) + abs(base.height * sin(angle))
+        let height = abs(base.width * sin(angle)) + abs(base.height * cos(angle))
+        let inset: CGFloat = 10
+        let handleWidth: CGFloat = editing ? 38 : 0
+        let availableWidth = max(0, viewport.width - 2 * inset - handleWidth)
+        let availableHeight = max(0, viewport.height - 2 * inset)
+        scale = min(requestedScale, availableWidth / max(1, width), availableHeight / max(1, height))
+        bounds = CGSize(width: width * scale, height: height * scale)
+
+        let horizontalExtent = max(editing ? 22 : 0, bounds.width / 2)
+        let left = min(viewport.width / 2, horizontalExtent + inset)
+        let right = min(viewport.width - left, horizontalExtent + handleWidth + inset)
+        let vertical = min(viewport.height / 2, max(editing ? 48 : 0, bounds.height / 2 + inset))
+        center = CGPoint(x: min(viewport.width - right, max(left, requestedCenter.x)),
+                         y: min(viewport.height - vertical, max(vertical, requestedCenter.y)))
+    }
+}
+
 struct RankMascotView: View {
     private enum Edit { case move, rotate, resize }
 
@@ -169,13 +195,13 @@ struct RankMascotView: View {
                 if spec.accessory != "none" {
                     let saved = placements[placementKey] ?? RankAccessoryPlacement()
                     let placement = draft ?? saved
-                    let center = accessoryCenter(placement, side: side, in: size)
+                    let layout = accessoryLayout(placement, side: side, in: size)
                     if allowsAccessoryPlacement {
-                        editor(placement, saved: saved, side: side, in: size)
-                            .position(center)
+                        editor(placement, layout: layout, saved: saved, side: side, in: size)
+                            .position(layout.center)
                     } else {
-                        transformedAccessory(placement, side: side)
-                            .position(center)
+                        transformedAccessory(placement, scale: layout.scale, side: side)
+                            .position(layout.center)
                             .allowsHitTesting(false)
                     }
                 }
@@ -185,10 +211,10 @@ struct RankMascotView: View {
         .onChange(of: placementKey) { _, _ in selected = false }
     }
 
-    private func editor(_ placement: RankAccessoryPlacement, saved: RankAccessoryPlacement,
+    private func editor(_ placement: RankAccessoryPlacement, layout: RankAccessoryLayout, saved: RankAccessoryPlacement,
                         side: CGFloat, in size: CGSize) -> some View {
-        let bounds = accessoryBounds(placement, side: side)
-        return transformedAccessory(placement, side: side)
+        let bounds = layout.bounds
+        return transformedAccessory(placement, scale: layout.scale, side: side)
             .frame(width: max(44, bounds.width), height: max(44, bounds.height))
             .contentShape(Rectangle())
             .onTapGesture { selected = true }
@@ -219,9 +245,10 @@ struct RankMascotView: View {
 
                         handle("arrow.up.left.and.arrow.down.right")
                             .accessibilityLabel("调整配饰大小")
-                            .accessibilityValue("\(Int(placement.scale * 100))%")
+                            .accessibilityValue("\(Int(layout.scale * 100))%")
                             .accessibilityAdjustableAction { direction in
                                 var resized = saved
+                                resized.scale = layout.scale
                                 switch direction {
                                 case .increment: resized.scale += 0.1
                                 case .decrement: resized.scale -= 0.1
@@ -249,27 +276,28 @@ struct RankMascotView: View {
             .contentShape(Rectangle())
     }
 
-    private func transformedAccessory(_ placement: RankAccessoryPlacement, side: CGFloat) -> some View {
+    private func transformedAccessory(_ placement: RankAccessoryPlacement, scale: CGFloat, side: CGFloat) -> some View {
         accessoryLayer(side: side)
-            .scaleEffect(placement.scale)
+            .scaleEffect(scale)
             .rotationEffect(.degrees(placement.rotation))
     }
 
     private func editGesture(_ edit: Edit, saved: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> some Gesture {
-        let center = accessoryCenter(saved, side: side, in: size)
+        let layout = accessoryLayout(saved, side: side, in: size)
         return DragGesture(minimumDistance: 3, coordinateSpace: .named("rankAccessoryPreview"))
             .updating($draft) { value, state, _ in
-                state = editedPlacement(edit, drag: value, saved: saved, center: center, side: side, in: size)
+                state = editedPlacement(edit, drag: value, saved: saved, layout: layout, side: side, in: size)
             }
             .onEnded { value in
-                save(editedPlacement(edit, drag: value, saved: saved, center: center, side: side, in: size))
+                save(editedPlacement(edit, drag: value, saved: saved, layout: layout, side: side, in: size))
             }
     }
 
     private func editedPlacement(_ edit: Edit, drag: DragGesture.Value, saved: RankAccessoryPlacement,
-                                 center: CGPoint, side: CGFloat, in size: CGSize) -> RankAccessoryPlacement {
+                                 layout: RankAccessoryLayout, side: CGFloat, in size: CGSize) -> RankAccessoryPlacement {
         guard side > 0 else { return saved }
         var placement = saved
+        let center = layout.center
         switch edit {
         case .move:
             let anchor = accessoryAnchor(side: side, in: size)
@@ -282,10 +310,10 @@ struct RankMascotView: View {
         case .resize:
             let start = hypot(drag.startLocation.x - center.x, drag.startLocation.y - center.y)
             let end = hypot(drag.location.x - center.x, drag.location.y - center.y)
-            placement.scale = min(2, max(0.5, saved.scale * end / max(1, start)))
+            placement.scale = min(2, max(0.5, layout.scale * end / max(1, start)))
         }
         let anchor = accessoryAnchor(side: side, in: size)
-        let boundedCenter = accessoryCenter(placement, side: side, in: size)
+        let boundedCenter = accessoryLayout(placement, side: side, in: size).center
         placement.offset = CGSize(width: (boundedCenter.x - anchor.x) / side,
                                   height: (boundedCenter.y - anchor.y) / side)
         return placement
@@ -295,23 +323,13 @@ struct RankMascotView: View {
         CGPoint(x: size.width / 2, y: (size.height - side) / 2 + side * accessoryHeight)
     }
 
-    private func accessoryCenter(_ placement: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> CGPoint {
+    private func accessoryLayout(_ placement: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> RankAccessoryLayout {
         let anchor = accessoryAnchor(side: side, in: size)
-        let bounds = accessoryBounds(placement, side: side)
-        let xMargin = min(size.width / 2, bounds.width / 2 + 4)
-        let yMargin = min(size.height / 2, bounds.height / 2 + 4)
-        let rightMargin = selected ? min(size.width / 2, max(22, bounds.width / 2) + 38) : xMargin
-        let handleMargin = selected ? max(yMargin, 42) : yMargin
-        return CGPoint(x: min(size.width - rightMargin, max(xMargin, anchor.x + placement.offset.width * side)),
-                       y: min(size.height - handleMargin, max(handleMargin, anchor.y + placement.offset.height * side)))
-    }
-
-    private func accessoryBounds(_ placement: RankAccessoryPlacement, side: CGFloat) -> CGSize {
-        let width = side * accessoryWidth * placement.scale
-        let height = side * accessoryCanvasHeight * placement.scale
-        let angle = placement.rotation * .pi / 180
-        return CGSize(width: abs(width * cos(angle)) + abs(height * sin(angle)),
-                      height: abs(width * sin(angle)) + abs(height * cos(angle)))
+        let center = CGPoint(x: anchor.x + placement.offset.width * side,
+                             y: anchor.y + placement.offset.height * side)
+        return RankAccessoryLayout(base: CGSize(width: side * accessoryWidth, height: side * accessoryCanvasHeight),
+                                   scale: placement.scale, rotation: placement.rotation, center: center,
+                                   viewport: size, editing: selected)
     }
 
     private func save(_ placement: RankAccessoryPlacement) {
