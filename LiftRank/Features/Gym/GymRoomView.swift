@@ -126,8 +126,13 @@ struct GymRoomView: View {
     }
     @ViewBuilder private var socialBanner: some View {
         if let (station, request) = store.incomingWorkIns.first {
+            let name = store.roomProfile(request.requesterID)?.name ?? L("Gym member")
+            let equipment = L(station.capitalized).lowercased(with: AppLanguage.current.locale)
             HStack {
-                Text("\(store.roomProfile(request.requesterID)?.name ?? "A lifter") asks to \(request.mode == "workIn" ? "work in" : "train together") at the \(station)").font(.caption.bold())
+                Text(request.mode == "workIn"
+                     ? L("%@ asks to work in at the %@", name, equipment)
+                     : L("%@ asks to train together at the %@", name, equipment))
+                    .font(.caption.bold())
                 Spacer()
                 Button("Accept") { store.perform { try await store.equipmentAction(station, "accept", target: request.requesterID) } }.buttonStyle(.borderedProminent).accessibilityIdentifier("acceptWorkIn")
                 Button("Decline") { store.perform { try await store.equipmentAction(station, "decline", target: request.requesterID) } }.font(.caption)
