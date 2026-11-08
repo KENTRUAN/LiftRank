@@ -129,9 +129,11 @@ struct RankAccessoryLayout {
 
     init(base: CGSize, scale requestedScale: CGFloat, rotation: Double, center requestedCenter: CGPoint,
          viewport: CGSize, editing: Bool) {
-        let angle = rotation * .pi / 180
-        let width = abs(base.width * cos(angle)) + abs(base.height * sin(angle))
-        let height = abs(base.width * sin(angle)) + abs(base.height * cos(angle))
+        let angle = CGFloat(rotation) * .pi / 180
+        let cosine = abs(cos(angle))
+        let sine = abs(sin(angle))
+        let width = base.width * cosine + base.height * sine
+        let height = base.width * sine + base.height * cosine
         let inset: CGFloat = 10
         let handleWidth: CGFloat = editing ? 38 : 0
         let availableWidth = max(0, viewport.width - 2 * inset - handleWidth)
