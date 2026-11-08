@@ -60,7 +60,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 想邀请你一起训练，器械是%@"
+            "value": "%@ 申请加入你的训练，想和你用%@一起练、互相辅助"
           }
         }
       }
@@ -1548,7 +1548,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "邀请对方一起训练"
+            "value": "申请加入合作训练"
           }
         }
       }
