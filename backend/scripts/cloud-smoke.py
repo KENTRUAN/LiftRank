@@ -20,6 +20,8 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--ai', action='store_true', help='Also run one avatar and two companion requests')
 parser.add_argument('--trainer', action='store_true', help='Validate live trainer todo edits and a seven-day schedule')
 parser.add_argument('--generic-unconfigured', action='store_true', help='Verify generic AI fails clearly without a separate key')
+parser.add_argument('--places', action='store_true', help='Also test the optional Google Places directory (uses provider quota)')
+parser.add_argument('--greeting', action='store_true', help='Also test one read-only Home welcome using the workout model')
 args = parser.parse_args()
 root = pathlib.Path(__file__).resolve().parents[2]
 with (root / 'LiftRank/Resources/SocialConfig.plist').open('rb') as handle:
@@ -139,16 +141,60 @@ try:
             context['activeWorkout']['remaining'] = result['todos']
         print('PASS: live trainer creates requested todos, preserves the list, handles short additions and schedules seven days', flush=True)
 
-    gyms = api(a, 'gyms/search', {'query': 'gyms in New York'})['gyms']
-    assert gyms
-    gym = gyms[0]
-    now = int(time.time() * 1000)
-    location = {'latitude': gym['latitude'], 'longitude': gym['longitude'], 'accuracy': 20, 'timestamp': now}
-    for point, status in [(None, 400), ({**location, 'accuracy': 101}, 400),
-                          ({**location, 'timestamp': now - 61000}, 400),
-                          ({**location, 'latitude': 0, 'longitude': 0}, 403)]:
-        api(a, 'rooms/join', {'placeID': gym['placeID'], 'location': point}, expected=status)
-    print('PASS: live Places search; missing, inaccurate, stale and distant check-ins denied', flush=True)
+    def nearby():
+        # Explicit synthetic test location, not a physical-device proximity rehearsal.
+        return {'latitude': 35.997085, 'longitude': -78.940951, 'accuracy': 20, 'timestamp': int(time.time() * 1000)}
+
+    registered = api(a, 'spaces/nearby', {'location': nearby()})['gyms']
+    assert any(gym['id'] == 'registered-duke-wilson' for gym in registered)
+    for point, status in [(None, 400), ({**nearby(), 'accuracy': 101}, 400),
+                          ({**nearby(), 'timestamp': int(time.time() * 1000) - 61000}, 400),
+                          ({**nearby(), 'latitude': 0, 'longitude': 0}, 403)]:
+        api(a, 'rooms/join', {'roomId': 'registered-duke-wilson', 'location': point}, expected=status)
+    registered_lease = api(a, 'rooms/join', {'roomId': 'registered-duke-wilson', 'location': nearby()})
+    api(a, 'rooms/leave', {'sessionId': registered_lease['sessionId']})
+    print('PASS: Wilson preset; missing, inaccurate, stale and distant check-ins denied', flush=True)
+
+    created = api(a, 'spaces/create', {'name': 'QA temporary space', 'visibility': 'public', 'location': nearby()})
+    room = created['gym']['id']
+    assert any(space['id'] == room for space in api(b, 'spaces/nearby', {'location': nearby()})['spaces'])
+    db('world/access/spaces/' + room, b, expected=401)
+    api(b, 'rooms/join', {'roomId': room, 'location': nearby()}, expected=403)
+    api(b, 'spaces/' + room + '/request', {'location': nearby()})
+    pending = api(a, 'spaces/inbox')['requests']
+    pending = next(item for item in pending if item['roomId'] == room)
+    api(a, 'spaces/' + room + '/respond', {'requestID': pending['id'], 'action': 'accept'})
+    joined = api(b, 'rooms/join', {'roomId': room, 'location': nearby()})
+    for guest, lease in [(a, created['membership']), (b, joined)]:
+        db('world/rooms/' + room + '/presence/' + guest['localId'], guest, {
+            'uid': guest['localId'], 'sessionId': lease['sessionId'], 'x': lease['spawnX'], 'y': lease['spawnY'],
+            'station': 'lounge', 'status': 'Ready', 'visibility': 'public', 'updatedAt': {'.sv': 'timestamp'},
+        }, 'PUT')
+    assert len(db('world/rooms/' + room + '/presence', b)) == 2
+    db('world/rooms/' + room + '/presence', c, expected=401)
+    api(a, 'spaces/' + room + '/visibility', {'visibility': 'private'})
+    assert not any(space['id'] == room for space in api(c, 'spaces/nearby', {'location': nearby()})['spaces'])
+    api(c, 'rooms/join', {'roomId': room, 'location': nearby()}, expected=403)
+    api(a, 'rooms/leave', {'sessionId': created['membership']['sessionId']})
+    assert api(b, 'spaces/inbox')['room']['isHost'] is True
+    api(b, 'spaces/' + room + '/invite', {'targetID': a['localId']})
+    assert any(item['gym']['id'] == room for item in api(a, 'spaces/inbox')['invitations'])
+    api(a, 'rooms/join', {'roomId': room, 'location': {**nearby(), 'latitude': 0}}, expected=403)
+    rejoined = api(a, 'rooms/join', {'roomId': room, 'location': nearby()})
+    api(a, 'rooms/leave', {'sessionId': rejoined['sessionId']})
+    api(b, 'rooms/leave', {'sessionId': joined['sessionId']})
+    assert db('world/access/spaces/' + room) is None
+    print('PASS: nearby requests/approval, shared presence, private access, host succession, friend invitation and final closure', flush=True)
+
+    if args.places:
+        assert api(a, 'gyms/search', {'query': 'gyms in New York'})['gyms']
+        print('PASS: optional live Places search', flush=True)
+
+    if args.greeting:
+        welcome = api(a, 'trainer/greeting', {'localDate': time.strftime('%Y-%m-%d'), 'language': 'en',
+                      'status': 'No active workout', 'plan': 'No requested plan today'})
+        assert set(welcome) == {'reply'} and isinstance(welcome['reply'], str) and welcome['reply'].strip()
+        print('PASS: live workout model returns a read-only Home welcome', flush=True)
 
     if args.generic_unconfigured:
         api(a, 'companion', {'messages': [{'role': 'user', 'text': 'Introduce me'}], 'targetID': b['localId']}, expected=503)
@@ -186,10 +232,10 @@ finally:
     # Remove only records created by this rehearsal; retain project quota usage.
     for guest in guests:
         uid = guest['localId']
-        lease = db('world/memberships/' + uid)
+        lease = db('world/access/memberships/' + uid)
         if lease:
             api(guest, 'rooms/leave', {'sessionId': lease['sessionId']})
-        for path in ['profiles/' + uid, 'world/memberships/' + uid, 'world/rooms/demo-gym/presence/' + uid,
+        for path in ['profiles/' + uid, 'world/access/memberships/' + uid, 'world/rooms/demo-gym/presence/' + uid,
                      'social/friends/' + uid, 'social/blocks/' + uid, 'roomMessages/demo-gym/qa-' + uid]:
             db(path, method='DELETE')
     for a in guests:

@@ -1,3 +1,6 @@
+import { spaceRoutes } from './spaceRoutes.js';
+import { accessState, admit, joinSpace, reconcileSpaces } from './spaces.js';
+import { registeredGyms } from './registeredGyms.js';
 import { validatedTrainerReply } from './trainer.js';
 import { trainerPlanReply } from './providers.js';
 import { equipmentAction, cleanEquipment } from './equipment.js';
@@ -50,7 +53,7 @@ async function transaction(ref: Reference, operation: (current: any) => any) {
   } finally { ref.off('value', listener); }
 }
 async function membership(uid: string, roomId?: string): Promise<Membership> {
-  const m = (await db.ref(`world/memberships/${uid}`).get()).val();
+  const m = (await db.ref(`world/access/memberships/${uid}`).get()).val();
   if (!m || m.expiresAt <= Date.now() || (roomId && m.roomId !== roomId)) throw new APIError(403, 'Check into this gym first.');
   return m;
 }
@@ -69,10 +72,10 @@ app.post('/profile', async (req, res) => {
   let oldVisibility: string | undefined;
   const profile = await transaction(ref, old => { oldVisibility = old?.visibility ?? 'public'; return cleanProfile(uid, req.body, old); });
   if (!req.body.snapshotOnly && oldVisibility !== profile.visibility) {
-    const lease = (await db.ref(`world/memberships/${uid}`).get()).val();
+    const lease = (await db.ref(`world/access/memberships/${uid}`).get()).val();
     if (lease) {
       const publicID = profile.visibility === 'anonymous' ? `anon-${randomUUID()}` : uid;
-      await transaction(db.ref(`world/memberships/${uid}`), current => current?.sessionId === lease.sessionId ? { ...current, publicID, visibility: profile.visibility } : current);
+      await transaction(db.ref(`world/access/memberships/${uid}`), current => current?.sessionId === lease.sessionId ? { ...current, publicID, visibility: profile.visibility } : current);
       await clearPresence(uid, lease);
     }
   }
@@ -88,51 +91,62 @@ app.post('/rooms/join', async (req, res) => {
   const uid = res.locals.uid;
   const profile = (await db.ref(`profiles/${uid}`).get()).val();
   if (!profile) throw new APIError(400, 'Create your social profile first.');
-  const demo = req.body.roomId === DEMO_ROOM;
-  let roomId = DEMO_ROOM;
-  if (!demo) {
+  const requested = key(req.body.roomId), custom = requested.startsWith('space-');
+  let roomId = requested;
+  if (requested !== DEMO_ROOM && !custom) {
     await quota(uid, 'checkin', 100, 2000);
-    const placeID = text(req.body.placeID, 200, 'Place ID');
-    const gym = await gymDetails(placeID);
-    validateCheckIn(req.body.location, gym);
-    roomId = roomKey(placeID);
-    // Place IDs are the only persisted Google Places fields.
-    await db.ref(`gymIdentifiers/${roomId}`).set({ placeID });
+    if (requested.startsWith('registered-')) {
+      const gym = registeredGyms().find(g => g.id === requested);
+      if (!gym) throw new APIError(404, 'This registered gym is unavailable.');
+      validateCheckIn(req.body.location, gym);
+    } else {
+      const placeID = text(req.body.placeID, 200, 'Place ID');
+      const gym = await gymDetails(placeID);
+      validateCheckIn(req.body.location, gym);
+      roomId = roomKey(placeID);
+      await db.ref(`gymIdentifiers/${roomId}`).set({ placeID });
+    }
   }
   const sessionId = randomUUID();
-  const previous: Membership | null = (await db.ref(`world/memberships/${uid}`).get()).val();
-  // Movement lives outside this transaction subtree: a busy room's 5 Hz
-  // position writes must not invalidate admission/capacity transactions.
-  const publicID = profile.visibility === 'anonymous' ? `anon-${randomUUID()}` : uid;
-  const memberships = await transaction(db.ref('world/memberships'), raw => {
-    const result = joinWorld({ memberships: raw ?? {}, rooms: {} }, uid, roomId, sessionId, Date.now()).memberships;
-    result[uid] = { ...result[uid]!, publicID, visibility: profile.visibility ?? 'public' };
-    return result;
+  const identity = { publicID: profile.visibility === 'anonymous' ? `anon-${randomUUID()}` : uid, visibility: profile.visibility ?? 'public' };
+  const social = custom ? normalizeSocial((await db.ref('social').get()).val()) : null;
+  let previous: Membership | undefined;
+  const state = await transaction(db.ref('world/access'), raw => {
+    const state = accessState(raw), now = Date.now(); previous = state.memberships[uid];
+    if (custom) {
+      if (Object.entries(state.memberships).some(([id, m]) => m.roomId === roomId && m.expiresAt > now && isBlocked(social!, uid, id))) throw new APIError(403, 'This space is unavailable.');
+      const grant = state.spaces[roomId]?.requests?.[uid];
+      const inviter = grant?.inviterID;
+      if (grant?.status === 'invited' && (!inviter || isBlocked(social!, inviter, uid) || social!.friends[inviter]?.[uid]?.status !== 'accepted')) throw new APIError(403, 'This friend invitation is no longer available.');
+      joinSpace(state, uid, roomId, sessionId, req.body.location, now, identity);
+    } else { admit(state, uid, roomId, sessionId, now, identity); reconcileSpaces(state, now); }
+    return state;
   });
   if (previous) await clearPresence(uid, previous);
-  res.json(memberships[uid]);
+  res.json(state.memberships[uid]);
 });
 app.post('/rooms/renew', async (req, res) => {
-  const uid = res.locals.uid;
-  const session = key(req.body.sessionId);
-  const updated = await transaction(db.ref(`world/memberships/${uid}`), m => {
-    if (!m || m.sessionId !== session || m.expiresAt <= Date.now()) throw new APIError(403, 'Check in again to rejoin.');
-    return { ...m, expiresAt: Date.now() + LEASE_MS };
+  const uid = res.locals.uid, session = key(req.body.sessionId);
+  const state = await transaction(db.ref('world/access'), raw => {
+    const state = accessState(raw), now = Date.now(), m = state.memberships[uid];
+    if (!m || m.sessionId !== session || m.expiresAt <= now) throw new APIError(403, 'Check in again to rejoin.');
+    m.expiresAt = now + LEASE_MS;
+    return reconcileSpaces(state, now);
   });
-  res.json(updated);
+  res.json(state.memberships[uid]);
 });
 app.post('/rooms/leave', async (req, res) => {
-  const uid = res.locals.uid;
-  const sessionId = key(req.body.sessionId);
+  const uid = res.locals.uid, sessionId = key(req.body.sessionId);
   let removed: Membership | undefined;
-  await transaction(db.ref(`world/memberships/${uid}`), m => {
-    removed = undefined;
-    if (m && m.sessionId === sessionId) { removed = m; return null; }
-    return m;
+  await transaction(db.ref('world/access'), raw => {
+    const state = accessState(raw), m = state.memberships[uid]; removed = undefined;
+    if (m?.sessionId === sessionId) { removed = m; delete state.memberships[uid]; }
+    return reconcileSpaces(state, Date.now());
   });
   if (removed) await clearPresence(uid, removed);
   res.json({ ok: true });
 });
+spaceRoutes(app, { db, transaction, quota, clearPresence });
 async function clearPresence(uid: string, membership: Membership) {
   await transaction(db.ref(`world/rooms/${membership.roomId}/presence/${membership.publicID ?? uid}`), p =>
     p?.sessionId === membership.sessionId ? null : p);
@@ -148,6 +162,7 @@ async function clearPresence(uid: string, membership: Membership) {
 }
 app.post('/equipment/:station/:action', async (req, res) => {
   const uid = res.locals.uid, lease = await membership(uid), actor = lease.publicID ?? uid;
+  if (lease.roomId.startsWith('space-')) throw new APIError(400, 'Open workout spaces do not reserve gym machines.');
   await quota(uid, 'equipment', 600, 10000);
   const room = db.ref(`world/rooms/${lease.roomId}`);
   const present = (await room.child('presence').get()).val() ?? {};
@@ -163,7 +178,10 @@ app.post('/friends/:target/:action', async (req, res) => {
   }
   await quota(uid, 'social', 300, 5000);
   if (!(await db.ref(`profiles/${target}`).get()).exists()) throw new APIError(404, 'Member not found.');
-  if (action === 'request') validateGymEncounter((await db.ref('world').get()).val(), uid, target);
+  if (action === 'request') {
+    const world = (await db.ref('world').get()).val();
+    validateGymEncounter({ memberships: world?.access?.memberships, rooms: world?.rooms }, uid, target);
+  }
   const social = await transaction(db.ref('social'), raw => friendshipAction(raw, uid, target, action, Date.now()));
   res.json({ friendship: social.friends?.[uid]?.[target] ?? null, conversationId: pairKey(uid, target) });
 });
@@ -250,6 +268,18 @@ app.post('/trainer', async (req, res) => {
   res.json(await validatedTrainerReply(new Set(entries.map((e: any) => e.key)), repair => trainerPlanReply(input, context, repair),
     () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300)),
     { allowsTodoEditing: context.activeWorkout != null && context.activeWorkout.allowsTodoEditing !== false }));
+});
+app.post('/trainer/greeting', async (req, res) => {
+  const context = {
+    localDate: text(req.body.localDate, 10), language: text(req.body.language ?? 'en', 40),
+    workout: text(req.body.status, 300), requestedPlan: text(req.body.plan, 300),
+  };
+  await quota(res.locals.uid, 'greeting', 20, Number(process.env.GREETING_GLOBAL_LIMIT ?? 200));
+  const message = [{ role: 'user', text: 'Welcome me back in one or two short sentences in my supplied language. Use the supplied workout status and requested plan, if any. Offer a useful training encouragement. Do not invent a schedule or claim to change anything. Return keep, todos:null and schedule:[].' }];
+  const result = await validatedTrainerReply(new Set(), repair => trainerPlanReply(message,
+    { ...context, catalog: [], activeWorkout: { allowsTodoEditing: false, status: context.workout }, schedule: [] }, repair),
+    () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300)), { allowsTodoEditing: false });
+  res.json({ reply: result.reply.slice(0, 600) });
 });
 app.post('/companion', async (req, res) => {
   const uid = res.locals.uid;

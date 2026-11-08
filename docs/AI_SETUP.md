@@ -7,11 +7,12 @@ Tinker is reserved for the workout trainer: exercise guidance, remaining-set edi
 | Feature | API / location in code | Required configuration | Where the credential lives |
 | --- | --- | --- | --- |
 | Trainer chat and workout edits | Tinker Anthropic-compatible Messages API; `backend/src/providers.ts`, authenticated `POST /trainer` | `TINKER_API_KEY`, `TINKER_TRAINER_MODEL` | Backend environment / private Secret Manager secret |
+| Home trainer welcome | Same workout model; authenticated, read-only `POST /trainer/greeting` | Same trainer key/model; `GREETING_GLOBAL_LIMIT` (200/day default) | Backend only; 20 greetings/guest/day, also counted against the 30/day trainer budget |
 | Older workout-context companion route | Same Tinker API; `POST /companion` without `targetID` | Same trainer configuration | Backend only |
 | Editable social introduction | Gemini Developer API `generateContent`; `POST /companion` with authorized `targetID` | **Your own `GEMINI_API_KEY`**, `GENERAL_AI_MODEL` | Backend only; add later |
 | Selfie/text avatar preview | Gemini Developer API image generation; `POST /avatars/generate` | **Your own `GEMINI_API_KEY`**, `AVATAR_MODEL` with image-generation access | Backend only; add later |
 | Body analysis, nutrition guidance, meal photos, summaries and local avatar tools | Developer-configured provider in `LiftRank/Features/AI/AIService.swift` | `LIFTRANK_AI_PROVIDER`, `LIFTRANK_AI_MODEL`, `LIFTRANK_AI_BASE_URL`, `LIFTRANK_AI_KEY` in ignored `Config/AI.local.xcconfig` | Use a server relay for provider secrets in distributed builds; these settings do not configure Tinker |
-| Future real-gym discovery/check-in | Google Places API (New); `/gyms`, `/rooms/join` | `GOOGLE_PLACES_API_KEY` | Backend / Secret Manager; preset Demo Gym does not need it |
+| Future external gym directory | Google Places API (New); `/gyms/search`, `/rooms/join` | `GOOGLE_PLACES_API_KEY` | Backend / Secret Manager; Wilson presets, nearby workout spaces and Demo Gym do not need it |
 | Identity, presence, social and approved image storage | Firebase Auth, Realtime Database, Storage | Local `SocialConfig.plist`; server project/database/bucket values and service-account identity | Ignored local app configuration; server uses Cloud Run identity |
 | Outdoor minimap and Apple workouts | MapKit, CoreLocation, HealthKit, WatchConnectivity, ActivityKit | Apple capabilities and user permissions | No external AI API key |
 

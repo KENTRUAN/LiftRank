@@ -108,7 +108,7 @@ export function cleanProfile(uid: string, value: any, existing?: Profile): Profi
     shareActivity, ...(highlights ? { highlights } : {}), routines: cleanRoutines(value.routines ?? existing?.routines),
   };
 }
-export interface Membership { roomId: string; sessionId: string; expiresAt: number; spawnX?: number; spawnY?: number; publicID?: string; visibility?: string }
+export interface Membership { roomId: string; sessionId: string; expiresAt: number; spawnX?: number; spawnY?: number; publicID?: string; visibility?: string; joinedAt?: number }
 export interface Presence { uid: string; sessionId: string; x: number; y: number; station: string; status: string; updatedAt: number }
 export interface World { memberships: Record<string, Membership>; rooms: Record<string, { presence: Record<string, Presence> }> }
 export function validateGymEncounter(raw: Partial<World> | null, a: string, b: string, now = Date.now()) {

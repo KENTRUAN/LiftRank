@@ -1,5 +1,7 @@
 # Live social gym setup
 
+See [nearby workout spaces](../docs/GYM_SPACES.md) for the unified workout flow, Wilson preset, private invitations, new APIs and coordinated backend/rules rollout.
+
 See [feature documentation](../docs/FEATURE_BRANCH.md) for the complete implemented behavior and main-integration decisions. [AI APIs and workout fine-tuning](../docs/AI_SETUP.md) lists provider boundaries, required keys, training commands and budget controls.
 
 The iOS client uses Firebase anonymous Auth, Realtime Database and Storage. The TypeScript API runs on Cloud Run; **no VM is needed**. The intended development project is `liftrank-514018`.
@@ -114,10 +116,10 @@ The iOS unit suite includes shared Home/gym session reuse, planned-set completio
 For an opt-in cloud rehearsal, run this from the repository root after configuring the cloud plist and signing into gcloud:
 
 ```sh
-python3 backend/scripts/cloud-smoke.py --ai
+python3 backend/scripts/cloud-smoke.py
 ```
 
-This creates three temporary guests, checks real database access rules, friendship/private chat, blocking, station updates, Places and rejected check-ins, then deletes its accounts and assets. `--trainer` verifies live structured todo edits and a complete week using two trainer requests (a validation repair, if needed, consumes one more attempt). To test ordinary English/Chinese chat, full-catalog todo edits, deletion and a seven-day plan directly with the configured provider, run `node --env-file=backend/.env backend/scripts/trainer-rehearsal.mjs` from the repository root. This opt-in provider diagnostic uses synthetic context and does not mutate the database; provider usage is billed normally. Run cloud smoke separately from simulator rehearsal because they share the preset gym equipment. `--ai` spends one avatar generation and two companion requests and verifies that introductions stay unsent. Omit it for the social/discovery checks alone. Project quota usage remains recorded after cleanup.
+This creates three temporary guests, checks real database access rules, friendship/private chat, blocking, station updates, Wilson check-in validation and nearby spaces, then deletes its accounts and assets. Space checks cover public requests/approval, private visibility, host succession, nearby friend invitations and last-member closure. Locations are synthetic; this does not replace a physical proximity rehearsal. Default checks make no AI or Places calls. `--greeting` adds one live read-only Home welcome, `--places` adds optional Google Places search, and `--trainer` verifies structured todo edits and a complete week using four trainer requests (validation repairs may consume extra attempts). To test ordinary English/Chinese chat, full-catalog todo edits, deletion and a seven-day plan directly with the configured provider, run `node --env-file=backend/.env backend/scripts/trainer-rehearsal.mjs` from the repository root. This opt-in provider diagnostic uses synthetic context and does not mutate the database; provider usage is billed normally. Run cloud smoke separately from simulator rehearsal because they share the preset gym equipment. `--ai` spends one avatar generation and two companion requests and verifies that introductions stay unsent. Project quota usage remains recorded after cleanup.
 
 From the repository root:
 

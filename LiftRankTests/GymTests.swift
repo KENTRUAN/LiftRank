@@ -2,6 +2,35 @@ import XCTest
 @testable import LiftRank
 
 final class GymTests: XCTestCase {
+    func testPlainSpaceHasNoInvisibleEquipmentObstacles() {
+        let start = GymLayout.Cell(x: 2, y: 7), target = GymLayout.Cell(x: 4, y: 2)
+        XCTAssertTrue(GymLayout.path(from: start, to: target).isEmpty)
+        XCTAssertEqual(GymLayout.path(from: start, to: target, plain: true).last, target)
+        XCTAssertTrue(GymLayout.path(from: start, to: .init(x: 12, y: 5), plain: true).isEmpty)
+    }
+    func testCameraFitsSmallScreensAndBoundsPinchZoom() {
+        XCTAssertEqual(GymCamera.fitScale(CGSize(width: 390, height: 360)), 2)
+        XCTAssertEqual(GymCamera.zoom(0), 0.8)
+        XCTAssertEqual(GymCamera.zoom(20), 3)
+        XCTAssertEqual(GymCamera.zoom(.nan), 1)
+    }
+    @MainActor func testAllStartActionsGoToTheGymAndSelectItsTab() {
+        let app = AppState(); app.communitySection = 1
+        app.perform(.startTodayWorkout)
+        XCTAssertEqual(app.tab, AppState.communityTab)
+        XCTAssertEqual(app.communitySection, 0)
+    }
+    @MainActor func testOfflinePrivateSpacePublishesNoMembershipAndRetainsMovementAndState() {
+        let store = GymStore()
+        store.startPrivateSpace(name: "Solo", gsr: 400, cosmetics: [])
+        XCTAssertTrue(store.room?.isLocal == true)
+        XCTAssertNil(store.membership)
+        XCTAssertFalse(store.offlineSample)
+        store.move(x: 5, y: 4); store.setTrainingState("Training")
+        XCTAssertEqual(store.members.first?.x, 5)
+        XCTAssertEqual(store.members.first?.status, "Training")
+        XCTAssertFalse(store.canRequestFriend("other"))
+    }
     func testProfileDecodesRealtimeDatabaseOmittedEmptyArrays() throws {
         let data = Data(#"{"uid":"a","name":"Guest","gsr":0,"interests":"","avatar":{"preset":"bolt","color":"orange"}}"#.utf8)
         let profile = try JSONDecoder().decode(SocialProfile.self, from: data)

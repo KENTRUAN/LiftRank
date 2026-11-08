@@ -80,9 +80,8 @@ struct GymHubView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("TRAIN TOGETHER.").font(.system(size: 28, weight: .heavy, design: .rounded))
-                    Text("A familiar gym. Your lifting people.").foregroundStyle(.white.opacity(0.8))
-                    Label("One session, from Home to the gym", systemImage: "dumbbell.fill").font(.caption.bold()).foregroundStyle(.mint)
+                    Text("Where are you training?").font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("Choose a gym or make your own space.").foregroundStyle(.white.opacity(0.8))
                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                     .foregroundStyle(.white).background(Color(red: 0.07, green: 0.18, blue: 0.22), in: RoundedRectangle(cornerRadius: 24))
                 if store.restoring || (!store.prepared && store.restoreError == nil) {
@@ -102,13 +101,15 @@ struct GymHubView: View {
                 }
                 if let error = store.error { Text(error).font(.callout).foregroundStyle(.orange).accessibilityIdentifier("gymError") }
                 if store.busy { ProgressView("One moment…") }
+                WorkoutSpacePicker(store: store, startLocal: {
+                    do { try beginSession(); store.startPrivateSpace(name: profile.name, gsr: gsr, cosmetics: profile.sharedCosmeticIDs) }
+                    catch { store.error = error.localizedDescription }
+                }, entered: beginSession)
                 presetCard
-                Text("Preset layout · benches, racks, cardio and a social lounge. Equipment and activity are selected by members.")
-                    .font(.caption).foregroundStyle(.secondary)
             }.padding(20)
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("Community").navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Start workout").navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { showSettings = true } label: { Image(systemName: "gearshape") }

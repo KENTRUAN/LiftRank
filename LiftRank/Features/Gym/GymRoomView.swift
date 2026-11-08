@@ -2,7 +2,7 @@ import SwiftUI
 import SpriteKit
 
 private enum GymRoomSheet: Identifiable {
-    case member(String), chat(String), equipment(String), inbox, trainer, roomChat, workout(Workout), finish(Workout), setup(Workout)
+    case member(String), chat(String), equipment(String), inbox, trainer, roomChat, workout(Workout), finish(Workout), setup(Workout), spaceSettings, cardioStart
     var id: String {
         switch self {
         case .member(let id): "member-\(id)"
@@ -14,6 +14,8 @@ private enum GymRoomSheet: Identifiable {
         case .workout: "workout"
         case .finish: "finish"
         case .setup: "setup"
+        case .spaceSettings: "spaceSettings"
+        case .cardioStart: "cardioStart"
         }
     }
 }
@@ -30,6 +32,9 @@ struct GymRoomView: View {
     @State private var lastLogged: String?
     @State private var occupiedStation: String?
     @ScaledMetric(relativeTo: .caption) private var memberCardWidth: CGFloat = 90
+    @State private var expanded = false
+    private var plain: Bool { gym.isPlainSpace }
+    private var online: Bool { !store.offlineSample && gym.isLocal != true }
     private var active: Workout? { session.flatMap { $0.isPublished ? nil : $0 } }
 
     var body: some View {
@@ -37,16 +42,28 @@ struct GymRoomView: View {
             VStack(spacing: 0) {
                 HStack {
                     Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
-                    Text(store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
+                    Text(gym.isLocal == true ? "PRIVATE · ONLY ON THIS DEVICE" : store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
                         .font(.caption.bold())
                     Spacer()
-                    Text("Preset layout").font(.caption2).foregroundStyle(.secondary)
+                    Text(plain ? (gym.visibility == "public" ? "Public space" : "Private space") : "Public gym").font(.caption2).foregroundStyle(.secondary)
                 }.padding(12).background(.teal.opacity(0.08))
-                SpriteView(scene: scene).aspectRatio(780 / 610, contentMode: .fit)
-                    .accessibilityLabel("Isometric gym. Tap equipment to start a set, or use the station picker and Start set button below.")
+                GymSceneView(scene: scene).frame(height: expanded ? 560 : 360)
+                    .accessibilityIdentifier("walkableGymScene")
+                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to start a set, or use the station picker below.")
+                HStack(spacing: 18) {
+                    Text("Pinch to zoom · Two fingers to move").font(.caption2).foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Button { scene.zoom(by: 0.8) } label: { Image(systemName: "minus.magnifyingglass") }.accessibilityLabel("Zoom out")
+                    Button { scene.zoom(by: 1.25) } label: { Image(systemName: "plus.magnifyingglass") }.accessibilityLabel("Zoom in")
+                    Button { scene.resetCamera() } label: { Image(systemName: "viewfinder") }.accessibilityLabel("Reset gym view")
+                    Button { expanded.toggle() } label: { Image(systemName: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") }
+                        .accessibilityLabel(expanded ? "Shrink gym" : "Enlarge gym")
+                }.padding(12).background(.background)
                 VStack(spacing: 12) {
                     workoutCard
-                    HStack {
+                    if plain {
+                        if let active, active.isOutdoor { OutdoorWorkoutMap(workout: active) }
+                    } else { HStack {
                         Picker("Station", selection: Binding(get: { store.station }, set: { useEquipment($0) })) {
                             ForEach(GymLayout.stations, id: \.self) { Text(L($0.capitalized)).tag($0) }
                         }.accessibilityIdentifier("gymStation")
@@ -54,13 +71,13 @@ struct GymRoomView: View {
                         if store.station != "lounge" {
                             Button("Release equipment") { releaseEquipment() }.font(.caption).disabled(active?.hasPendingSet == true || active?.cardioTimerStartedAt != nil).accessibilityIdentifier("releaseEquipment")
                         }
-                    }
+                    } }
                     if let active, !store.offlineSample { TrainingHealthStatusView(workout: active) }
                     if let lastLogged { Label(lastLogged, systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.teal).accessibilityIdentifier("gymSetSaved") }
                     HStack {
                         Button { sheet = .trainer } label: { Label("AI trainer", systemImage: "sparkles") }
                         Spacer()
-                        Button { sheet = .roomChat } label: { Label("Room chat", systemImage: "bubble.left.and.bubble.right") }.disabled(store.offlineSample)
+                        Button { sheet = .roomChat } label: { Label("Room chat", systemImage: "bubble.left.and.bubble.right") }.disabled(!online)
                     }.buttonStyle(.bordered)
                     memberList
                     if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange).accessibilityIdentifier("gymError") }
@@ -72,6 +89,7 @@ struct GymRoomView: View {
         .navigationTitle(gym.name).navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Leave") { store.suspend() } }
+            if plain { ToolbarItem(placement: .primaryAction) { Button { sheet = .spaceSettings } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("Workout space settings") } }
             ToolbarItem(placement: .primaryAction) {
                 Button { sheet = .inbox } label: {
                     Label(store.inboxCount > 0 ? "Inbox (\(store.inboxCount))" : "Inbox", systemImage: "tray.fill")
@@ -83,14 +101,16 @@ struct GymRoomView: View {
             if let active, !store.offlineSample {
                 Group {
                     if active.activity != .strength {
-                        CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded") }
+                        CardioTimerControls(workout: active, profile: profile) { lastLogged = L("Cardio saved · elapsed time recorded"); if plain { store.suspend() } }
                     } else {
-                        WorkoutSetControl(workout: active, profile: profile, onStart: { useEquipment(store.station == "lounge" ? "bench" : store.station) }, onLog: { sheet = .equipment(store.station) })
+                        WorkoutSetControl(workout: active, profile: profile, onStart: {
+                            if plain { sheet = .equipment("all") } else { useEquipment(store.station == "lounge" ? "bench" : store.station) }
+                        }, onLog: { sheet = .equipment(plain ? "all" : store.station) }, onCardio: plain ? { sheet = .cardioStart } : nil)
                     }
                 }.padding(.horizontal, 16).padding(.vertical, 10).background(.regularMaterial)
             }
         }
-        .onAppear { wireScene(); syncScene() }
+        .onAppear { scene.configure(plain: plain); wireScene(); syncScene() }
         .onReceive(store.$members) { _ in DispatchQueue.main.async { syncScene() } }
         .onReceive(store.$profiles) { _ in DispatchQueue.main.async { syncScene() } }
         .onReceive(store.$portraits) { _ in DispatchQueue.main.async { syncScene() } }
@@ -100,7 +120,9 @@ struct GymRoomView: View {
         .onChange(of: store.equipment[store.station]?.ownerID) { _, _ in walkToReservedStation() }
         .task(id: active?.id) {
             if let active, !store.offlineSample {
-                if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
+                if AppState.shared.prefersCardioStart && active.cardioTimerStartedAt == nil {
+                    AppState.shared.prefersCardioStart = false; sheet = .cardioStart
+                } else if !active.startOptionsChosen && active.exercises.isEmpty { sheet = .setup(active) }
                 else { await TrainingHealthManager.shared.start(active, context: active.modelContext) }
             }
         }
@@ -115,7 +137,11 @@ struct GymRoomView: View {
         }
         // Sheets and tab changes keep the room alive. Root handles background cleanup.
         .onDisappear { scene.cancelMovement() }
-        .sheet(item: $sheet) { route in
+        .sheet(item: $sheet, onDismiss: {
+            if let active, !active.startOptionsChosen && active.activity == .strength && active.exercises.isEmpty && !store.offlineSample {
+                sheet = .setup(active)
+            }
+        }) { route in
             sheetContent(route).presentationDetents(detents(for: route)).presentationDragIndicator(.visible)
         }
     }
@@ -126,7 +152,14 @@ struct GymRoomView: View {
         }
     }
     @ViewBuilder private var socialBanner: some View {
-        if let (station, request) = store.incomingWorkIns.first {
+        if let request = store.spaceRequests.first(where: { $0.roomId == gym.id }) {
+            HStack {
+                Text("\(request.name) wants to join this workout space").font(.caption.bold())
+                Spacer()
+                Button("Accept") { store.perform { try await store.respondToSpace(request, accept: true) } }.buttonStyle(.borderedProminent).accessibilityIdentifier("acceptSpaceRequest")
+                Button("Decline") { store.perform { try await store.respondToSpace(request, accept: false) } }.font(.caption)
+            }.padding(12).background(.regularMaterial).disabled(store.busy)
+        } else if let (station, request) = store.incomingWorkIns.first {
             let name = store.roomProfile(request.requesterID)?.name ?? L("Gym member")
             let equipment = L(station.capitalized).lowercased(with: AppLanguage.current.locale)
             HStack {
@@ -211,23 +244,29 @@ struct GymRoomView: View {
         case .inbox: GymFriendsView(store: store, workout: workoutSummary)
         case .trainer: GymCompanionView(store: store, workout: workoutSummary)
         case .roomChat: GymChatView(store: store, target: gym.id, isRoom: true, title: L("Room chat"))
+        case .spaceSettings: WorkoutSpaceSettings(store: store)
+        case .cardioStart: CardioStartView(profile: profile) { _ in sheet = nil }
         case .equipment(let station):
             if station == "cardio" {
                 if let active, active.activity != .strength, active.cardioTimerStartedAt != nil { TimedCardioWorkoutView(workout: active, profile: profile) }
                 else { CardioStartView(profile: profile, requiresEquipment: true) { sheet = .workout($0) } }
             } else if let active {
-                GymEquipmentSheet(workout: active, profile: profile, station: station, requiresEquipment: true) { name, rest in
+                GymEquipmentSheet(workout: active, profile: profile, station: station, requiresEquipment: !plain) { name, rest in
                     lastLogged = L("%@ saved to your workout", name)
                     store.recordSetCompletion(Date())
                 }
             }
-        case .workout(let workout): ActiveWorkoutView(workout: workout, profile: profile)
+        case .workout(let workout):
+            ActiveWorkoutView(workout: workout, profile: profile).onDisappear {
+                if plain && workout.isPublished { store.suspend() }
+            }
         case .finish(let workout):
-            FinishWorkoutSheet(workout: workout, profile: profile) { sheet = nil; lastLogged = L("Workout finished · saved to your history") }
+            FinishWorkoutSheet(workout: workout, profile: profile) { sheet = nil; lastLogged = L("Workout finished · saved to your history"); if plain { store.suspend() } }
         case .setup(let workout): WorkoutStartOptionsView(workout: workout, profile: profile)
         }
     }
     private func openMember(_ id: String) {
+        if gym.isLocal == true { sheet = .spaceSettings; return }
         guard !id.hasPrefix("anon-"), store.members.first(where: { $0.uid == id })?.visibility != "anonymous" else { store.error = L("Anonymous lifter · profile hidden"); return }
         sheet = .member(id)
     }

@@ -90,7 +90,7 @@ struct ProfileView: View {
                     NavigationLink { CommunityProfileView(store: gym, profile: profile, embedded: true) } label: {
                         HStack { Label("社区资料与可见性", systemImage: "person.crop.square"); Spacer(); Text(gym.connected ? "已连接" : "未加入").font(.caption).foregroundStyle(.secondary) }
                     }
-                    Button { AppState.shared.tab = AppState.communityTab } label: { Label("进入健身房", systemImage: "person.2.wave.2.fill") }
+                    Button { AppState.shared.perform(.startTodayWorkout) } label: { Label("Start workout", systemImage: "person.2.wave.2.fill") }
                     Button { AppState.shared.communitySection = 1; AppState.shared.tab = AppState.communityTab } label: { Label("好友与消息", systemImage: "bubble.left.and.bubble.right") }
                     NavigationLink { SocialView(profile: profile) } label: { Label("段位卡片", systemImage: "rectangle.portrait") }
                 }

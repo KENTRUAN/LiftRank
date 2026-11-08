@@ -26,8 +26,16 @@ struct WorkoutHomeView: View {
     var body: some View {
         @Bindable var app = app
         NavigationStack {
-            Group {
-                if mode == 0 { strengthList } else { CardioView(profile: profile) }
+            VStack(spacing: 10) {
+                TrainerWelcomeView(workout: unpublished, plan: todayPlan).padding(.horizontal)
+                Button {
+                    app.prefersCardioStart = mode == 1
+                    app.perform(.startTodayWorkout)
+                } label: {
+                    Label(unpublished == nil ? "Start workout" : "Continue workout", systemImage: "play.circle.fill")
+                        .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
+                }.buttonStyle(.borderedProminent).tint(.teal).padding(.horizontal).accessibilityIdentifier("openSocialGym")
+                Group { if mode == 0 { strengthList } else { CardioView(profile: profile) } }
             }
             .navigationTitle(mode == 0 ? "训练" : "有氧")
             .toolbar {
@@ -49,7 +57,6 @@ struct WorkoutHomeView: View {
                 WorkoutSetupView(title: target.title, items: target.items, isNew: target.isNew) { name, items in save(target, name: name, items: items) }
             }
             .onAppear { if DemoData.autoOpenActive, activeWorkout == nil { activeWorkout = unpublished }; openRequestedWorkout() }
-            .onChange(of: app.startTodayRequest) { _, _ in startToday() }
             .onChange(of: app.pending) { _, action in
                 if action == .openCardio { mode = 1; app.pending = nil }; openRequestedWorkout()
             }
@@ -75,38 +82,6 @@ struct WorkoutHomeView: View {
 
     private var strengthList: some View {
         List {
-            Section {
-                Button { app.tab = AppState.communityTab } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.2.wave.2.fill").font(.title2).foregroundStyle(.teal)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Enter Gym").font(.headline)
-                        }
-                        Spacer()
-                        Image(systemName: "arrow.up.right").foregroundStyle(.teal)
-                    }.padding(.vertical, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("openSocialGym")
-            }
-            if let w = unpublished {
-                Section {
-                    Button { activeWorkout = w } label: {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("继续训练：\(w.title)").bold()
-                                Text("已进行 \(w.duration.clockString) · \(w.completedSets.count) 组已完成").font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "play.circle.fill").font(.title).foregroundStyle(.green)
-                        }
-                    }
-                }
-            } else {
-                Section {
-                    Button { startToday() } label: { Label("Start workout", systemImage: "play.circle.fill").font(.headline) }
-                        .accessibilityIdentifier("startBlankWorkout")
-                }
-            }
-
             if let p = todayPlan {
                 Section("Today") {
                     HStack {
@@ -176,11 +151,8 @@ struct WorkoutHomeView: View {
     }
 
     private func startToday() {
-        guard unpublished == nil else { activeWorkout = unpublished; return }
-        do {
-            activeWorkout = try WorkoutSession.startOrResume(profile: profile, context: context)
-            mode = 0
-        } catch { sessionError = error.localizedDescription }
+        app.prefersCardioStart = false
+        app.perform(.startTodayWorkout)
     }
 
     private func start(title: String, items: [TemplateExercise]) {

@@ -17,6 +17,12 @@ final class GymStore: ObservableObject {
     @Published private(set) var latestMessages: [String: ChatMessage] = [:]
     @Published private(set) var readThrough: [String: Double] = [:]
     @Published var gyms: [GymSummary] = []
+    @Published var nearbySpaces: [GymSummary] = []
+    @Published var spaceInvitations: [SpaceInvitation] = []
+    @Published var spaceRequests: [SpaceJoinRequest] = []
+    @Published var sentSpaceRequests: [SpaceInvitation] = []
+    @Published var discoveryError: String?
+    @Published var discovering = false
     @Published var room: GymSummary?
     @Published var members: [RoomPresence] = []
     @Published var profiles: [String: SocialProfile] = [:]
@@ -47,7 +53,7 @@ final class GymStore: ObservableObject {
     private var lastSend = Date.distantPast
     private var position = CGPoint(x: 2, y: 7)
     var me: SocialProfile? { profiles[uid] }
-    var roomIdentity: String { membership?.publicID ?? uid }
+    var roomIdentity: String { room?.isLocal == true ? "local-me" : membership?.publicID ?? uid }
     var anonymous: Bool { me?.visibility == "anonymous" }
     var incomingWorkIns: [(String, GymWorkInRequest)] {
         equipment.flatMap { station, value in value.requests.values.filter { $0.ownerID == roomIdentity && $0.expiresAt > Date().timeIntervalSince1970 * 1000 }.map { (station, $0) } }
@@ -68,7 +74,11 @@ final class GymStore: ObservableObject {
     func recordSetCompletion(_ date: Date) {
         let time = date.timeIntervalSince1970 * 1000
         guard time > setCompletedAt else { return }
-        setCompletedAt = time; publishPresence(force: true)
+        setCompletedAt = time
+        if room?.isLocal == true, let index = members.firstIndex(where: { $0.uid == roomIdentity }) {
+            members[index].setCompletedAt = time; members[index].updatedAt = time
+        }
+        publishPresence(force: true)
     }
     func equipmentAction(_ station: String, _ action: String, target: String? = nil, mode: String = "workIn") async throws {
         guard let api, membership != nil else { throw GymFailure.message(L("Enter a live gym first.")) }
@@ -89,7 +99,7 @@ final class GymStore: ObservableObject {
     }
     var incomingRequests: [Friendship] { friends.filter { $0.status == "incoming" && !blocked.contains($0.uid) } }
     var unreadFriends: [String] { latestMessages.keys.filter { isUnread($0) }.sorted() }
-    var inboxCount: Int { incomingRequests.count + unreadFriends.count + incomingWorkIns.count }
+    var inboxCount: Int { incomingRequests.count + unreadFriends.count + incomingWorkIns.count + spaceInvitations.count + spaceRequests.count }
     var sharesRank: Bool {
         let key = "gym.shareRank.\(uid)"
         if UserDefaults.standard.object(forKey: key) != nil { return UserDefaults.standard.bool(forKey: key) }
@@ -160,7 +170,7 @@ final class GymStore: ObservableObject {
         if !snapshotOnly {
             profiles[uid] = saved
             UserDefaults.standard.set(shareRank, forKey: "gym.shareRank.\(uid)")
-            if changedVisibility, let previousRoom { await leave(); try await join(previousRoom) }
+            if changedVisibility, let previousRoom { try await join(previousRoom) }
         }
     }
 
@@ -242,6 +252,70 @@ final class GymStore: ObservableObject {
         gyms = try await api.search(query: query, location: point, radius: radius)
     }
 
+    func discoverSpaces() async {
+        guard !discovering, connected, let api else { return }
+        discovering = true; discoveryError = nil
+        defer { discovering = false }
+        do {
+            struct Result: Decodable { var gyms: [GymSummary]; var spaces: [GymSummary] }
+            let point = try await location.current()
+            let result: Result = try await api.post("spaces/nearby", body: ["location": point.jsonObject])
+            gyms = result.gyms; nearbySpaces = result.spaces
+        } catch { gyms = []; nearbySpaces = []; discoveryError = error.localizedDescription }
+    }
+    func refreshSpaceInbox() async {
+        guard connected, let api else { return }
+        do {
+            let inbox: SpaceInbox = try await api.post("spaces/inbox")
+            spaceInvitations = inbox.invitations; spaceRequests = inbox.requests; sentSpaceRequests = inbox.sent
+            if let updated = inbox.room, room?.id == updated.id { room = updated }
+        } catch { /* Polling must not interrupt an active workout or clear a pending invitation. */ }
+    }
+    func requestSpace(_ gym: GymSummary) async throws {
+        guard let api else { throw GymFailure.message(L("Connect your community profile first.")) }
+        let point = try await location.current()
+        try await api.send("spaces/\(gym.id)/request", body: ["location": point.jsonObject])
+        await refreshSpaceInbox()
+    }
+    func respondToSpace(_ request: SpaceJoinRequest, accept: Bool) async throws {
+        try await api?.send("spaces/\(request.roomId)/respond", body: ["requestID": request.id, "action": accept ? "accept" : "decline"])
+        await refreshSpaceInbox()
+    }
+    func cancelSpaceRequest(_ roomID: String) async throws {
+        try await api?.send("spaces/\(roomID)/cancel")
+        await refreshSpaceInbox()
+    }
+    func setSpaceVisibility(_ visibility: String) async throws {
+        guard let room, room.kind == "custom", room.isLocal != true, let api else { return }
+        struct Result: Decodable { var gym: GymSummary }
+        let result: Result = try await api.post("spaces/\(room.id)/visibility", body: ["visibility": visibility])
+        self.room = result.gym
+        await refreshSpaceInbox()
+    }
+    func inviteToSpace(_ id: String) async throws {
+        guard let room, let api else { return }
+        try await api.send("spaces/\(room.id)/invite", body: ["targetID": id])
+    }
+    func startPrivateSpace(name: String, gsr: Int, cosmetics: [String]) {
+        suspend(); offlineSample = false
+        profiles["local-me"] = SocialProfile(uid: "local-me", name: name, gsr: gsr, cosmetics: cosmetics, interests: "", avatar: me?.avatar ?? AvatarAppearance())
+        position = CGPoint(x: 2, y: 7); station = "lounge"
+        members = [RoomPresence(uid: "local-me", sessionId: "local", x: 2, y: 7, station: "lounge", status: status, updatedAt: Date().timeIntervalSince1970 * 1000)]
+        room = .personal
+    }
+    func createSpace(name: String, visibility: String) async throws {
+        guard let api else { throw GymFailure.message(L("Connect your community profile first.")) }
+        let attempt = UUID(); joinAttempt = attempt
+        defer { if joinAttempt == attempt { joinAttempt = nil } }
+        await cleanup?.value; cleanup = nil
+        await leave()
+        guard joinAttempt == attempt else { throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready.")) }
+        let point = try await location.current()
+        struct Result: Decodable { var gym: GymSummary; var membership: RoomMembership }
+        let result: Result = try await api.post("spaces/create", body: ["name": name, "visibility": visibility, "location": point.jsonObject])
+        try await enter(result.gym, lease: result.membership, attempt: attempt)
+    }
+
     func join(_ gym: GymSummary) async throws {
         guard let api else { return }
         let attempt = UUID(); joinAttempt = attempt
@@ -250,10 +324,17 @@ final class GymStore: ObservableObject {
         await cleanup?.value
         cleanup = nil
         guard joinAttempt == attempt else { throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready.")) }
-        await leave()
+        // Re-entering the same custom space must not close it before replacing our lease.
+        if membership?.roomId == gym.id && gym.kind == "custom" { detachRoom(); await cleanup?.value; cleanup = nil }
+        else { await leave() }
         guard joinAttempt == attempt else { throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready.")) }
         let point = gym.isDemo ? nil : try await location.current()
         let lease = try await api.join(gym, location: point)
+        try await enter(gym, lease: lease, attempt: attempt)
+    }
+
+    private func enter(_ gym: GymSummary, lease: RoomMembership, attempt: UUID) async throws {
+        guard let api else { return }
         guard joinAttempt == attempt else {
             try? await api.leave(lease)
             throw GymFailure.message(L("Gym entry was cancelled. Enter again when ready."))
@@ -318,8 +399,8 @@ final class GymStore: ObservableObject {
 
     func move(x: Double, y: Double) {
         position = CGPoint(x: x, y: y)
-        if offlineSample {
-            if let index = members.firstIndex(where: { $0.uid == uid }) { members[index].x = x; members[index].y = y }
+        if offlineSample || room?.isLocal == true {
+            if let index = members.firstIndex(where: { $0.uid == roomIdentity }) { members[index].x = x; members[index].y = y }
         } else { publishPresence(force: false) }
     }
     func publishPresence(force: Bool) {
@@ -334,7 +415,7 @@ final class GymStore: ObservableObject {
     func setStation(_ value: String) {
         guard GymLayout.stations.contains(value), value == "lounge" || offlineSample || ownsStation(value) else { return }
         station = value
-        if offlineSample, let index = members.firstIndex(where: { $0.uid == uid }) { members[index].station = value; members[index].status = status }
+        if offlineSample || room?.isLocal == true, let index = members.firstIndex(where: { $0.uid == roomIdentity }) { members[index].station = value; members[index].status = status; members[index].updatedAt = Date().timeIntervalSince1970 * 1000 }
         publishPresence(force: true)
     }
     func setTrainingState(_ value: String) {

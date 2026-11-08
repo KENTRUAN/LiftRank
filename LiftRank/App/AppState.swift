@@ -24,12 +24,14 @@ final class AppState {
     var showCoach = false
     var showRewards = false
     var communitySection = 0
+    var prefersCardioStart = false
     var toast: String?
 
     func perform(_ action: PendingAction) {
         switch action {
         case .startTodayWorkout:
-            tab = 0
+            communitySection = 0
+            tab = Self.communityTab
             startTodayRequest += 1
         case .openCoach:
             tab = 0

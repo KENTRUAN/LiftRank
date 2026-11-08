@@ -60,7 +60,32 @@ struct GymSummary: Codable, Identifiable, Equatable {
     var distanceMeters: Double?
     var isDemo: Bool
     var attributions: [Attribution]?
+    var kind: String?
+    var visibility: String?
+    var isHost: Bool?
+    var isLocal: Bool?
+    var isPlainSpace: Bool { kind == "custom" || isLocal == true }
     static var demo: GymSummary { GymSummary(id: "demo-gym", name: L("Demo Gym"), address: L("A shared room for the hackathon. Join from anywhere."), isDemo: true) }
+    static var personal: GymSummary { GymSummary(id: "local-space", name: L("Private workout"), address: L("Only on this device"), isDemo: false, kind: "custom", visibility: "private", isHost: true, isLocal: true) }
+}
+
+struct SpaceInvitation: Codable, Identifiable {
+    var id: String
+    var gym: GymSummary
+    var status: String
+    var expiresAt: Double
+}
+struct SpaceJoinRequest: Codable, Identifiable {
+    var id: String
+    var roomId: String
+    var name: String
+    var expiresAt: Double
+}
+struct SpaceInbox: Decodable {
+    var invitations: [SpaceInvitation]
+    var requests: [SpaceJoinRequest]
+    var sent: [SpaceInvitation]
+    var room: GymSummary?
 }
 
 struct GymLocation: Codable {
@@ -128,9 +153,9 @@ enum GymLayout {
     static let statuses = ["Ready", "Training", "Resting"]
     static let stationCells: [String: Cell] = ["lounge": Cell(x: 2, y: 7), "bench": Cell(x: 4, y: 3), "rack": Cell(x: 1, y: 2), "cardio": Cell(x: 9, y: 2), "platform": Cell(x: 8, y: 6)]
     static let blocked: Set<Cell> = [Cell(x: 1, y: 1), Cell(x: 2, y: 1), Cell(x: 4, y: 2), Cell(x: 5, y: 2), Cell(x: 8, y: 1), Cell(x: 9, y: 1), Cell(x: 8, y: 5), Cell(x: 9, y: 5), Cell(x: 1, y: 8), Cell(x: 2, y: 8)]
-    static func walkable(_ c: Cell) -> Bool { (0..<width).contains(c.x) && (0..<height).contains(c.y) && !blocked.contains(c) }
-    static func path(from start: Cell, to end: Cell) -> [Cell] {
-        guard walkable(start), walkable(end), start != end else { return [] }
+    static func walkable(_ c: Cell, plain: Bool = false) -> Bool { (0..<width).contains(c.x) && (0..<height).contains(c.y) && (plain || !blocked.contains(c)) }
+    static func path(from start: Cell, to end: Cell, plain: Bool = false) -> [Cell] {
+        guard walkable(start, plain: plain), walkable(end, plain: plain), start != end else { return [] }
         var queue = [start], index = 0
         var previous: [Cell: Cell] = [:]
         var seen: Set<Cell> = [start]
@@ -143,7 +168,7 @@ enum GymLayout {
             }
             for d in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 let next = Cell(x: current.x + d.0, y: current.y + d.1)
-                if walkable(next), seen.insert(next).inserted { previous[next] = current; queue.append(next) }
+                if walkable(next, plain: plain), seen.insert(next).inserted { previous[next] = current; queue.append(next) }
             }
         }
         return []

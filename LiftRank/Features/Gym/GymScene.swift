@@ -16,15 +16,58 @@ final class GymScene: SKScene {
     private var lastTime: TimeInterval = 0
     private var trainer: SKNode?
     private let world = SKNode()
+    private let roomCamera = SKCameraNode()
+    private var zoomLevel: CGFloat = 1
+    private var viewportSize = CGSize.zero
+    private(set) var plainSpace = false
 
     override init(size: CGSize) {
         super.init(size: size)
-        scaleMode = .aspectFit
+        scaleMode = .resizeFill
         backgroundColor = UIColor(red: 0.055, green: 0.08, blue: 0.13, alpha: 1)
         addChild(world)
+        addChild(roomCamera); camera = roomCamera
+        roomCamera.position = CGPoint(x: 390, y: 305)
         buildRoom()
     }
     required init?(coder aDecoder: NSCoder) { fatalError("Use init(size:)") }
+    override func didChangeSize(_ oldSize: CGSize) { fitViewport(size) }
+    func fitViewport(_ size: CGSize) {
+        guard size.width > 0, size.height > 0, viewportSize != size else { return }
+        viewportSize = size
+        roomCamera.setScale(GymCamera.fitScale(size) / zoomLevel)
+    }
+    func zoom(by factor: CGFloat, around anchor: CGPoint? = nil) {
+        guard factor.isFinite, factor > 0 else { return }
+        let before = anchor.map { convertPoint(fromView: $0) }
+        zoomLevel = GymCamera.zoom(zoomLevel * factor)
+        roomCamera.setScale(GymCamera.fitScale(viewportSize) / zoomLevel)
+        if let anchor, let before {
+            let after = convertPoint(fromView: anchor)
+            roomCamera.position.x += before.x - after.x; roomCamera.position.y += before.y - after.y
+        }
+        clampCamera()
+    }
+    func pan(by translation: CGPoint) {
+        roomCamera.position.x -= translation.x * roomCamera.xScale
+        roomCamera.position.y += translation.y * roomCamera.yScale
+        clampCamera()
+    }
+    func resetCamera() {
+        zoomLevel = 1; roomCamera.position = CGPoint(x: 390, y: 305)
+        roomCamera.setScale(GymCamera.fitScale(viewportSize))
+    }
+    private func clampCamera() {
+        roomCamera.position.x = min(650, max(130, roomCamera.position.x))
+        roomCamera.position.y = min(500, max(110, roomCamera.position.y))
+    }
+    func configure(plain: Bool) {
+        guard plainSpace != plain else { return }
+        plainSpace = plain; cancelMovement()
+        for node in world.children where node.name?.hasPrefix("station:") == true { node.isHidden = plain }
+        (childNode(withName: "roomHeading") as? SKLabelNode)?.text = plain ? L("YOUR WORKOUT SPACE") : L("LIFT / SOCIAL CLUB")
+        (childNode(withName: "roomHint") as? SKLabelNode)?.text = plain ? L("Tap to walk · Choose any workout below") : L("Tap equipment to train · Tap a lifter to connect")
+    }
     private func point(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: 370 + (x - y) * 30, y: 470 - (x + y) * 16) }
     private func cell(at p: CGPoint) -> GymLayout.Cell {
         let a = (p.x - 370) / 30, b = (470 - p.y) / 16
@@ -42,6 +85,7 @@ final class GymScene: SKScene {
     }
     private func buildRoom() {
         let title = label(L("LIFT / SOCIAL CLUB"), size: 20, color: .white)
+        title.name = "roomHeading"
         title.position = CGPoint(x: 390, y: 555); addChild(title)
         let subtitle = label(L("YOUR PEOPLE. YOUR PACE."), size: 10, color: .systemMint)
         subtitle.position = CGPoint(x: 390, y: 529); addChild(subtitle)
@@ -66,6 +110,7 @@ final class GymScene: SKScene {
         equipment("platform", x: 8, y: 5, color: .systemPurple)
         equipment("lounge", x: 1, y: 8, color: .systemIndigo)
         let helper = label(L("Tap equipment to train · Tap a lifter to connect"), size: 12, color: .lightGray)
+        helper.name = "roomHint"
         helper.position = CGPoint(x: 390, y: 91); addChild(helper)
         let coach = makePerson(profile: SocialProfile(uid: "trainer", name: L("AI trainer"), gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "star", color: "green")), portrait: nil)
         coach.name = "trainer"; coach.position = point(4, 7); coach.zPosition = 30
@@ -195,23 +240,12 @@ final class GymScene: SKScene {
     }
     private func walk(to cell: GymLayout.Cell) {
         let start = GymLayout.Cell(x: Int(localPosition.x.rounded()), y: Int(localPosition.y.rounded()))
-        route = GymLayout.path(from: start, to: cell)
+        route = GymLayout.path(from: start, to: cell, plain: plainSpace)
     }
-    private var touchOrigin: CGPoint?
-    private var dragged = false
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touchOrigin = touches.first?.location(in: self); dragged = false
-    }
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if let origin = touchOrigin, let point = touches.first?.location(in: self), hypot(point.x - origin.x, point.y - origin.y) > 12 { dragged = true }
-    }
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchOrigin = nil; dragged = true }
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        defer { touchOrigin = nil; dragged = false }
-        guard !dragged, let origin = touchOrigin, let touch = touches.first,
-              hypot(touch.location(in: self).x - origin.x, touch.location(in: self).y - origin.y) <= 12 else { return }
-        let p = touch.location(in: world)
+    func select(at scenePoint: CGPoint) {
+        let p = world.convert(scenePoint, from: self)
         for hit in world.nodes(at: p) {
+            guard !hit.isHidden, hit.parent?.isHidden != true else { continue }
             var node: SKNode? = hit
             while let n = node, n !== world {
                 if let name = n.name {
