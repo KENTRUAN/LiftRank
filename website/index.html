@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f9f3">
+  <title>LiftRank — Build strength. Climb the ranks.</title>
+  <meta name="description" content="Meet LiftRank: an iOS fitness app that turns your training into progress you can see. Explore strength ranks, your AI trainer, and a shared gym experience.">
+  <link rel="canonical" href="https://nailongranklift.github.io/LiftRank/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="LiftRank — Build strength. Climb the ranks.">
+  <meta property="og:description" content="Your workouts. Your progress. A little more play. Take an interactive tour of LiftRank for iOS.">
+  <meta property="og:url" content="https://nailongranklift.github.io/LiftRank/">
+  <meta property="og:image" content="https://nailongranklift.github.io/LiftRank/assets/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="LiftRank: Build strength. Climb the ranks. A blue rank mascot beside the LiftRank headline.">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" href="./assets/app-icon.png">
+  <link rel="apple-touch-icon" href="./assets/app-icon.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header shell">
+    <a class="wordmark" href="#main" aria-label="LiftRank home"><img src="./assets/app-icon.png" width="36" height="36" alt="">LiftRank<span class="wordmark-dot">.</span></a>
+    <nav aria-label="Main navigation">
+      <a href="#features">The app</a>
+      <a href="#demo">Take a tour</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="header-link" href="https://github.com/NaiLongRankLift/LiftRank">View on GitHub <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> A little more play. A lot more progress.</p>
+        <h1 id="hero-title">Build strength.<br>Climb the <span class="text-blue">ranks<span class="hand-underline" aria-hidden="true"></span>.</span></h1>
+        <p class="hero-description">Turn showing up into something you can see. Track your training, grow your strength, and find your people with LiftRank.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#demo">Explore the demo <span aria-hidden="true">↗</span></a>
+          <span class="hero-note">Made for iOS.<br>Built around you.</span>
+        </div>
+        <div class="hero-footnote"><span aria-hidden="true">✳</span> Every rep is a step forward.</div>
+      </div>
+      <div class="hero-art" aria-label="An illustrated preview of LiftRank’s Gold mascot and a sample strength rank">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="little-star star-one" aria-hidden="true">✦</div>
+        <div class="little-star star-two" aria-hidden="true">✧</div>
+        <div class="phone-preview">
+          <div class="phone-top"><span>9:41</span><span class="phone-notch"></span><span aria-hidden="true">▰</span></div>
+          <div class="phone-content">
+            <p class="mini-eyebrow">YOUR STRENGTH, VISUALIZED</p>
+            <h2>Look at you grow.</h2>
+            <div class="score-ring"><div><strong>450</strong><span>GOLD RANK</span></div></div>
+            <div class="phone-progress"><span>A little stronger, every time.</span><div><i></i></div><small>50 LP · 50 to Platinum</small></div>
+            <div class="sample-session"><span class="session-icon" aria-hidden="true">↗</span><div><strong>Push day</strong><small>3 exercises · sample workout</small></div><span class="checkmark" aria-hidden="true">✓</span></div>
+            <p class="phone-disclaimer">Illustrative app preview</p>
+          </div>
+          <div class="phone-home"></div>
+        </div>
+        <img class="hero-mascot" src="./assets/mascot-gold.png" width="560" height="560" alt="LiftRank’s friendly blue Gold rank mascot" fetchpriority="high">
+        <div class="hero-sticker"><span aria-hidden="true">✦</span> Small wins.<br><strong>Stronger you.</strong></div>
+        <div class="art-caption"><span class="caption-line"></span> YOUR NEXT CHAPTER LOOKS STRONG</div>
+      </div>
+    </section>
+
+    <div class="promise-strip">
+      <div class="shell promises">
+        <p><span aria-hidden="true">01</span> Training with purpose</p>
+        <p><span aria-hidden="true">02</span> Progress with personality</p>
+        <p><span aria-hidden="true">03</span> A gym with your people</p>
+      </div>
+    </div>
+
+    <section id="demo" class="tour-section shell" aria-labelledby="tour-title">
+      <div class="section-heading">
+        <div><p class="eyebrow text-teal">A FEW TAPS. THE WHOLE FEEL.</p><h2 id="tour-title">Meet your new<br>training sidekick.</h2></div>
+        <p>Take LiftRank for a little spin.<br>No download. No sign-up. Just a preview of what’s possible.</p>
+      </div>
+      <noscript><p class="notice">This guided tour needs JavaScript. You can still explore LiftRank’s features and frequently asked questions below.</p></noscript>
+      <div id="tour" class="tour" hidden>
+        <div class="tour-sidebar">
+          <div class="tour-tabs" role="tablist" aria-label="App tour">
+            <button id="tab-workout" class="tour-tab" role="tab" aria-selected="true" aria-controls="panel-workout" tabindex="0" data-tab="workout"><span class="tab-number">01</span><span><strong>Make every rep count</strong><small>A workout, your way.</small></span><span class="tab-arrow" aria-hidden="true">↗</span></button>
+            <button id="tab-ranks" class="tour-tab" role="tab" aria-selected="false" aria-controls="panel-ranks" tabindex="-1" data-tab="ranks"><span class="tab-number">02</span><span><strong>See your strength grow</strong><small>Nine ranks. One stronger you.</small></span><span class="tab-arrow" aria-hidden="true">↗</span></button>
+            <button id="tab-community" class="tour-tab" role="tab" aria-selected="false" aria-controls="panel-community" tabindex="-1" data-tab="community"><span class="tab-number">03</span><span><strong>Find your gym people</strong><small>Train alongside a little company.</small></span><span class="tab-arrow" aria-hidden="true">↗</span></button>
+          </div>
+          <div class="tour-note"><span class="status-dot"></span><p><strong>A playground for your progress.</strong>Everything here is sample data. Your demo stays in this browser tab.</p></div>
+          <button id="reset-demo" class="text-button">Reset the demo <span aria-hidden="true">↻</span></button>
+        </div>
+        <div class="tour-stage">
+          <div class="preview-topbar"><span><i></i><i></i><i></i></span><p>LIFTRANK / INTERACTIVE PREVIEW</p><span class="sample-pill">SAMPLE</span></div>
+          <section id="panel-workout" class="app-panel" role="tabpanel" aria-labelledby="tab-workout" tabindex="0">
+            <div class="app-heading"><div><p class="mini-eyebrow">YOUR TIME. YOUR PACE.</p><h3>Let’s get stronger.</h3></div><span class="app-symbol" aria-hidden="true">↗</span></div>
+            <div class="trainer-welcome"><span class="trainer-symbol" aria-hidden="true">✳</span><p><strong>Your training sidekick</strong>Ready when you are. Start fresh, then choose a routine that feels right.</p></div>
+            <div id="workout-content"></div>
+          </section>
+          <section id="panel-ranks" class="app-panel" role="tabpanel" aria-labelledby="tab-ranks" tabindex="0" hidden>
+            <div class="app-heading"><div><p class="mini-eyebrow">PROGRESS WITH PERSONALITY</p><h3>Find your next chapter.</h3></div><span class="app-symbol" aria-hidden="true">✦</span></div>
+            <div class="rank-showcase">
+              <div class="rank-mascot-wrap"><img id="rank-mascot" src="./assets/mascot-gold.png" width="560" height="560" alt="Gold rank mascot" loading="lazy"></div>
+              <div class="rank-copy"><p class="mini-eyebrow">EXPLORE THE TIERS</p><h4 id="rank-name">Gold</h4><p id="rank-range">400–499 points</p><p class="rank-explanation">Your strength score becomes a rank you can see. Choose a tier to meet its mascot.</p><span class="small-label">Illustrative rank explorer</span></div>
+            </div>
+            <div id="rank-options" class="rank-options" role="group" aria-label="Choose a strength rank"></div>
+            <p class="panel-footnote">In the app, strength scores use your lifts, bodyweight, and scoring curve. This preview explores tiers; it doesn’t calculate your rank.</p>
+          </section>
+          <section id="panel-community" class="app-panel community-panel" role="tabpanel" aria-labelledby="tab-community" tabindex="0" hidden>
+            <div class="app-heading"><div><p class="mini-eyebrow">YOUR PEOPLE. YOUR PACE.</p><h3>A little stronger, together.</h3></div><span class="app-symbol" aria-hidden="true">☻</span></div>
+            <div class="gym">
+              <div class="gym-heading"><span>DEMO GYM</span><span>3 sample members</span></div>
+              <svg class="gym-floor" viewBox="0 0 600 360" role="img" aria-label="Illustrated gym with a bench, squat rack, cardio station, and sample members">
+                <defs><pattern id="tiles" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform="matrix(1 .5 -1 .5 300 40)"><rect width="48" height="48" fill="#243e45"/><path d="M48 0H0V48" fill="none" stroke="#375159" stroke-width="1"/></pattern></defs>
+                <path d="M38 170 300 40 562 170V216L300 85 38 216Z" fill="#29424c"/>
+                <path d="M38 170 300 40 562 170" fill="none" stroke="#7bd7c5" stroke-width="3"/>
+                <path d="m38 216 262-131 262 131-262 131Z" fill="url(#tiles)" stroke="#4a696e"/>
+                <g stroke="#aac2c7" stroke-width="7" stroke-linejoin="round" fill="none"><path d="m178 183 0-70 72 36v70m-72-82 72 36"/><path d="m165 181 25 13m48 20 25 13"/></g>
+                <path d="m170 123 89 45" stroke="#e0b86e" stroke-width="6"/><path d="m178 117-10 20m87 23-10 20" stroke="#d9e5df" stroke-width="10"/>
+                <g stroke="#8bb8ba" stroke-width="5"><path d="m300 225 0 30m72-65v31"/><path d="m291 228 76-39" stroke="#f6b879" stroke-width="16"/></g>
+                <g stroke="#97bfca" stroke-width="5" stroke-linejoin="round"><path d="m400 153 48 25-29 16-48-25Z" fill="#57787c"/><path d="m435 171 0-43-21-10m21 10 21-10" fill="none"/></g>
+                <path d="m95 236 58 29m286-23 41-20" stroke="#6fcab6" stroke-width="3" opacity=".6"/>
+              </svg>
+              <button class="gym-hotspot hotspot-rack" data-detail="rack"><span aria-hidden="true">+</span> Rack</button>
+              <button class="gym-hotspot hotspot-bench" data-detail="bench"><span aria-hidden="true">+</span> Bench</button>
+              <button class="gym-hotspot hotspot-cardio" data-detail="cardio"><span aria-hidden="true">+</span> Cardio</button>
+              <button class="gym-person person-alex" data-detail="alex" aria-label="Meet Alex, sample member"><span>A</span><small>Alex</small></button>
+              <button class="gym-person person-jamie" data-detail="jamie" aria-label="Meet Jamie, sample member"><span>J</span><small>Jamie</small></button>
+              <button class="gym-person person-you" data-detail="you" aria-label="View your sample gym profile"><span>You</span><small>Ready</small></button>
+              <p class="gym-hint">Pick a station. Meet a sample member.</p>
+            </div>
+            <div class="community-caption"><span aria-hidden="true">↗</span><p><strong>Same room. Shared motivation.</strong>In the app, meet other lifters, share the progress you choose, and connect after training together.</p></div>
+          </section>
+        </div>
+      </div>
+      <p id="demo-status" class="sr-only" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="features" class="features-section" aria-labelledby="features-title">
+      <div class="shell">
+        <div class="section-heading"><div><p class="eyebrow text-teal">THERE’S MORE IN YOUR CORNER</p><h2 id="features-title">A whole routine.<br>A little less friction.</h2></div><p>From your first set to your next small win.<br>Build habits with tools that work together.</p></div>
+        <div class="feature-grid">
+          <article class="coach-feature">
+            <div class="feature-text"><p class="mini-eyebrow">01 / YOUR AI TRAINER</p><h3>A plan that starts<br>with a conversation.</h3><p>Ask your trainer for a workout or a change of plan. It can update what’s ahead while keeping the sets you’ve already logged.</p></div>
+            <div class="chat-preview" aria-label="Scripted trainer conversation"><p class="chat-label"><span aria-hidden="true">✳</span> A SAMPLE CONVERSATION</p><p class="chat-bubble user-bubble">Let’s do a short push workout today.</p><div class="chat-bubble coach-bubble"><strong>Let’s make it count.</strong><p>Bench press, overhead press, then triceps. Here’s a simple starting point for today.</p><span>Bench press <b>3 × 8</b></span><span>Overhead press <b>3 × 8</b></span><span>Triceps pushdown <b>2 × 12</b></span></div><p class="chat-footnote">Illustrative conversation · live coaching is in the configured app</p></div>
+          </article>
+          <article class="small-feature cardio-feature"><span class="feature-icon" aria-hidden="true">↗</span><p class="mini-eyebrow">02 / KEEP MOVING</p><h3>Every kind of<br>showing up counts.</h3><p>Time a run, ride, or walk. Pause when you need to. Connect Apple Health and a compatible Watch for supported workout tracking.</p><div class="timer-preview" aria-label="Sample cardio timer"><span>OUTDOOR RUN · SAMPLE</span><strong>24<span>:</span>08</strong><div><i></i> YOUR PACE, ALWAYS</div></div></article>
+          <article class="small-feature nutrition-feature"><span class="feature-icon" aria-hidden="true">◒</span><p class="mini-eyebrow">03 / THE BIGGER PICTURE</p><h3>Fuel the work.<br>Notice the progress.</h3><p>Keep meals and body logs alongside your training. Look back through weekly, monthly, and seasonal summaries.</p><div class="nutrition-visual" aria-hidden="true"><span class="nutrition-ring"></span><div><strong>Little habits.<br>Long-term progress.</strong><span>TRAIN · FUEL · REPEAT</span></div></div></article>
+        </div>
+        <article class="rewards-banner"><div class="reward-art"><img src="./assets/mascot-wood.png" width="560" height="560" alt="Wood rank mascot" loading="lazy"><img src="./assets/mascot-diamond.png" width="560" height="560" alt="Diamond rank mascot" loading="lazy"></div><div><p class="mini-eyebrow">04 / A LITTLE SOMETHING FOR SHOWING UP</p><h3>Good habits deserve<br>a little personality.</h3><p>Earn Eggs through training rewards. Unlock cosmetics, make your avatar your own, and let your rank tell a story.</p></div><a class="text-link" href="#demo" data-tour-link="ranks">Meet the ranks <span aria-hidden="true">↗</span></a></article>
+      </div>
+    </section>
+
+    <section id="faq" class="faq-section shell" aria-labelledby="faq-title">
+      <div><p class="eyebrow text-teal">GOOD QUESTIONS</p><h2 id="faq-title">Before your<br>first rep.</h2><p>A few things to know about LiftRank.</p></div>
+      <div class="faq-list">
+        <details><summary>Can I download LiftRank today?<span aria-hidden="true">+</span></summary><p>LiftRank is an iOS app in development, for iOS 17 and later. There isn’t a public App Store or TestFlight download linked here yet. You can explore the preview above or <a href="https://github.com/NaiLongRankLift/LiftRank">visit the GitHub project</a> for setup instructions.</p></details>
+        <details><summary>Is this the real app?<span aria-hidden="true">+</span></summary><p>This website is a guided preview, built around the current app. Workouts, ranks, people, and trainer messages here are examples. Nothing is saved to an account, and refreshing the page resets the demo.</p></details>
+        <details><summary>How do strength ranks work?<span aria-hidden="true">+</span></summary><p>The app estimates strength from recorded sets, then uses bodyweight and an exercise-specific scoring curve to produce scores from 1 to 1,000. Nine tiers run from Wood to Olympian. You can see ranks for exercises, muscle groups, and overall strength.</p></details>
+        <details><summary>Does LiftRank need an internet connection?<span aria-hidden="true">+</span></summary><p>Core workout records and strength ranks are stored locally. Live community features and AI tools need a connection and their configured services. The website demo uses only sample data in your browser.</p></details>
+        <details><summary>What about Apple Health and Apple Watch?<span aria-hidden="true">+</span></summary><p>The app includes Apple Health support and a Watch companion. Available tracking depends on your device, OS version, build configuration, and permissions. Real Watch sensor tracking still needs device validation as development continues.</p></details>
+      </div>
+    </section>
+
+    <section class="closing-section shell" aria-labelledby="closing-title"><span class="closing-spark" aria-hidden="true">✳</span><p class="eyebrow">YOUR NEXT REP IS A NEW BEGINNING</p><h2 id="closing-title">Start where you are.<br><span>See where you go.</span></h2><a class="button button-primary" href="#demo">Take a look around <span aria-hidden="true">↗</span></a><p>Small wins welcome.</p></section>
+  </main>
+  <footer class="site-footer shell"><a class="wordmark" href="#main">LiftRank<span class="wordmark-dot">.</span></a><p>A little more play. A stronger you.</p><a href="https://github.com/NaiLongRankLift/LiftRank">Made in the open <span aria-hidden="true">↗</span></a></footer>
+  <dialog id="gym-dialog" aria-labelledby="dialog-title" aria-describedby="dialog-description"><div class="dialog-top"><span class="mini-eyebrow">LIFTRANK / SAMPLE GYM</span><button id="close-dialog" class="close-button" aria-label="Close gym details">×</button></div><span id="dialog-icon" class="dialog-icon" aria-hidden="true"></span><h2 id="dialog-title"></h2><p id="dialog-description"></p><p class="dialog-note">This is a simulated preview. No live members, reservations, or messages.</p><button id="dialog-done" class="button button-primary">Back to the gym <span aria-hidden="true">↗</span></button></dialog>
+</body>
+</html>
