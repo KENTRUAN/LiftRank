@@ -49,18 +49,34 @@
         }
       }
     },
-    "%@ asks to %@ at the %@": {
+    "%@ asks to train together at the %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ asks to %@ at the %@"
+            "value": "%@ asks to train together at the %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 请求在%@%@"
+            "value": "%@ 想邀请你一起训练，器械是%@"
+          }
+        }
+      }
+    },
+    "%@ asks to work in at the %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ asks to work in at the %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 想和你轮流用%@，一人一组"
           }
         }
       }
@@ -1532,7 +1548,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请求一起练"
+            "value": "邀请对方一起训练"
           }
         }
       }
@@ -1548,7 +1564,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请求合用"
+            "value": "申请轮流用器械（一人一组）"
           }
         }
       }
@@ -2700,7 +2716,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用中的器械"
+            "value": "器械正在使用中"
           }
         }
       }
@@ -4988,7 +5004,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "训练计划"
+            "value": "训练模板"
           }
         }
       }
@@ -5948,7 +5964,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "该器械位已被占用，需当前成员同意后你才能加入。"
+            "value": "这台器械有人在用，对方同意后你就能加入。"
           }
         }
       }

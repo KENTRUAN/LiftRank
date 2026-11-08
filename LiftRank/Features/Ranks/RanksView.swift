@@ -251,7 +251,7 @@ struct MuscleMapView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(group.name)
-                    .accessibilityValue(scores[group].map { String($0) } ?? "待评分")
+                    .accessibilityValue(scores[group].map { String($0) } ?? L("待评分"))
                 }
             }
         }
