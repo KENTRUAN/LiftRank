@@ -122,13 +122,13 @@ enum DailyTrainingEngine {
 
     /// Pays the daily reward once per day. Returns the Eggs granted (0 when nothing new).
     @discardableResult
-    static func claimIfEarned(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], claims: [QuestClaim], gsr: Int, context: ModelContext, today: Date = Date()) -> Int {
+    static func claimIfEarned(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], claims: [QuestClaim], gsr: Int, context: ModelContext, today: Date = Date(), save: Bool = true) -> Int {
         let s = status(profile: profile, workouts: workouts, cardio: cardio, claims: claims, gsr: gsr, today: today)
         guard s.isComplete, !s.claimed else { return 0 }
         context.insert(QuestClaim(questID: questID, periodKey: s.dayKey))
         context.insert(RewardEvent(date: today, kind: .dailyTraining, xp: 0, eggs: s.reward, note: L("完成今日训练（%@ 段位加成）", RankTier.tier(for: gsr).name)))
         profile.eggs += s.reward
-        try? context.save()
+        if save { try? context.save() }
         return s.reward
     }
 }

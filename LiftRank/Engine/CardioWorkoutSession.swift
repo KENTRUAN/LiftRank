@@ -50,10 +50,11 @@ enum CardioWorkoutSession {
         let record = CardioSession(date: started, type: type, durationMinutes: duration / 60,
                                    distanceKm: workout.isOutdoor ? workout.routeDistanceMeters / 1000 : 0,
                                    source: "timer", externalID: id)
+        let previousEnd = workout.endedAt
         workout.endedAt = end; workout.isPublished = true; workout.publishedAt = end
         context.insert(record)
         do { try context.save() }
-        catch { context.delete(record); workout.isPublished = false; workout.publishedAt = nil; throw error }
+        catch { context.delete(record); workout.endedAt = previousEnd; workout.isPublished = false; workout.publishedAt = nil; throw error }
         return record
     }
 }

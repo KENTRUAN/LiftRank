@@ -8,12 +8,25 @@ struct CardioView: View {
     @Query(sort: \CardioSession.date, order: .reverse) private var sessions: [CardioSession]
     @Query private var workouts: [Workout]
     @AppStorage(AIProgram.combinedKey) private var combined = Data()
-    @State private var editing: CardioSession?
+    @State private var editor: EditorTarget?
     @State private var healthStatus: String?
     @State private var importing = false
     @State private var activeWorkout: Workout?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var week: [CardioSession] { sessions.filter { $0.date.weekKey == Date().weekKey } }
+
+    private enum EditorTarget: Identifiable {
+        case existing(CardioSession)
+        case planned(AIProgram.Cardio)
+
+        var id: String {
+            switch self {
+            case .existing(let session): session.id.uuidString
+            case .planned: "planned"
+            }
+        }
+    }
 
     private struct WeekBucket: Identifiable { let id: String; let start: Date; let minutes: Double }
     private var weekly: [WeekBucket] {
@@ -31,7 +44,7 @@ struct CardioView: View {
             if let program = AIProgram.load(combined), program.weeks.contains(where: { !$0.cardio.isEmpty }) {
                 Section("Saved cardio plan") {
                     NavigationLink("查看四周有氧计划") {
-                        AIProgramView(program: program, focus: .cardio)
+                        AIProgramView(program: program, focus: .cardio, onCardio: { editor = .planned($0) })
                     }
                 }
             }
@@ -39,17 +52,18 @@ struct CardioView: View {
                 if let active = workouts.first(where: { !$0.isPublished && $0.isOutdoor }), active.startOptionsChosen { OutdoorWorkoutMap(workout: active) }
             }
             Section {
-                HStack(spacing: 10) {
-                    StatTile(title: L("本周时长"), value: L("%@ 分", week.reduce(0) { $0 + $1.durationMinutes }.fmt(0)))
-                    StatTile(title: L("本周距离"), value: "\(week.reduce(0) { $0 + $1.distanceKm }.fmt(1)) km", color: .blue)
-                    StatTile(title: L("本周次数"), value: "\(week.count)", color: .green)
+                let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 10))
+                layout {
+                    StatTile(title: L("时长"), value: L("%@ 分钟", week.reduce(0) { $0 + $1.durationMinutes }.fmt(0)))
+                    StatTile(title: L("距离"), value: "\(week.reduce(0) { $0 + $1.distanceKm }.fmt(1)) km", color: .blue)
+                    StatTile(title: L("有氧次数"), value: "\(week.count)", color: .green)
                 }
-                .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
-                Chart(weekly) { b in
-                    BarMark(x: .value("周", b.start, unit: .weekOfYear), y: .value("分钟", b.minutes)).foregroundStyle(Color.accentColor.gradient)
-                }
-                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month().day()) } }
-                .frame(height: 120)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                .listRowBackground(Color.clear)
+            } header: { Text("本周有氧") }
+
+            Section {
+                weeklyChart
             } header: { Text("最近 8 周") }
 
             Section {
@@ -63,7 +77,7 @@ struct CardioView: View {
             Section(sessions.isEmpty ? "记录" : "记录 · \(sessions.count) 次") {
                 if sessions.isEmpty { Text("还没有有氧记录。").font(.footnote).foregroundStyle(.secondary) }
                 ForEach(sessions) { s in
-                    Button { if s.sourceRaw == "timer", let record = workouts.first(where: { TrainingHealthManager.syncIdentifier($0.id) == s.externalID }) { activeWorkout = record } else { editing = s } } label: {
+                    Button { if s.sourceRaw == "timer", let record = workouts.first(where: { TrainingHealthManager.syncIdentifier($0.id) == s.externalID }) { activeWorkout = record } else { editor = .existing(s) } } label: {
                         HStack {
                             Image(systemName: s.type.icon).font(.title3).frame(width: 30).foregroundStyle(Color.accentColor)
                             VStack(alignment: .leading, spacing: 2) {
@@ -82,7 +96,58 @@ struct CardioView: View {
             }
         }
         .fullScreenCover(item: $activeWorkout) { ActiveWorkoutView(workout: $0, profile: profile) }
-        .sheet(item: $editing) { s in CardioEditor(profile: profile, session: s) { _ in try? context.save() } }
+        .sheet(item: $editor) { target in
+            switch target {
+            case .existing(let session):
+                CardioEditor(profile: profile, session: session)
+            case .planned(let planned):
+                CardioEditor(profile: profile, session: nil, suggested: planned)
+            }
+        }
+    }
+
+    private var weeklyChart: some View {
+        let buckets = weekly
+        let peak = buckets.map(\.minutes).max() ?? 0
+        let step = max(20, (peak / 100).rounded(.up) * 20)
+        let ticks = (0...5).map { Double($0) * step }
+        let labelIndices = dynamicTypeSize.isAccessibilitySize ? [0, 7] : [0, 2, 4, 7]
+        let dateLabels = Dictionary(uniqueKeysWithValues: labelIndices.map { index in
+            let bucket = buckets[index]
+            let date = bucket.start.formatted(.dateTime.month(.defaultDigits).day().locale(AppLanguage.current.locale))
+            return (bucket.id, date)
+        })
+
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("每周有氧时长（分钟）").font(.subheadline.bold())
+            Chart(buckets) { bucket in
+                BarMark(x: .value(L("周"), bucket.id), y: .value(L("分钟"), bucket.minutes))
+                    .foregroundStyle(Color.accentColor.gradient)
+                    .accessibilityLabel(bucket.start.shortString)
+                    .accessibilityValue(L("%@ 分钟", bucket.minutes.fmt(0)))
+            }
+            .chartXScale(domain: buckets.map(\.id))
+            .chartYScale(domain: 0...(step * 5), range: .plotDimension(startPadding: 0, endPadding: 9))
+            .chartYAxis {
+                AxisMarks(values: ticks) { _ in
+                    AxisGridLine()
+                    AxisValueLabel()
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: buckets.map(\.id).filter { dateLabels[$0] != nil }) { value in
+                    if let id = value.as(String.self), let date = dateLabels[id] {
+                        AxisValueLabel { Text(date).font(.caption2).fixedSize() }
+                    }
+                }
+            }
+            .frame(height: 168)
+            .accessibilityIdentifier("weeklyCardioChart")
+            Text("每根柱代表从该日期开始的一周内累计的有氧分钟数。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 10)
     }
 
     private func detail(_ s: CardioSession) -> String {
@@ -131,8 +196,8 @@ struct CardioEditor: View {
     let profile: UserProfile
     let session: CardioSession?
     var suggested: AIProgram.Cardio? = nil
-    let onSave: (CardioSession) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @State private var type: CardioType = .running
     @State private var date = Date()
     @State private var minutes = "30"
@@ -140,6 +205,7 @@ struct CardioEditor: View {
     @State private var calories = ""
     @State private var heartRate = ""
     @State private var notes = ""
+    @State private var saveFailed = false
 
     private var estimatedKcal: Double {
         let m = Double(minutes) ?? 0
@@ -165,19 +231,11 @@ struct CardioEditor: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("取消") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
-                        let s = session ?? CardioSession(date: date, type: type, durationMinutes: 0)
-                        s.type = type; s.date = date
-                        s.durationMinutes = Double(minutes) ?? 0
-                        s.distanceKm = type.usesDistance ? (Double(distance) ?? 0) : 0
-                        s.calories = Double(calories) ?? 0
-                        s.avgHeartRate = Double(heartRate) ?? 0
-                        s.notes = notes
-                        onSave(s)
-                        dismiss()
-                    }.disabled((Double(minutes) ?? 0) <= 0)
+                    Button("保存", action: save)
+                        .disabled((Double(minutes) ?? 0) <= 0)
                 }
             }
+            .alert("无法保存有氧记录，请重试。", isPresented: $saveFailed) { Button("OK") {} }
             .onAppear {
                 guard let s = session else {
                     if let suggested {
@@ -193,6 +251,33 @@ struct CardioEditor: View {
                 heartRate = s.avgHeartRate > 0 ? s.avgHeartRate.fmt(0) : ""
                 notes = s.notes
             }
+        }
+    }
+
+    private func save() {
+        guard let duration = Double(minutes), duration.isFinite, duration > 0 else { return }
+        let record = session ?? CardioSession(date: date, type: type, durationMinutes: duration)
+        let previous = (record.type, record.date, record.durationMinutes, record.distanceKm,
+                        record.calories, record.avgHeartRate, record.notes)
+        record.type = type
+        record.date = date
+        record.durationMinutes = duration
+        record.distanceKm = type.usesDistance ? (Double(distance) ?? 0) : 0
+        record.calories = Double(calories) ?? 0
+        record.avgHeartRate = Double(heartRate) ?? 0
+        record.notes = notes
+        if session == nil { context.insert(record) }
+        do {
+            try context.save()
+            dismiss()
+        } catch {
+            if session == nil {
+                context.delete(record)
+            } else {
+                (record.type, record.date, record.durationMinutes, record.distanceKm,
+                 record.calories, record.avgHeartRate, record.notes) = previous
+            }
+            saveFailed = true
         }
     }
 

@@ -69,9 +69,10 @@ struct ExerciseProgressView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("训练量").font(.headline)
-                        Chart(pts) { p in BarMark(x: .value("日期", p.date, unit: .day), y: .value("量", unit.fromKg(p.volume))) }
-                            .frame(height: 140)
+                        Text("训练量（\(unit.label)）").font(.headline)
+                        Chart(pts) { p in BarMark(x: .value("日期", p.date, unit: .day), y: .value(L("训练量"), unit.fromKg(p.volume))) }
+                            .chartYAxisLabel(unit.label)
+                            .frame(height: 160)
                     }.card()
 
                     VStack(alignment: .leading, spacing: 8) {

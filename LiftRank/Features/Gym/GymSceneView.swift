@@ -5,7 +5,7 @@ import SpriteKit
 enum GymCamera {
     static func zoom(_ value: CGFloat) -> CGFloat { min(3, max(0.8, value.isFinite ? value : 1)) }
     static func fitScale(_ size: CGSize) -> CGFloat {
-        max(780 / max(1, size.width), 610 / max(1, size.height))
+        max(GymScene.roomSize.width / max(1, size.width), GymScene.roomSize.height / max(1, size.height))
     }
 }
 
@@ -20,7 +20,7 @@ struct GymSceneView: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tap(_:)))
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
-        pan.minimumNumberOfTouches = 2; pan.maximumNumberOfTouches = 2
+        pan.maximumNumberOfTouches = 1
         pinch.delegate = context.coordinator; pan.delegate = context.coordinator
         tap.require(toFail: pinch); tap.require(toFail: pan)
         [tap, pinch, pan].forEach { view.addGestureRecognizer($0) }
@@ -35,14 +35,24 @@ struct GymSceneView: UIViewRepresentable {
             scene.select(at: scene.convertPoint(fromView: gesture.location(in: gesture.view)))
         }
         @objc func pinch(_ gesture: UIPinchGestureRecognizer) {
+            guard gesture.state == .began || gesture.state == .changed else { return }
             if gesture.state == .began { scene.cancelMovement() }
             scene.zoom(by: gesture.scale, around: gesture.location(in: gesture.view))
             gesture.scale = 1
         }
         @objc func pan(_ gesture: UIPanGestureRecognizer) {
-            if gesture.state == .began { scene.cancelMovement() }
-            scene.pan(by: gesture.translation(in: gesture.view))
+            guard gesture.state == .began || gesture.state == .changed else { return }
+            let translation = gesture.translation(in: gesture.view)
             gesture.setTranslation(.zero, in: gesture.view)
+            guard gesture.numberOfTouches == 1 else { return }
+            if gesture.state == .began { scene.cancelMovement() }
+            scene.pan(by: translation)
+        }
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            !(gestureRecognizer is UIPanGestureRecognizer) || scene.canPan
+        }
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            gestureRecognizer is UIPanGestureRecognizer && (other.view as? UIScrollView)?.panGestureRecognizer === other
         }
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             (gestureRecognizer is UIPinchGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer)

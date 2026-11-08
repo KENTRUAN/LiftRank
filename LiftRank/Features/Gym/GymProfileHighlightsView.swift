@@ -60,6 +60,7 @@ struct GymProfileHighlightsView: View {
                     }
                     .chartYScale(domain: 0...max(1, highlights.months.map(\.sessions).max() ?? 1))
                     .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
+                    .chartYAxisLabel(L("训练次数"))
                     .frame(height: 150)
                     Text("\(highlights.months.reduce(0) { $0 + $1.sessions }) workouts in this period").font(.caption).foregroundStyle(.secondary)
                 }.card()
@@ -70,7 +71,7 @@ struct GymProfileHighlightsView: View {
                         HStack(alignment: .top) {
                             Image(systemName: "dumbbell.fill").foregroundStyle(.teal).padding(8).background(.teal.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(memory.title).font(.subheadline.bold())
+                                Text(WorkoutLabels.title(memory.title)).font(.subheadline.bold())
                                 Text(Date(timeIntervalSince1970: memory.date / 1000), format: .dateTime.month(.abbreviated).day()).font(.caption).foregroundStyle(.secondary)
                                 Text("\(memory.minutes) min · \(memory.sets) sets").font(.caption).foregroundStyle(.secondary)
                             }

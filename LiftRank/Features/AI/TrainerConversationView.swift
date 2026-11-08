@@ -78,7 +78,20 @@ struct TrainerConversationView: View {
         let retrying = messages.last?.role == "user" && messages.last?.text == text
         let history = messages.dropLast(retrying ? 1 : 0).suffix(14).map { ["role": $0.role, "text": String($0.text.prefix(3000))] } + [["role": "user", "text": text]]
         let workout = active, revision = TrainerPlanEditor.revision(active), today = Date()
-        if !retrying { context.insert(TrainerMessage(role: "user", text: text)); try? context.save() }
+        let expectedSchedule = TrainerPlanEditor.scheduleRevision(plans)
+        let schedule = plans.filter { $0.dayKey >= today.dayKey && ($0.requestedByUser || $0.sourceRaw == "ai") }
+            .sorted { $0.dayKey < $1.dayKey }.prefix(28).map { plan in
+                ["date": plan.dayKey, "title": plan.title, "items": plan.items.map { item in
+                    ["exerciseKey": item.exerciseKey, "sets": item.sets, "repsLow": item.repsLow,
+                     "repsHigh": item.repsHigh, "restSeconds": item.restSeconds]
+                }] as [String: Any]
+            }
+        if !retrying {
+            let message = TrainerMessage(role: "user", text: text)
+            context.insert(message)
+            do { try context.save() }
+            catch { context.delete(message); self.error = error.localizedDescription; return }
+        }
         input = ""; busy = true; error = nil; failedDraft = ""
         Task {
             defer { busy = false }
@@ -88,15 +101,12 @@ struct TrainerConversationView: View {
                     ["activity": w.activity.name, "allowsTodoEditing": w.activity == .strength, "remaining": TrainerPlanEditor.remainingTodos(w).map { ["exerciseKey": $0.exerciseKey, "sets": $0.sets, "repsLow": $0.repsLow, "repsHigh": $0.repsHigh, "restSeconds": $0.restSeconds] },
                      "completed": w.sortedExercises.map { e in ["exerciseKey": e.exerciseKey, "sets": e.sets.filter(\.isCompleted).count] }]
                 }
-                let schedule = plans.filter { $0.dayKey >= today.dayKey && ($0.requestedByUser || $0.sourceRaw == "ai") }.prefix(28).map { p in
-                    ["date": p.dayKey, "title": p.title, "items": p.items.map { ["exerciseKey": $0.exerciseKey, "sets": $0.sets, "repsLow": $0.repsLow, "repsHigh": $0.repsHigh, "restSeconds": $0.restSeconds] }] as [String: Any]
-                }
                 let reply: TrainerReply = try await api.post("trainer", body: ["messages": history, "localDate": today.dayKey, "language": AppLanguage.current.locale.identifier,
                     "catalog": exercises.map { ["key": $0.key, "name": $0.nameEn, "cardio": $0.isCardio] }, "activeWorkout": current as Any? ?? NSNull(),
                     "schedule": schedule, "goals": profile.planGoal.name])
-                let result = try TrainerPlanEditor.apply(reply, workout: workout, expectedRevision: revision, exercises: exercises, plans: plans, context: context, today: today)
-                context.insert(TrainerMessage(role: "assistant", text: reply.reply + (result.isEmpty ? "" : "\n\n" + result)))
-                try context.save()
+                _ = try TrainerPlanEditor.apply(reply, workout: workout, expectedRevision: revision, exercises: exercises,
+                                            plans: plans, context: context, today: today,
+                                            expectedSchedule: expectedSchedule, recordReply: true)
             } catch { self.error = error.localizedDescription; self.failedDraft = text }
         }
     }

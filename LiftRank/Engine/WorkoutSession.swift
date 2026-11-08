@@ -17,14 +17,19 @@ enum WorkoutSession {
         catch { context.delete(workout); throw error }
     }
 
-    static func applyPreset(to workout: Workout, title: String, items: [TemplateExercise], exercises: [Exercise], context: ModelContext) throws {
+    static func applyPreset(to workout: Workout, title: String, items: [TemplateExercise], exercises: [Exercise], context: ModelContext,
+                            plan: DailyPlan? = nil) throws {
         guard !workout.isPublished, workout.endedAt == nil, workout.exercises.isEmpty, !workout.hasPendingSet else {
             throw GymFailure.message(L("A preset can only be added to an empty workout. Your recorded work has been kept."))
         }
+        let resolved = items.compactMap { item in exercises.first { $0.key == item.exerciseKey } }
+        guard !items.isEmpty, resolved.count == items.count else {
+            throw GymFailure.message(L("Some exercises in this saved plan are unavailable. Your workout is unchanged."))
+        }
         let history = try context.fetch(FetchDescriptor<Workout>())
-        let oldTitle = workout.title
-        for (index, item) in items.enumerated() {
-            guard let exercise = exercises.first(where: { $0.key == item.exerciseKey }) else { continue }
+        let previous = (workout.title, workout.hasChecklist, workout.startOptionsChosen, plan?.workoutID)
+        for (index, pair) in zip(items, resolved).enumerated() {
+            let (item, exercise) = pair
             let entry = WorkoutExercise(order: index, exercise: exercise, restSeconds: item.restSeconds)
             let previous = WorkoutPublisher.lastSets(for: exercise.key, workouts: history, excluding: workout)
             for order in 0..<max(1, item.sets) {
@@ -32,9 +37,18 @@ enum WorkoutSession {
             }
             workout.exercises.append(entry)
         }
-        workout.title = title; workout.hasChecklist = true
+        workout.title = title
+        workout.hasChecklist = true
+        workout.startOptionsChosen = true
+        plan?.workoutID = workout.id
         do { try context.save() }
-        catch { for entry in workout.exercises { context.delete(entry) }; workout.exercises = []; workout.title = oldTitle; throw error }
+        catch {
+            for entry in workout.exercises { context.delete(entry) }
+            workout.exercises = []
+            (workout.title, workout.hasChecklist, workout.startOptionsChosen) = (previous.0, previous.1, previous.2)
+            plan?.workoutID = previous.3
+            throw error
+        }
     }
 
     static func beginSet(_ workout: Workout, exerciseKey: String, context: ModelContext, now: Date = Date()) throws {

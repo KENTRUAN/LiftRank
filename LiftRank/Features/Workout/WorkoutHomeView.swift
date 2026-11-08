@@ -27,6 +27,12 @@ struct WorkoutHomeView: View {
         @Bindable var app = app
         NavigationStack {
             VStack(spacing: 10) {
+                Text(mode == 0 ? "训练" : "有氧")
+                    .font(.largeTitle.bold())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("workoutHomeTitle")
                 TrainerWelcomeView(workout: unpublished, plan: todayPlan).padding(.horizontal)
                 Button {
                     app.prefersCardioStart = mode == 1
@@ -38,6 +44,7 @@ struct WorkoutHomeView: View {
                 Group { if mode == 0 { strengthList } else { CardioView(profile: profile) } }
             }
             .navigationTitle(mode == 0 ? "训练" : "有氧")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Picker("", selection: $mode) { Text("力量").tag(0); Text("有氧").tag(1) }.pickerStyle(.segmented).frame(width: 160)
@@ -55,7 +62,7 @@ struct WorkoutHomeView: View {
             .sheet(isPresented: $showSummary) { NavigationStack { SummaryView(profile: profile) } }
             .sheet(isPresented: $app.showCoach) { CoachChatView(profile: profile) }
             .sheet(item: $setup) { target in
-                WorkoutSetupView(title: target.title, items: target.items, isNew: target.isNew) { name, items in save(target, name: name, items: items) }
+                WorkoutSetupView(title: target.title, items: target.items, isNew: target.isNew) { name, items in try save(target, name: name, items: items) }
             }
             .onAppear { if DemoData.autoOpenActive, activeWorkout == nil { activeWorkout = unpublished }; openRequestedWorkout() }
             .onChange(of: app.pending) { _, action in
@@ -114,8 +121,10 @@ struct WorkoutHomeView: View {
                     HStack {
                         Button { setup = SetupTarget(template: t) } label: {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(t.name).foregroundStyle(.primary)
-                                Text(t.planName.isEmpty ? "\(t.items.count) 个动作" : "\(t.planName) · \(t.items.count) 个动作")
+                                Text(t.displayName).foregroundStyle(.primary)
+                                Text(t.planName.isEmpty
+                                     ? L("%lld 个动作", t.items.count)
+                                     : L("%@ · %lld 个动作", t.displayPlanName, t.items.count))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
@@ -158,14 +167,20 @@ struct WorkoutHomeView: View {
         startToday()
     }
 
-    private func save(_ target: SetupTarget, name: String, items: [TemplateExercise]) {
+    private func save(_ target: SetupTarget, name: String, items: [TemplateExercise]) throws {
         switch target.kind {
         case .newTemplate:
-            context.insert(WorkoutTemplate(name: name, items: items))
-        case .template(let t):
-            t.name = name; t.items = items
+            let template = WorkoutTemplate(name: name, items: items)
+            context.insert(template)
+            do { try context.save() }
+            catch { context.delete(template); throw error }
+        case .template(let template):
+            let previous = (template.name, template.items)
+            template.name = name
+            template.items = items
+            do { try context.save() }
+            catch { (template.name, template.items) = previous; throw error }
         }
-        try? context.save()
     }
 
     private func defaultTitle() -> String {
@@ -193,7 +208,7 @@ struct WorkoutRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
-                Text(workout.title).bold()
+                Text(WorkoutLabels.title(workout.title)).bold()
                 Text("\((workout.publishedAt ?? workout.startedAt).shortString) · \(workout.duration.clockString) · \(workout.exercises.count) 动作 · \(unit.fromKg(workout.totalVolumeKg).fmt(0)) \(unit.label)")
                     .font(.caption).foregroundStyle(.secondary)
             }

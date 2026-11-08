@@ -2145,6 +2145,22 @@
         }
       }
     },
+    "Continue workout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue workout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续训练"
+          }
+        }
+      }
+    },
     "Could not refresh your shared profile. %@": {
       "localizations": {
         "en": {
@@ -2621,6 +2637,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "请先结束这组再保存。"
+          }
+        }
+      }
+    },
+    "Enlarge gym": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enlarge gym"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开地图"
           }
         }
       }
@@ -3293,6 +3325,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "日程无效，未做任何更改。"
+          }
+        }
+      }
+    },
+    "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "健身房地图。双指缩放，点击器械选择训练位置和动作。"
           }
         }
       }
@@ -3985,6 +4033,22 @@
         }
       }
     },
+    "Open workout space. Pinch to zoom, tap to walk, or use Start set below.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open workout space. Pinch to zoom, tap to walk, or use Start set below."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由训练空间。双指缩放，点地面移动，或在下方开始一组。"
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "en": {
@@ -4209,6 +4273,22 @@
         }
       }
     },
+    "PRIVATE · ONLY ON THIS DEVICE": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRIVATE · ONLY ON THIS DEVICE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人空间 · 仅限此设备"
+          }
+        }
+      }
+    },
     "Pause": {
       "localizations": {
         "en": {
@@ -4269,6 +4349,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停"
+          }
+        }
+      }
+    },
+    "Pinch to zoom · Drag with one finger when zoomed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinch to zoom · Drag with one finger when zoomed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双指缩放 · 放大后可单指拖动"
           }
         }
       }
@@ -4641,6 +4737,22 @@
         }
       }
     },
+    "Ready when you are. Start a workout, or tell me what you want to train.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready when you are. Start a workout, or tell me what you want to train."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备好了就开始训练，也可以告诉我今天想练什么。"
+          }
+        }
+      }
+    },
     "Ready": {
       "localizations": {
         "en": {
@@ -4833,6 +4945,22 @@
         }
       }
     },
+    "Reset gym view": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset gym view"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还原健身房缩放"
+          }
+        }
+      }
+    },
     "Rest %@": {
       "localizations": {
         "en": {
@@ -4861,6 +4989,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "休息日"
+          }
+        }
+      }
+    },
+    "Rest · %llds": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rest · %llds"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "休息 · %lld 秒"
           }
         }
       }
@@ -5345,6 +5489,22 @@
         }
       }
     },
+    "Shrink gym": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shrink gym"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起地图"
+          }
+        }
+      }
+    },
     "Simulated member · offline sample": {
       "localizations": {
         "en": {
@@ -5569,6 +5729,22 @@
         }
       }
     },
+    "Start workout opens your gym space. Choose Cardio to begin timing and Apple Health tracking. End saves elapsed time.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start workout opens your gym space. Choose Cardio to begin timing and Apple Health tracking. End saves elapsed time."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始训练后会进入训练空间。选择有氧即可开始计时和 Apple 健康记录，结束后保存运动时长。"
+          }
+        }
+      }
+    },
     "Start workout": {
       "localizations": {
         "en": {
@@ -5777,6 +5953,22 @@
         }
       }
     },
+    "Talk to your trainer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talk to your trainer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和 AI 教练聊聊"
+          }
+        }
+      }
+    },
     "Tap equipment to train · Tap a lifter to connect": {
       "localizations": {
         "en": {
@@ -5789,6 +5981,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击器械开始训练 · 点击成员建立联系"
+          }
+        }
+      }
+    },
+    "Tap to walk · Choose any workout below": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to walk · Choose any workout below"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点地面移动 · 在下方选择训练"
           }
         }
       }
@@ -6065,6 +6273,22 @@
         }
       }
     },
+    "Today's training": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today's training"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日训练"
+          }
+        }
+      }
+    },
     "Traditional strength training": {
       "localizations": {
         "en": {
@@ -6077,6 +6301,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "传统力量训练"
+          }
+        }
+      }
+    },
+    "Trainer unavailable. Retry welcome message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trainer unavailable. Retry welcome message"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教练暂不可用，重试问候消息"
           }
         }
       }
@@ -6529,6 +6769,22 @@
         }
       }
     },
+    "YOUR WORKOUT SPACE": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YOUR WORKOUT SPACE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的训练空间"
+          }
+        }
+      }
+    },
     "You": {
       "localizations": {
         "en": {
@@ -6717,6 +6973,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "训练师思考期间你的训练已变化，请再次询问以更新剩余待办动作。"
+          }
+        }
+      }
+    },
+    "Zoom in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom in"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大地图"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom out"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩小地图"
           }
         }
       }
@@ -11733,6 +12021,22 @@
         }
       }
     },
+    "拉力日": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pull Day"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拉力日"
+          }
+        }
+      }
+    },
     "拉起一切": {
       "localizations": {
         "en": {
@@ -11857,6 +12161,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "推"
+          }
+        }
+      }
+    },
+    "推力日": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push Day"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推力日"
+          }
+        }
+      }
+    },
+    "推拉日（进行中）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push & Pull Day (In Progress)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推拉日（进行中）"
           }
         }
       }
@@ -12181,6 +12517,38 @@
         }
       }
     },
+    "无法保存有氧记录，请重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save the cardio session. Try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存有氧记录，请重试。"
+          }
+        }
+      }
+    },
+    "无法保存训练模板，请重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not save the workout template. Try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存训练模板，请重试。"
+          }
+        }
+      }
+    },
     "无法保存重量单位，请重试。": {
       "localizations": {
         "en": {
@@ -12193,6 +12561,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法保存重量单位，请重试。"
+          }
+        }
+      }
+    },
+    "无法发布训练，请重试。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not publish the workout. Try again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法发布训练，请重试。"
           }
         }
       }
@@ -12757,6 +13141,22 @@
         }
       }
     },
+    "有氧次数": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有氧次数"
+          }
+        }
+      }
+    },
     "服务": {
       "localizations": {
         "en": {
@@ -12945,6 +13345,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "本周有氧 90 分钟"
+          }
+        }
+      }
+    },
+    "本周有氧": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cardio This Week"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本周有氧"
           }
         }
       }
@@ -13925,6 +14341,22 @@
         }
       }
     },
+    "每周有氧时长（分钟）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly cardio time (min)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每周有氧时长（分钟）"
+          }
+        }
+      }
+    },
     "每天都来": {
       "localizations": {
         "en": {
@@ -13985,6 +14417,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "每日训练目标"
+          }
+        }
+      }
+    },
+    "每根柱代表从该日期开始的一周内累计的有氧分钟数。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each bar shows total cardio minutes for the week starting on that date."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每根柱代表从该日期开始的一周内累计的有氧分钟数。"
           }
         }
       }
@@ -15685,6 +16133,22 @@
         }
       }
     },
+    "组数": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sets"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "组数"
+          }
+        }
+      }
+    },
     "组间休息": {
       "localizations": {
         "en": {
@@ -16741,6 +17205,22 @@
         }
       }
     },
+    "腿部日": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leg Day"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "腿部日"
+          }
+        }
+      }
+    },
     "臀": {
       "localizations": {
         "en": {
@@ -17493,6 +17973,38 @@
         }
       }
     },
+    "训练日程在等待回复时已更新，请重新发送请求。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your schedule changed while the trainer was thinking. Send your request again."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练日程在等待回复时已更新，请重新发送请求。"
+          }
+        }
+      }
+    },
+    "训练次数": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workouts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练次数"
+          }
+        }
+      }
+    },
     "训练清单 %lld/%lld 组": {
       "localizations": {
         "en": {
@@ -17585,6 +18097,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "训练量分布"
+          }
+        }
+      }
+    },
+    "训练量分布（%@）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Training volume (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练量分布（%@）"
+          }
+        }
+      }
+    },
+    "训练量（%@）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Training volume (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "训练量（%@）"
           }
         }
       }
@@ -18193,6 +18737,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "距 %@ 还差 %lld LP"
+          }
+        }
+      }
+    },
+    "距离": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Distance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "距离"
           }
         }
       }

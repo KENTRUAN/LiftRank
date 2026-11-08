@@ -6,6 +6,7 @@ struct ProfileView: View {
 
     @Bindable var profile: UserProfile
     @Environment(\.modelContext) private var context
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var gym: GymStore
     @Query private var workouts: [Workout]
     @Query private var exercises: [Exercise]
@@ -44,18 +45,7 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    HStack(spacing: 14) {
-                        AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, portrait: portrait ?? gym.portraits[gym.uid])
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
-                            HStack(spacing: 4) { EggIcon(size: 14); Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary) }
-                        }
-                        Spacer()
-                        Button { showPortrait = true } label: { Label("AI 肖像", systemImage: "photo").font(.caption.bold()).labelStyle(.titleAndIcon) }
-                            .fixedSize()
-                    }
-                }
+                Section { profileHeader }
                 Section("个人资料") {
                     nicknameRow
                     Picker("性别（评分曲线）", selection: $profile.sex) { ForEach(Sex.allCases) { Text($0.label).tag($0) } }
@@ -147,6 +137,53 @@ struct ProfileView: View {
             }
             .alert("说明", isPresented: Binding(get: { info != nil }, set: { if !$0 { info = nil } })) { Button("好") {} } message: { Text(info ?? "") }
         }
+    }
+
+    private var profileHeader: some View {
+        VStack(alignment: .trailing, spacing: 10) {
+            if dynamicTypeSize.isAccessibilitySize {
+                portraitButton.frame(maxWidth: .infinity, alignment: .leading)
+                titleBadge
+            } else {
+                HStack(spacing: 10) {
+                    portraitButton
+                    Spacer(minLength: 0)
+                    titleBadge
+                        .frame(maxWidth: 144, alignment: .trailing)
+                        .layoutPriority(1)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var titleBadge: some View {
+        TitleTag(cosmetic: profile.equipped(.title))
+            .multilineTextAlignment(.trailing)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var portraitButton: some View {
+        Button {
+            focusedField = nil
+            showPortrait = true
+        } label: {
+            HStack(spacing: 12) {
+                AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64, portrait: portrait ?? gym.portraits[gym.uid])
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(profile.name).font(.headline).foregroundStyle(.primary).lineLimit(1)
+                    Text("AI 肖像").font(.caption.weight(.semibold)).foregroundStyle(Color.accentColor)
+                    HStack(spacing: 4) {
+                        EggIcon(size: 14)
+                        Text("\(profile.eggs) Eggs").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("profilePortrait")
     }
 
     private var nicknameRow: some View {
