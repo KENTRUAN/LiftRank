@@ -2625,6 +2625,22 @@
         }
       }
     },
+    "Enlarge gym": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enlarge gym"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开地图"
+          }
+        }
+      }
+    },
     "Enter Gym": {
       "localizations": {
         "en": {
@@ -3293,6 +3309,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "日程无效，未做任何更改。"
+          }
+        }
+      }
+    },
+    "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "健身房地图。双指缩放，点击器械选择训练位置和动作。"
           }
         }
       }
@@ -3985,6 +4017,22 @@
         }
       }
     },
+    "Open workout space. Pinch to zoom, tap to walk, or use Start set below.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open workout space. Pinch to zoom, tap to walk, or use Start set below."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由训练空间。双指缩放，点地面移动，或在下方开始一组。"
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "en": {
@@ -4209,6 +4257,22 @@
         }
       }
     },
+    "PRIVATE · ONLY ON THIS DEVICE": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PRIVATE · ONLY ON THIS DEVICE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私人空间 · 仅限此设备"
+          }
+        }
+      }
+    },
     "Pause": {
       "localizations": {
         "en": {
@@ -4269,6 +4333,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停"
+          }
+        }
+      }
+    },
+    "Pinch to zoom · Drag with one finger when zoomed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinch to zoom · Drag with one finger when zoomed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双指缩放 · 放大后可单指拖动"
           }
         }
       }
@@ -4833,6 +4913,22 @@
         }
       }
     },
+    "Reset gym view": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset gym view"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还原健身房缩放"
+          }
+        }
+      }
+    },
     "Rest %@": {
       "localizations": {
         "en": {
@@ -5345,6 +5441,22 @@
         }
       }
     },
+    "Shrink gym": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shrink gym"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起地图"
+          }
+        }
+      }
+    },
     "Simulated member · offline sample": {
       "localizations": {
         "en": {
@@ -5789,6 +5901,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "点击器械开始训练 · 点击成员建立联系"
+          }
+        }
+      }
+    },
+    "Tap to walk · Choose any workout below": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to walk · Choose any workout below"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点地面移动 · 在下方选择训练"
           }
         }
       }
@@ -6529,6 +6657,22 @@
         }
       }
     },
+    "YOUR WORKOUT SPACE": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YOUR WORKOUT SPACE"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的训练空间"
+          }
+        }
+      }
+    },
     "You": {
       "localizations": {
         "en": {
@@ -6717,6 +6861,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "训练师思考期间你的训练已变化，请再次询问以更新剩余待办动作。"
+          }
+        }
+      }
+    },
+    "Zoom in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom in"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大地图"
+          }
+        }
+      }
+    },
+    "Zoom out": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom out"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩小地图"
           }
         }
       }

@@ -27,7 +27,7 @@ struct GymRoomView: View {
     let session: Workout?
     let workoutSummary: String
     let startSession: () -> Void
-    @State private var scene = GymScene(size: CGSize(width: 780, height: 610))
+    @StateObject private var scene = GymScene(size: GymScene.roomSize)
     @State private var sheet: GymRoomSheet?
     @State private var lastLogged: String?
     @State private var occupiedStation: String?
@@ -86,32 +86,64 @@ struct GymRoomView: View {
     private var roomContent: some View {
         ScrollView {
             VStack(spacing: 0) {
-                roomStatus
-                GymSceneView(scene: scene).frame(height: expanded ? 560 : 360)
-                    .accessibilityIdentifier("walkableGymScene")
-                    .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.")
-                sceneControls
+                roomMap
                 sessionDetails
             }
         }
     }
+    private var roomMap: some View {
+        VStack(spacing: 0) {
+            roomStatus
+            GymSceneView(scene: scene).frame(height: expanded ? 560 : 285)
+                .accessibilityIdentifier("walkableGymScene")
+                .accessibilityLabel(plain ? "Open workout space. Pinch to zoom, tap to walk, or use Start set below." : "Isometric gym. Pinch to zoom. Tap equipment to choose your station and exercise.")
+            Text(plain ? "Tap to walk · Choose any workout below" : "Tap equipment to train · Tap a lifter to connect")
+                .font(.subheadline.weight(.medium))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.93))
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.white.opacity(0.07))
+            sceneControls
+        }
+        .background(Color(red: 0.055, green: 0.08, blue: 0.13))
+    }
     private var roomStatus: some View {
-        HStack {
-            Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
-            Text(gym.isLocal == true ? "PRIVATE · ONLY ON THIS DEVICE" : store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
-                .font(.caption.bold())
-            Spacer()
-            Text(plain ? (gym.visibility == "public" ? "Public space" : "Private space") : "Public gym").font(.caption2).foregroundStyle(.secondary)
-        }.padding(12).background(.teal.opacity(0.08))
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(plain ? "YOUR WORKOUT SPACE" : "LIFT / SOCIAL CLUB")
+                    .font(.subheadline.bold()).foregroundStyle(.white)
+                if !plain { Text("YOUR PEOPLE. YOUR PACE.").font(.caption).foregroundStyle(.mint) }
+                HStack(spacing: 7) {
+                    Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(gym.isLocal == true ? "PRIVATE · ONLY ON THIS DEVICE" : store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
+                        .font(.caption.bold()).foregroundStyle(.white.opacity(0.86))
+                }
+            }
+            Spacer(minLength: 0)
+            Button { scene.resetCamera() } label: {
+                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    .font(.subheadline.bold())
+                    .frame(width: 44, height: 44)
+                    .background(.white.opacity(0.10), in: Circle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .accessibilityLabel("Reset gym view")
+            .accessibilityIdentifier("gymResetZoom")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
     private var sceneControls: some View {
         HStack(spacing: 18) {
-            Text("Pinch to zoom · Two fingers to move").font(.caption2).foregroundStyle(.secondary)
+            Text("Pinch to zoom · Drag with one finger when zoomed").font(.caption).foregroundStyle(.secondary)
             Spacer(minLength: 0)
             Button { scene.zoom(by: 0.8) } label: { Image(systemName: "minus.magnifyingglass") }.accessibilityLabel("Zoom out")
             Button { scene.zoom(by: 1.25) } label: { Image(systemName: "plus.magnifyingglass") }.accessibilityLabel("Zoom in")
-            Button { scene.resetCamera() } label: { Image(systemName: "viewfinder") }.accessibilityLabel("Reset gym view")
-            Button { expanded.toggle() } label: { Image(systemName: expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") }
+            Button { expanded.toggle() } label: { Image(systemName: expanded ? "rectangle.compress.vertical" : "rectangle.expand.vertical") }
                 .accessibilityLabel(expanded ? "Shrink gym" : "Enlarge gym")
         }.padding(12).background(.background)
     }
