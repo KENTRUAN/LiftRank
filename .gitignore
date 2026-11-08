@@ -26,6 +26,8 @@ GoogleService-Info.plist
 SocialConfig.plist
 configuration/Signing.local.xcconfig
 configuration/SocialConfig.device.plist
+.setup-demo-*
+scripts/__pycache__/
 backend/service-account*.json
 build-*.log
 
