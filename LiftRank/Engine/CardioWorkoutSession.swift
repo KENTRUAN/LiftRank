@@ -6,8 +6,10 @@ enum CardioWorkoutSession {
     static func start(profile: UserProfile, activity: TrainingActivity, outdoor: Bool, context: ModelContext, convertingEmpty: Workout? = nil, now: Date = Date()) throws -> Workout {
         guard activity != .strength else { throw GymFailure.message(L("Choose a cardio activity.")) }
         let active = try context.fetch(FetchDescriptor<Workout>()).first { !$0.isPublished }
+        // Existing timers remain resumable, including sessions made by an older app.
+        if let active, active.activity != .strength, active.cardioTimerStartedAt != nil, active.endedAt == nil { return active }
+        guard !outdoor || activity.supportsOutdoor else { throw GymFailure.message(L("Choose an outdoor cardio activity.")) }
         if let active {
-            if active.activity != .strength, active.cardioTimerStartedAt != nil, active.endedAt == nil { return active }
             guard active === convertingEmpty, active.exercises.isEmpty, active.notes.isEmpty, active.routePoints.isEmpty, !active.hasPendingSet else {
                 throw GymFailure.message(L("Finish your current workout before starting cardio."))
             }
@@ -21,6 +23,7 @@ enum CardioWorkoutSession {
         workout.cardioPauses = []; workout.startedAt = now; workout.cardioTimerStartedAt = now; workout.startOptionsChosen = true
         if active == nil { context.insert(workout) }
         do { try context.save() } catch { context.rollback(); throw error }
+        CardioLiveActivityManager.shared.refresh()
         return workout
     }
 
@@ -39,7 +42,7 @@ enum CardioWorkoutSession {
     }
 
     @discardableResult
-    static func finish(_ workout: Workout, context: ModelContext, now: Date = Date()) throws -> CardioSession {
+    static func finish(_ workout: Workout, context: ModelContext, now: Date = Date(), persist: Bool = true) throws -> CardioSession {
         let id = TrainingHealthManager.syncIdentifier(workout.id)
         if let saved = try context.fetch(FetchDescriptor<CardioSession>()).first(where: { $0.externalID == id }) { return saved }
         guard workout.activity != .strength, let started = workout.cardioTimerStartedAt, !workout.isPublished else { throw GymFailure.message(L("Start the cardio timer first.")) }
@@ -53,7 +56,7 @@ enum CardioWorkoutSession {
         let previousEnd = workout.endedAt
         workout.endedAt = end; workout.isPublished = true; workout.publishedAt = end
         context.insert(record)
-        do { try context.save() }
+        do { if persist { try context.save() } }
         catch { context.delete(record); workout.endedAt = previousEnd; workout.isPublished = false; workout.publishedAt = nil; throw error }
         return record
     }

@@ -21,18 +21,26 @@ struct CardioStartView: View {
     @State private var error: String?
     private var active: Workout? { workouts.first { !$0.isPublished } }
     private var timed: Workout? { active.flatMap { $0.cardioTimerStartedAt != nil && $0.activity != .strength ? $0 : nil } }
+    private var availableActivities: [TrainingActivity] { TrainingActivity.cardioActivities(outdoor: outdoor, requiresEquipment: requiresEquipment) }
+    private var locationSelection: Binding<Bool> {
+        Binding(get: { outdoor }, set: { value in
+            let choices = TrainingActivity.cardioActivities(outdoor: value, requiresEquipment: requiresEquipment)
+            if !choices.contains(activity) { activity = .running }
+            outdoor = value
+        })
+    }
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     Picker("Activity", selection: $activity) {
-                        ForEach(TrainingActivity.allCases.filter { $0 != .strength && (!requiresEquipment || $0 != .swimming) }) { Text($0.name).tag($0) }
+                        ForEach(availableActivities) { Text($0.name).tag($0) }
                     }.accessibilityIdentifier("cardioActivity")
                     if !requiresEquipment {
-                        Picker("Location", selection: $outdoor) { Text("Indoor").tag(false); Text("Outdoor").tag(true) }.pickerStyle(.segmented)
+                        Picker("Location", selection: locationSelection) { Text("Indoor").tag(false); Text("Outdoor").tag(true) }.pickerStyle(.segmented)
                     }
                     Text("Start begins the timer. End saves your elapsed time automatically.").font(.caption).foregroundStyle(.secondary)
-                }
+                }.disabled(busy)
                 Section {
                     Button(timed == nil ? "Start cardio" : "Resume cardio") {
                         if let timed { onStarted(timed); return }
@@ -46,7 +54,7 @@ struct CardioStartView: View {
             }
             .navigationTitle("Cardio").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
-            .onAppear { outdoor = initialOutdoor && !requiresEquipment }
+            .onAppear { locationSelection.wrappedValue = initialOutdoor && !requiresEquipment }
             .confirmationDialog("Finish your current workout and start cardio? Recorded sets are kept; uncompleted todos are removed.", isPresented: $confirmSwitch, titleVisibility: .visible) {
                 Button("Finish workout & start cardio") { start(finishing: true) }
                 Button("Cancel", role: .cancel) {}
@@ -54,7 +62,9 @@ struct CardioStartView: View {
         }
     }
     private func start(finishing: Bool = false) {
+        guard availableActivities.contains(activity) else { error = L("Choose an activity available for this location."); return }
         guard !requiresEquipment || gym.ownsStation("cardio") else { error = L("This cardio machine is no longer reserved for you."); return }
+        let selectedActivity = activity, selectedOutdoor = outdoor
         busy = true; error = nil
         Task { @MainActor in
             defer { busy = false }
@@ -71,7 +81,7 @@ struct CardioStartView: View {
                     }
                 }
                 if !requiresEquipment, gym.station != "lounge", gym.membership != nil { try await gym.equipmentAction(gym.station, "release") }
-                let session = try CardioWorkoutSession.start(profile: profile, activity: activity, outdoor: outdoor, context: context, convertingEmpty: convertingEmpty)
+                let session = try CardioWorkoutSession.start(profile: profile, activity: selectedActivity, outdoor: selectedOutdoor, context: context, convertingEmpty: convertingEmpty)
                 onStarted(session)
                 await TrainingHealthManager.shared.start(session, context: context)
             } catch { self.error = error.localizedDescription }
@@ -144,7 +154,6 @@ struct TimedCardioWorkoutView: View {
     @Bindable var workout: Workout
     let profile: UserProfile
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var liveActivity = CardioLiveActivityManager.shared
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -153,10 +162,7 @@ struct TimedCardioWorkoutView: View {
                     CardioTimerControls(workout: workout, profile: profile).padding(20).background(.background, in: RoundedRectangle(cornerRadius: 20))
                     if workout.isOutdoor { OutdoorWorkoutMap(workout: workout) }
                     TrainingHealthStatusView(workout: workout)
-                    if let error = liveActivity.error, !workout.isPublished {
-                        Text(error).font(.caption).foregroundStyle(.secondary)
-                        Button("Retry Live Activity") { liveActivity.retry() }
-                    }
+                    if !workout.isPublished, workout.endedAt == nil { WorkoutLiveActivityStatusView() }
                 }.padding(20)
             }.background(Color(.systemGroupedBackground))
             .navigationTitle(L(workout.activity.name))

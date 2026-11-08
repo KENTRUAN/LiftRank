@@ -11,7 +11,8 @@ struct WorkoutHomeView: View {
     @Query private var plans: [DailyPlan]
     @AppStorage(AIProgram.combinedKey) private var combined = Data()
     @AppStorage(AIProgram.strengthKey) private var strength = Data()
-    @State private var mode = 0
+    @State private var mode = TrainingHomeMode.strength
+    @State private var startedCardio: Workout?
     @State private var activeWorkout: Workout?
     @State private var showGenerator = false
     @State private var showSummary = false
@@ -27,27 +28,26 @@ struct WorkoutHomeView: View {
         @Bindable var app = app
         NavigationStack {
             VStack(spacing: 10) {
-                Text(mode == 0 ? "训练" : "有氧")
+                Text(mode == .strength ? "训练" : "有氧")
                     .font(.largeTitle.bold())
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal)
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("workoutHomeTitle")
-                TrainerWelcomeView(workout: unpublished, plan: todayPlan).padding(.horizontal)
+                TrainerWelcomeView(profile: profile, mode: mode, workout: unpublished, plan: todayPlan).padding(.horizontal)
                 Button {
-                    app.prefersCardioStart = mode == 1
-                    app.perform(.startTodayWorkout)
+                    app.perform(mode.startAction)
                 } label: {
-                    Label(unpublished == nil ? "Start workout" : "Continue workout", systemImage: "play.circle.fill")
+                    Label(mode == .cardio ? (unpublished?.cardioTimerStartedAt == nil ? "Start cardio" : "Continue cardio") : (unpublished == nil ? "Start workout" : "Continue workout"), systemImage: "play.circle.fill")
                         .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
-                }.buttonStyle(.borderedProminent).tint(.teal).padding(.horizontal).accessibilityIdentifier("openSocialGym")
-                Group { if mode == 0 { strengthList } else { CardioView(profile: profile) } }
+                }.buttonStyle(.borderedProminent).tint(.teal).padding(.horizontal).accessibilityIdentifier(mode == .cardio ? "openCardioStart" : "openSocialGym")
+                Group { if mode == .strength { strengthList } else { CardioView(profile: profile) } }
             }
-            .navigationTitle(mode == 0 ? "训练" : "有氧")
+            .navigationTitle(mode == .strength ? "训练" : "有氧")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Picker("", selection: $mode) { Text("力量").tag(0); Text("有氧").tag(1) }.pickerStyle(.segmented).frame(width: 160)
+                    Picker("", selection: $mode) { Text("力量").tag(TrainingHomeMode.strength); Text("有氧").tag(TrainingHomeMode.cardio) }.pickerStyle(.segmented).frame(width: 160)
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button { showSummary = true } label: { Image(systemName: "chart.xyaxis.line") }
@@ -61,12 +61,20 @@ struct WorkoutHomeView: View {
             .sheet(isPresented: $showGenerator) { WorkoutGeneratorView(profile: profile) }
             .sheet(isPresented: $showSummary) { NavigationStack { SummaryView(profile: profile) } }
             .sheet(isPresented: $app.showCoach) { CoachChatView(profile: profile) }
+            .sheet(isPresented: $app.showCardioStart, onDismiss: {
+                if let startedCardio { activeWorkout = startedCardio; self.startedCardio = nil }
+            }) {
+                CardioStartView(profile: profile) { workout in
+                    startedCardio = workout
+                    app.showCardioStart = false
+                }
+            }
             .sheet(item: $setup) { target in
                 WorkoutSetupView(title: target.title, items: target.items, isNew: target.isNew) { name, items in try save(target, name: name, items: items) }
             }
-            .onAppear { if DemoData.autoOpenActive, activeWorkout == nil { activeWorkout = unpublished }; openRequestedWorkout() }
+            .onAppear { if DemoData.autoOpenActive, activeWorkout == nil { activeWorkout = unpublished }; handlePending() }
             .onChange(of: app.pending) { _, action in
-                if action == .openCardio { mode = 1; app.pending = nil }; openRequestedWorkout()
+                handlePending()
             }
             .alert("Could not start workout", isPresented: Binding(get: { sessionError != nil }, set: { if !$0 { sessionError = nil } })) {
                 Button("OK") { sessionError = nil }
@@ -74,10 +82,15 @@ struct WorkoutHomeView: View {
         }
     }
 
+    private func handlePending() {
+        if app.pending == .openCardio { mode = .cardio; app.pending = nil }
+        openRequestedWorkout()
+    }
+
     private func openRequestedWorkout() {
         guard case .openWorkout(let id) = app.pending else { return }
         if activeWorkout?.id == id { app.pending = nil; return }
-        mode = 0 // Dismiss a Cardio-tab presentation before opening the shared workout view.
+        mode = .strength // Dismiss a Cardio-tab presentation before opening the shared workout view.
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))
             guard app.pending == .openWorkout(id) else { return }

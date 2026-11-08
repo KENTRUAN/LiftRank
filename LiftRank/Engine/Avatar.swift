@@ -115,7 +115,7 @@ enum RankMascotStyle: String, CaseIterable {
     }
 }
 
-private struct RankAccessoryPlacement: Codable {
+struct RankAccessoryPlacement: Codable, Equatable {
     var offset: CGSize = .zero
     var rotation = 0.0
     var scale = 1.0
@@ -163,6 +163,8 @@ struct RankMascotView: View {
     let spec: AvatarSpec
     let style: RankMascotStyle
     var allowsAccessoryPlacement = false
+    /// Remote profiles must use the owner's placement, never this device's edits.
+    var accessoryPlacement: RankAccessoryPlacement? = nil
     @AppStorage("trainingAvatar.mascotAccessoryOffsets") private var savedPlacements = Data()
     @GestureState private var draft: RankAccessoryPlacement?
     @State private var selected = false
@@ -201,7 +203,7 @@ struct RankMascotView: View {
                     .accessibilityIdentifier("rankMascot")
 
                 if spec.accessory != "none" {
-                    let saved = placements[placementKey] ?? RankAccessoryPlacement()
+                    let saved = accessoryPlacement ?? placements[placementKey] ?? RankAccessoryPlacement()
                     let placement = draft ?? saved
                     let layout = accessoryLayout(placement, side: side, in: size)
                     if allowsAccessoryPlacement {

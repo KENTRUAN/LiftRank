@@ -74,6 +74,37 @@ final class CardioTimerTests: XCTestCase {
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Workout>()), 1)
     }
 
+    func testOutdoorChoicesExcludeIndoorMachinesAndKeepIndoorOptions() {
+        XCTAssertEqual(TrainingActivity.cardioActivities(outdoor: true), [.running, .walking, .cycling, .swimming, .hiit])
+        let indoor = TrainingActivity.cardioActivities(outdoor: false)
+        for machine in [TrainingActivity.elliptical, .rowing, .stairs] { XCTAssertTrue(indoor.contains(machine)) }
+        XCTAssertFalse(indoor.contains(.strength))
+        XCTAssertFalse(TrainingActivity.cardioActivities(outdoor: false, requiresEquipment: true).contains(.swimming))
+    }
+
+    @MainActor func testOutdoorMachineStartCannotCreateOrMutateAnEmptyDraft() throws {
+        let (container, profile) = try fixture(), context = container.mainContext
+        for machine in [TrainingActivity.elliptical, .rowing, .stairs] {
+            XCTAssertThrowsError(try CardioWorkoutSession.start(profile: profile, activity: machine, outdoor: true, context: context))
+        }
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Workout>()), 0)
+        let draft = try WorkoutSession.startOrResume(profile: profile, context: context)
+        let id = draft.id
+        XCTAssertThrowsError(try CardioWorkoutSession.start(profile: profile, activity: .elliptical, outdoor: true, context: context, convertingEmpty: draft))
+        XCTAssertEqual(draft.id, id); XCTAssertEqual(draft.activity, .strength)
+        XCTAssertNil(draft.cardioTimerStartedAt)
+        XCTAssertNoThrow(try CardioWorkoutSession.start(profile: profile, activity: .elliptical, outdoor: false, context: context, convertingEmpty: draft))
+    }
+
+    @MainActor func testLegacyOutdoorMachineSessionCanStillResumeAndFinish() throws {
+        let (container, profile) = try fixture(), context = container.mainContext
+        let workout = try CardioWorkoutSession.start(profile: profile, activity: .rowing, outdoor: false, context: context)
+        workout.isOutdoor = true; try context.save()
+        let resumed = try CardioWorkoutSession.start(profile: profile, activity: .rowing, outdoor: true, context: context)
+        XCTAssertTrue(resumed === workout)
+        XCTAssertNoThrow(try CardioWorkoutSession.finish(workout, context: context))
+    }
+
     @MainActor func testPauseResumeExcludesPausedTimeAndRejectsStaleClockChanges() throws {
         let (container, profile) = try fixture(), context = container.mainContext
         let start = Date(timeIntervalSince1970: 1_700_000_000)

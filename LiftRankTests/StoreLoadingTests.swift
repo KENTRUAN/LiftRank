@@ -50,7 +50,23 @@ final class StoreLoadingTests: XCTestCase {
         loader.retry()
 
         XCTAssertTrue(loader.container === container)
+        XCTAssertTrue(try loader.requireContext() === container.mainContext)
         XCTAssertEqual(attempts, 1)
+    }
+
+    @MainActor func testBackgroundContextRequestFailsWithoutReplacingStore() throws {
+        var attempts = 0
+        let schema = Schema([UserProfile.self])
+        let container = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+        let loader = StoreLoader {
+            attempts += 1
+            if attempts < 3 { throw LoadError.unavailable }
+            return container
+        }
+        XCTAssertThrowsError(try loader.requireContext())
+        XCTAssertNil(loader.container)
+        XCTAssertTrue(try loader.requireContext() === container.mainContext)
+        XCTAssertEqual(attempts, 3)
     }
 
     @MainActor

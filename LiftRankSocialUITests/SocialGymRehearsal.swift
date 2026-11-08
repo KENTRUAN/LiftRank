@@ -204,7 +204,7 @@ final class SocialGymRehearsal: XCTestCase {
         enter.tap()
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 20))
         capture("Rejoined without setup and resumed the workout")
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
         app.terminate(); app.launch()
         XCTAssertTrue(enter.waitForExistence(timeout: 40))
         expectation(for: NSPredicate(format: "label CONTAINS %@", "Enter live Demo Gym"), evaluatedWith: enter)
@@ -235,11 +235,11 @@ final class SocialGymRehearsal: XCTestCase {
         capture("Messages subtab keeps the gym session alive")
         XCTAssertTrue(app.buttons["gymMember.QA Jordan"].waitForNonExistence(timeout: 90))
         capture("Backgrounding removes the other avatar")
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
     }
     func testAnonymousAndTrainerInbox() {
         enter(as: "QA Jordan")
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
         app.buttons["Community settings"].tap()
         app.segmentedControls["gymVisibility"].buttons["Anonymous"].tap()
         let save = app.buttons["saveCommunityProfile"]
@@ -278,7 +278,7 @@ final class SocialGymRehearsal: XCTestCase {
         capture("Trainer directly updates remaining todos from Messages")
         app.buttons["Done"].tap()
         app.segmentedControls["communitySection"].buttons["Gym"].tap()
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
         app.buttons["Community settings"].tap()
         app.segmentedControls["gymVisibility"].buttons["Public"].tap()
         if !save.isHittable { app.swipeUp() }
@@ -316,7 +316,7 @@ final class SocialGymRehearsal: XCTestCase {
     private func startOutdoorCardio() {
         app.tabBars.buttons.element(boundBy: 0).tap()
         app.buttons["openSocialGym"].tap()
-        if app.buttons["Leave"].waitForExistence(timeout: 2) { app.buttons["Leave"].tap() }
+        if app.buttons["Leave"].waitForExistence(timeout: 2) { app.leaveGymSavingWorkout() }
         let solo = app.buttons["startPrivateWorkout"]
         XCTAssertTrue(solo.waitForExistence(timeout: 10)); solo.tap()
         if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 2) { app.buttons["keepWorkoutBlank"].tap() }
@@ -403,6 +403,6 @@ final class SocialGymRehearsal: XCTestCase {
         app.buttons["startCardioTimer"].tap()
         if app.buttons["Finish workout & start cardio"].waitForExistence(timeout: 2) { app.buttons["Finish workout & start cardio"].tap() }
         verifyTimedCardio(outdoor: false)
-        XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10)); app.buttons["Leave"].tap()
+        XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10)); app.leaveGymSavingWorkout()
     }
 }

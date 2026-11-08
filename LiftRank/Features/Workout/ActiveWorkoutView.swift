@@ -47,6 +47,7 @@ struct ActiveWorkoutView: View {
                 Section {
                     WorkoutSetControl(workout: workout, profile: profile, onStart: { showSet = true }, onLog: { showSet = true })
                     TrainingHealthStatusView(workout: workout)
+                    if workout.startOptionsChosen && workout.endedAt == nil { WorkoutLiveActivityStatusView() }
                     if workout.exercises.isEmpty && !workout.hasPendingSet {
                         Button("Choose an optional preset") { showStartOptions = true }
                     }

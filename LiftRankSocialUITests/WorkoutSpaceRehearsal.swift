@@ -13,7 +13,7 @@ final class WorkoutSpaceRehearsal: XCTestCase {
         app.launch()
         if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 10) { app.buttons["keepWorkoutBlank"].tap() }
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 30))
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
         return app
     }
     func testPublicSpaceOwner() {
@@ -29,7 +29,7 @@ final class WorkoutSpaceRehearsal: XCTestCase {
         let two = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "2 in the room")).firstMatch
         XCTAssertTrue(two.waitForExistence(timeout: 60))
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Two users admitted to a nearby public space"; shot.lifetime = .keepAlways; add(shot)
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
     }
     func testPublicSpaceJoiner() {
         let app = liveApp("Space joiner")
@@ -52,7 +52,7 @@ final class WorkoutSpaceRehearsal: XCTestCase {
         let one = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "1 in the room")).firstMatch
         XCTAssertTrue(one.waitForExistence(timeout: 60))
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Space remains open after creator leaves"; shot.lifetime = .keepAlways; add(shot)
-        app.buttons["Leave"].tap()
+        app.leaveGymSavingWorkout()
     }
     func testPrivateSpaceZoomAndWorkoutControls() throws {
         continueAfterFailure = false

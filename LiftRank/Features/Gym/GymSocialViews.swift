@@ -24,7 +24,13 @@ struct GymFriendsView: View {
                 }
                 Section {
                     Button { showTrainer = true } label: {
-                        HStack { Image(systemName: "sparkles").font(.title2).foregroundStyle(.teal); VStack(alignment: .leading) { Text("AI trainer").font(.headline); Text("Private · plans & workout todos").font(.caption).foregroundStyle(.secondary) } }
+                        HStack {
+                            if let profile = localProfiles.first { CoachFace(spec: profile.coachAvatar, size: 30) }
+                            VStack(alignment: .leading) {
+                                Text(localProfiles.first.map { TrainerIdentity(profile: $0).name } ?? L("AI trainer")).font(.headline)
+                                Text("Private · plans & workout todos").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                     }.accessibilityIdentifier("trainerRecipient")
                 }
                 if store.friends.isEmpty { ContentUnavailableView("Your circle starts here", systemImage: "person.2", description: Text("Enter a gym and tap a member to send a friend request.")) }
@@ -98,7 +104,11 @@ struct GymMemberView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
-                    GymAvatarView(profile: member, image: store.portraits[memberID], size: 100)
+                    if let member, let appearance = member.visibleTrainingAvatar {
+                        SharedTrainingAvatarView(profile: member, appearance: appearance).frame(height: 230)
+                    } else {
+                        GymAvatarView(profile: member, image: store.portraits[memberID], size: 100)
+                    }
                     Text(member?.name ?? L("Gym member")).font(.title.bold())
                     if let member, member.gsr > 0 {
                         HStack { Text("\(member.gsr) GSR").font(.headline); TierBadge(tier: RankTier.tier(for: member.gsr)) }

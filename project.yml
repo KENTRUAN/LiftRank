@@ -102,7 +102,7 @@ targets:
     info:
       path: LiftRankLiveActivity/Info.plist
       properties:
-        CFBundleDisplayName: LiftRank Cardio
+        CFBundleDisplayName: LiftRank Workout
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

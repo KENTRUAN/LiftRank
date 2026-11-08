@@ -51,8 +51,20 @@ export function validateCheckIn(value: unknown, gym: Pick<Location, 'latitude' |
 }
 export interface Avatar { preset: string; color: string; assetPath?: string }
 export interface Profile { uid: string; name: string; gsr: number; cosmetics: string[]; interests: string; avatar: Avatar;
+  trainingAvatar?: ReturnType<typeof cleanTrainingAvatar>;
   visibility?: string; muscleRanks?: Record<string, number>; shareRank?: boolean; shareActivity?: boolean; highlights?: ReturnType<typeof cleanHighlights>; routines?: ReturnType<typeof cleanRoutines> }
 const muscleKeys = new Set(['chest', 'shoulders', 'biceps', 'triceps', 'forearms', 'abs', 'quads', 'calves', 'back', 'traps', 'glutes', 'hamstrings', 'lowerBack']);
+export function cleanTrainingAvatar(value: any) {
+  if (value == null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value) || !['nailong', 'doubao'].includes(value.style)) {
+    throw new APIError(400, 'Choose a supported training avatar.');
+  }
+  return {
+    style: value.style as string,
+    offsetX: finite(value.offsetX ?? 0, -1, 1), offsetY: finite(value.offsetY ?? 0, -1, 1),
+    rotation: finite(value.rotation ?? 0, -360, 360), scale: finite(value.scale ?? 1, 0.5, 2),
+  };
+}
 export function cleanMuscleRanks(value: any): Record<string, number> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(Object.entries(value).filter(([name]) => muscleKeys.has(name)).map(([name, score]) => [name, Math.round(finite(score, 0, 1000))]));
@@ -85,10 +97,11 @@ export function cleanRoutines(value: any) {
 export function cleanProfile(uid: string, value: any, existing?: Profile): Profile {
   if (value.snapshotOnly) {
     if (!existing) throw new APIError(409, 'Create your shared profile first.');
-    // Background refreshes cannot overwrite consent, identity or routine selection.
+    // Background refreshes update the equipped look but cannot overwrite consent, name or routine selection.
     const allowed = new Set((existing.routines ?? []).map(r => r.id));
     return cleanProfile(uid, { ...existing, gsr: value.gsr, muscleRanks: value.muscleRanks,
-      highlights: value.highlights,
+      highlights: value.highlights, cosmetics: value.cosmetics ?? existing.cosmetics,
+      trainingAvatar: value.trainingAvatar ?? existing.trainingAvatar,
       routines: (Array.isArray(value.routines) ? value.routines : []).filter((r: any) => allowed.has(r.id)) }, existing);
   }
   const shareRank = typeof value.shareRank === 'boolean' ? value.shareRank : existing?.shareRank ?? (value.gsr ?? 0) > 0;
@@ -98,9 +111,12 @@ export function cleanProfile(uid: string, value: any, existing?: Profile): Profi
     throw new APIError(400, 'Choose a supported avatar style.');
   }
   const shareActivity = typeof value.shareActivity === 'boolean' ? value.shareActivity : existing?.shareActivity ?? false;
+  const visibility = value.visibility === 'anonymous' ? 'anonymous' : value.visibility === 'public' ? 'public' : existing?.visibility ?? 'public';
+  const trainingAvatar = shareRank && visibility !== 'anonymous' ? cleanTrainingAvatar(value.trainingAvatar ?? existing?.trainingAvatar) : undefined;
   const highlights = shareActivity ? cleanHighlights(value.highlights ?? existing?.highlights) : undefined;
   return {
-    uid, visibility: value.visibility === 'anonymous' ? 'anonymous' : value.visibility === 'public' ? 'public' : existing?.visibility ?? 'public', name: text(value.name, 40, 'Nickname'), shareRank, gsr: shareRank ? Math.round(finite(value.gsr ?? 0, 0, 1000)) : 0,
+    uid, visibility, name: text(value.name, 40, 'Nickname'), shareRank, gsr: shareRank ? Math.round(finite(value.gsr ?? 0, 0, 1000)) : 0,
+    ...(trainingAvatar ? { trainingAvatar } : {}),
     cosmetics: shareRank && Array.isArray(value.cosmetics) ? value.cosmetics.slice(0, 16).map((v: unknown) => text(v, 60)) : [],
     interests: typeof value.interests === 'string' ? value.interests.trim().slice(0, 160) : '',
     avatar: { preset, color, ...(existing?.avatar.assetPath && !value.resetAvatar ? { assetPath: existing.avatar.assetPath } : {}) },

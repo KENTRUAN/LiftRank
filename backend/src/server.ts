@@ -1,7 +1,7 @@
 import { spaceRoutes } from './spaceRoutes.js';
 import { accessState, admit, joinSpace, reconcileSpaces } from './spaces.js';
 import { registeredGyms } from './registeredGyms.js';
-import { coachReply } from './coach.js';
+import { coachReply, trainerIdentity } from './coach.js';
 import { equipmentAction, cleanEquipment } from './equipment.js';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
@@ -262,7 +262,8 @@ app.post('/trainer', async (req, res) => {
   const input = messages.map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', text: text(m.text, 3000) }));
   // Workout context is supplied only on an explicit message send and never saved on the server.
   const context = { catalog: entries, localDate: text(req.body.localDate, 10), activeWorkout: req.body.activeWorkout ?? null,
-    schedule: req.body.schedule ?? [], language: text(req.body.language ?? 'en', 40), goals: typeof req.body.goals === 'string' ? req.body.goals.slice(0, 500) : '' };
+    schedule: req.body.schedule ?? [], language: text(req.body.language ?? 'en', 40), goals: typeof req.body.goals === 'string' ? req.body.goals.slice(0, 500) : '',
+    trainer: trainerIdentity(req.body.trainer) };
   if (JSON.stringify(context).length > 60000) throw new APIError(400, 'Training context is too large.');
   res.json(await coachReply(input, context,
     () => quota(res.locals.uid, 'companion', 30, Number(process.env.COMPANION_GLOBAL_LIMIT ?? 300))));
@@ -271,6 +272,7 @@ app.post('/trainer/greeting', async (req, res) => {
   const context = {
     localDate: text(req.body.localDate, 10), language: text(req.body.language ?? 'en', 40),
     workout: text(req.body.status, 300), requestedPlan: text(req.body.plan, 300),
+    trainer: trainerIdentity(req.body.trainer), trainingMode: req.body.trainingMode === 'cardio' ? 'cardio' : 'strength',
   };
   await quota(res.locals.uid, 'greeting', 20, Number(process.env.GREETING_GLOBAL_LIMIT ?? 200));
   const message = [{ role: 'user', text: 'Welcome me back in one or two short sentences in my supplied language. Use the supplied workout status and requested plan, if any. Offer a useful training encouragement. Do not invent a schedule or claim to change anything.' }];

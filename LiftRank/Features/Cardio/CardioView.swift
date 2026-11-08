@@ -71,7 +71,7 @@ struct CardioView: View {
                 Button { importFromHealth() } label: { Label(importing ? "导入中…" : "从健康 App 导入最近 90 天运动", systemImage: "square.and.arrow.down") }.disabled(importing)
                 if let healthStatus { Text(healthStatus).font(.footnote).foregroundStyle(.secondary) }
             } header: { Text("Apple Watch 与 Fitness") } footer: {
-                Text("Start workout opens your gym space. Choose Cardio to begin timing and Apple Health tracking. End saves elapsed time.")
+                Text("Start cardio to choose an indoor or outdoor activity. Outdoor workouts show your private route while LiftRank is open. End saves elapsed time.")
             }
 
             Section(sessions.isEmpty ? "记录" : "记录 · \(sessions.count) 次") {

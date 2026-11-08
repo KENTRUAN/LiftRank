@@ -20,6 +20,8 @@ struct SocialProfile: Codable, Identifiable, Equatable {
     var cosmetics: [String]
     var interests: String
     var avatar: AvatarAppearance
+    var trainingAvatar: TrainingAvatarAppearance?
+    var visibleTrainingAvatar: TrainingAvatarAppearance? { visibility == "anonymous" ? nil : trainingAvatar }
     var muscleRanks: [String: Int] = [:]
     var visibility = "public"
     var shareActivity = false
@@ -31,7 +33,7 @@ struct SocialProfile: Codable, Identifiable, Equatable {
         self.uid = uid; self.name = name; self.gsr = gsr; self.cosmetics = cosmetics
         self.interests = interests; self.avatar = avatar
     }
-    enum CodingKeys: String, CodingKey { case uid, name, gsr, cosmetics, interests, avatar, muscleRanks, shareActivity, highlights, routines, visibility }
+    enum CodingKeys: String, CodingKey { case uid, name, gsr, cosmetics, interests, avatar, trainingAvatar, muscleRanks, shareActivity, highlights, routines, visibility }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         uid = try values.decode(String.self, forKey: .uid)
@@ -41,6 +43,7 @@ struct SocialProfile: Codable, Identifiable, Equatable {
         cosmetics = try values.decodeIfPresent([String].self, forKey: .cosmetics) ?? []
         interests = try values.decodeIfPresent(String.self, forKey: .interests) ?? ""
         avatar = try values.decodeIfPresent(AvatarAppearance.self, forKey: .avatar) ?? AvatarAppearance()
+        trainingAvatar = try values.decodeIfPresent(TrainingAvatarAppearance.self, forKey: .trainingAvatar)
         muscleRanks = try values.decodeIfPresent([String: Int].self, forKey: .muscleRanks) ?? [:]
         visibility = try values.decodeIfPresent(String.self, forKey: .visibility) ?? "public"
         shareActivity = try values.decodeIfPresent(Bool.self, forKey: .shareActivity) ?? false
