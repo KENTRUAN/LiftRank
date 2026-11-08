@@ -25,7 +25,7 @@ actions must make no service requests.
 
 ## Publish with GitHub Pages
 
-1. In [repository settings](https://github.com/KENTRUAN/LiftRank/settings/pages),
+1. In [repository settings](https://github.com/NaiLongRankLift/LiftRank/settings/pages),
    open **Pages → Build and deployment → Source** and select **GitHub Actions**.
    This one-time step requires repository admin or maintainer access.
 2. Review and explicitly authorize merging the website feature branch into
@@ -34,7 +34,7 @@ actions must make no service requests.
    only the website directory. Feature-branch pushes and pull requests run checks
    without deploying. Manual runs also deploy only when run on main.
 4. After a successful deployment, verify
-   [kentruan.github.io/LiftRank](https://kentruan.github.io/LiftRank/), including
+   [nailongranklift.github.io/LiftRank](https://nailongranklift.github.io/LiftRank/), including
    all three tour screens and loaded images.
 
 No deploy secrets are required: the workflow uses GitHub's scoped Pages and
