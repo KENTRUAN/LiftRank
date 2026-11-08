@@ -100,77 +100,244 @@ struct AvatarFigureView: View {
 
 // MARK: - Rank mascot
 
-extension RankTier {
-    var mascotAsset: String {
-        switch self {
-        case .wood: "RankMascotWood"
-        case .bronze: "RankMascotBronze"
-        case .silver: "RankMascotSilver"
-        case .gold: "RankMascotGold"
-        case .platinum: "RankMascotPlatinum"
-        case .diamond: "RankMascotDiamond"
-        case .champion: "RankMascotChampion"
-        case .titan: "RankMascotTitan"
-        case .olympian: "RankMascotOlympian"
-        }
+enum RankMascotStyle: String, CaseIterable {
+    case nailong, doubao
+
+    var title: String { self == .nailong ? L("奶龙") : L("豆包") }
+
+    func asset(for tier: RankTier) -> String {
+        let prefix = self == .nailong ? "RankMascot" : "RankMascotDoubao"
+        return prefix + tier.name
+    }
+
+    func accessibilityLabel(for tier: RankTier) -> String {
+        let rank = AppLanguage.current.isEnglish ? tier.name : tier.nameZh
+        return self == .nailong ? L("%@ 奶龙", rank) : L("%@ 豆包", rank)
+    }
+}
+
+private struct RankAccessoryPlacement: Codable {
+    var offset: CGSize = .zero
+    var rotation = 0.0
+    var scale = 1.0
+}
+
+struct RankAccessoryLayout {
+    let center: CGPoint
+    let bounds: CGSize
+    let scale: CGFloat
+
+    init(base: CGSize, scale requestedScale: CGFloat, rotation: Double, center requestedCenter: CGPoint,
+         viewport: CGSize, editing: Bool) {
+        let angle = rotation * .pi / 180
+        let width = abs(base.width * cos(angle)) + abs(base.height * sin(angle))
+        let height = abs(base.width * sin(angle)) + abs(base.height * cos(angle))
+        let inset: CGFloat = 10
+        let handleWidth: CGFloat = editing ? 38 : 0
+        let availableWidth = max(0, viewport.width - 2 * inset - handleWidth)
+        let availableHeight = max(0, viewport.height - 2 * inset)
+        scale = min(requestedScale, availableWidth / max(1, width), availableHeight / max(1, height))
+        bounds = CGSize(width: width * scale, height: height * scale)
+
+        let horizontalExtent = max(editing ? 22 : 0, bounds.width / 2)
+        let left = min(viewport.width / 2, horizontalExtent + inset)
+        let right = min(viewport.width - left, horizontalExtent + handleWidth + inset)
+        let vertical = min(viewport.height / 2, max(editing ? 48 : 0, bounds.height / 2 + inset))
+        center = CGPoint(x: min(viewport.width - right, max(left, requestedCenter.x)),
+                         y: min(viewport.height - vertical, max(vertical, requestedCenter.y)))
     }
 }
 
 struct RankMascotView: View {
+    private enum Edit { case move, rotate, resize }
+
     let tier: RankTier
     let spec: AvatarSpec
+    let style: RankMascotStyle
     var allowsAccessoryPlacement = false
-    @AppStorage("trainingAvatar.mascotAccessoryOffsets") private var savedOffsets = Data()
-    @GestureState private var drag = CGSize.zero
+    @AppStorage("trainingAvatar.mascotAccessoryOffsets") private var savedPlacements = Data()
+    @GestureState private var draft: RankAccessoryPlacement?
+    @State private var selected = false
 
-    private var offsets: [String: CGSize] {
-        (try? JSONDecoder().decode([String: CGSize].self, from: savedOffsets)) ?? [:]
+    private var placements: [String: RankAccessoryPlacement] {
+        let decoder = JSONDecoder()
+        if let saved = try? decoder.decode([String: RankAccessoryPlacement].self, from: savedPlacements) {
+            return saved
+        }
+        let previousOffsets = (try? decoder.decode([String: CGSize].self, from: savedPlacements)) ?? [:]
+        return previousOffsets.mapValues { RankAccessoryPlacement(offset: $0) }
+    }
+
+    private var placementKey: String {
+        style == .nailong ? spec.accessory : "\(style.rawValue).\(spec.accessory)"
     }
 
     var body: some View {
         GeometryReader { geometry in
-            let side = min(geometry.size.width, geometry.size.height) * 0.91
-            let offset = offsets[spec.accessory] ?? .zero
+            let size = geometry.size
+            let side = min(size.width, size.height) * 0.91
             ZStack {
                 Canvas { context, size in
                     AvatarPainter(spec: spec, muscles: [:], front: true, physique: nil).drawBackdrop(&context, size: size)
                 }
+                .contentShape(Rectangle())
+                .onTapGesture { selected = false }
                 .accessibilityHidden(true)
 
-                ZStack {
-                    Image(tier.mascotAsset)
-                        .resizable()
-                        .scaledToFit()
-                        .accessibilityLabel(L("%@ 奶龙", AppLanguage.current.isEnglish ? tier.name : tier.nameZh))
-                        .accessibilityIdentifier("rankMascot")
+                Image(style.asset(for: tier))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: side, height: side)
+                    .allowsHitTesting(false)
+                    .accessibilityLabel(style.accessibilityLabel(for: tier))
+                    .accessibilityIdentifier("rankMascot")
 
-                    if spec.accessory != "none" {
-                        Group {
-                            if allowsAccessoryPlacement {
-                                accessoryLayer(side: side)
-                                    .gesture(DragGesture()
-                                        .updating($drag) { value, state, _ in state = value.translation }
-                                        .onEnded { value in saveOffset(offset, translation: value.translation, side: side) })
-                                    .accessibilityAction(named: "重置饰品位置") { saveOffset(.zero, translation: .zero, side: side) }
-                            } else {
-                                accessoryLayer(side: side).allowsHitTesting(false)
-                            }
-                        }
-                        .position(x: side * (0.5 + offset.width) + drag.width,
-                                  y: side * (accessoryHeight + offset.height) + drag.height)
+                if spec.accessory != "none" {
+                    let saved = placements[placementKey] ?? RankAccessoryPlacement()
+                    let placement = draft ?? saved
+                    let layout = accessoryLayout(placement, side: side, in: size)
+                    if allowsAccessoryPlacement {
+                        editor(placement, layout: layout, saved: saved, side: side, in: size)
+                            .position(layout.center)
+                    } else {
+                        transformedAccessory(placement, scale: layout.scale, side: side)
+                            .position(layout.center)
+                            .allowsHitTesting(false)
                     }
                 }
-                .frame(width: side, height: side)
             }
+            .coordinateSpace(name: "rankAccessoryPreview")
         }
+        .onChange(of: placementKey) { _, _ in selected = false }
     }
 
-    private func saveOffset(_ offset: CGSize, translation: CGSize, side: CGFloat) {
-        guard side > 0 else { return }
-        var updated = offsets
-        updated[spec.accessory] = CGSize(width: min(0.25, max(-0.25, offset.width + translation.width / side)),
-                                         height: min(0.30, max(-0.12, offset.height + translation.height / side)))
-        if let data = try? JSONEncoder().encode(updated) { savedOffsets = data }
+    private func editor(_ placement: RankAccessoryPlacement, layout: RankAccessoryLayout, saved: RankAccessoryPlacement,
+                        side: CGFloat, in size: CGSize) -> some View {
+        let bounds = layout.bounds
+        return transformedAccessory(placement, scale: layout.scale, side: side)
+            .frame(width: max(44, bounds.width), height: max(44, bounds.height))
+            .contentShape(Rectangle())
+            .onTapGesture { selected = true }
+            .highPriorityGesture(editGesture(.move, saved: saved, side: side, in: size), including: selected ? .all : .subviews)
+            .accessibilityAction { selected = true }
+            .accessibilityAction(named: "重置配饰") { save(RankAccessoryPlacement()) }
+            .overlay {
+                if selected {
+                    RoundedRectangle(cornerRadius: 5)
+                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 2]))
+                        .frame(width: bounds.width + 8, height: bounds.height + 8)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .overlay(alignment: .trailing) {
+                if selected {
+                    VStack(spacing: 4) {
+                        Button {
+                            var rotated = saved
+                            rotated.rotation += 15
+                            save(rotated)
+                        } label: {
+                            handle("arrow.clockwise")
+                        }
+                        .accessibilityLabel("旋转配饰")
+                        .highPriorityGesture(editGesture(.rotate, saved: saved, side: side, in: size))
+
+                        handle("arrow.up.left.and.arrow.down.right")
+                            .accessibilityLabel("调整配饰大小")
+                            .accessibilityValue("\(Int(layout.scale * 100))%")
+                            .accessibilityAdjustableAction { direction in
+                                var resized = saved
+                                resized.scale = layout.scale
+                                switch direction {
+                                case .increment: resized.scale += 0.1
+                                case .decrement: resized.scale -= 0.1
+                                @unknown default: return
+                                }
+                                resized.scale = min(2, max(0.5, resized.scale))
+                                save(resized)
+                            }
+                            .highPriorityGesture(editGesture(.resize, saved: saved, side: side, in: size))
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: 20)
+                }
+            }
+    }
+
+    private func handle(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.accentColor)
+            .frame(width: 28, height: 28)
+            .background(.regularMaterial, in: Circle())
+            .overlay(Circle().strokeBorder(Color.accentColor, lineWidth: 1))
+            .frame(width: 36, height: 36)
+            .contentShape(Rectangle())
+    }
+
+    private func transformedAccessory(_ placement: RankAccessoryPlacement, scale: CGFloat, side: CGFloat) -> some View {
+        accessoryLayer(side: side)
+            .scaleEffect(scale)
+            .rotationEffect(.degrees(placement.rotation))
+    }
+
+    private func editGesture(_ edit: Edit, saved: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> some Gesture {
+        let layout = accessoryLayout(saved, side: side, in: size)
+        return DragGesture(minimumDistance: 3, coordinateSpace: .named("rankAccessoryPreview"))
+            .updating($draft) { value, state, _ in
+                state = editedPlacement(edit, drag: value, saved: saved, layout: layout, side: side, in: size)
+            }
+            .onEnded { value in
+                save(editedPlacement(edit, drag: value, saved: saved, layout: layout, side: side, in: size))
+            }
+    }
+
+    private func editedPlacement(_ edit: Edit, drag: DragGesture.Value, saved: RankAccessoryPlacement,
+                                 layout: RankAccessoryLayout, side: CGFloat, in size: CGSize) -> RankAccessoryPlacement {
+        guard side > 0 else { return saved }
+        var placement = saved
+        let center = layout.center
+        switch edit {
+        case .move:
+            let anchor = accessoryAnchor(side: side, in: size)
+            placement.offset = CGSize(width: (center.x + drag.translation.width - anchor.x) / side,
+                                      height: (center.y + drag.translation.height - anchor.y) / side)
+        case .rotate:
+            let start = atan2(drag.startLocation.y - center.y, drag.startLocation.x - center.x)
+            let end = atan2(drag.location.y - center.y, drag.location.x - center.x)
+            placement.rotation += (end - start) * 180 / .pi
+        case .resize:
+            let start = hypot(drag.startLocation.x - center.x, drag.startLocation.y - center.y)
+            let end = hypot(drag.location.x - center.x, drag.location.y - center.y)
+            placement.scale = min(2, max(0.5, layout.scale * end / max(1, start)))
+        }
+        let anchor = accessoryAnchor(side: side, in: size)
+        let boundedCenter = accessoryLayout(placement, side: side, in: size).center
+        placement.offset = CGSize(width: (boundedCenter.x - anchor.x) / side,
+                                  height: (boundedCenter.y - anchor.y) / side)
+        return placement
+    }
+
+    private func accessoryAnchor(side: CGFloat, in size: CGSize) -> CGPoint {
+        CGPoint(x: size.width / 2, y: (size.height - side) / 2 + side * accessoryHeight)
+    }
+
+    private func accessoryLayout(_ placement: RankAccessoryPlacement, side: CGFloat, in size: CGSize) -> RankAccessoryLayout {
+        let anchor = accessoryAnchor(side: side, in: size)
+        let center = CGPoint(x: anchor.x + placement.offset.width * side,
+                             y: anchor.y + placement.offset.height * side)
+        return RankAccessoryLayout(base: CGSize(width: side * accessoryWidth, height: side * accessoryCanvasHeight),
+                                   scale: placement.scale, rotation: placement.rotation, center: center,
+                                   viewport: size, editing: selected)
+    }
+
+    private func save(_ placement: RankAccessoryPlacement) {
+        var updated = placements
+        var normalized = placement
+        normalized.rotation.formTruncatingRemainder(dividingBy: 360)
+        updated[placementKey] = normalized
+        if let data = try? JSONEncoder().encode(updated) { savedPlacements = data }
     }
 
     private func accessoryLayer(side: CGFloat) -> some View {
@@ -182,40 +349,80 @@ struct RankMascotView: View {
                 let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
                 context.fill(Path(roundedRect: rect, cornerRadius: height * 0.35), with: .color(color))
             }
-            func symbol(_ name: String, size: CGFloat, color: Color) {
-                let image = Text(Image(systemName: name)).font(.system(size: size, weight: .bold)).foregroundColor(color)
-                context.draw(image, at: center)
+            func symbol(_ name: String, width: CGFloat, color: Color) {
+                var image = context.resolve(Image(systemName: name))
+                guard image.size.width > 0, image.size.height > 0 else { return }
+                image.shading = .color(color)
+                let scale = min(width / image.size.width, size.height * 0.9 / image.size.height)
+                let bounds = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+                context.draw(image, in: CGRect(x: center.x - bounds.width / 2, y: center.y - bounds.height / 2,
+                                               width: bounds.width, height: bounds.height))
             }
             switch spec.accessory {
-            case "headband": band(center, width: side * 0.18, height: side * 0.027, color: color)
+            case "headband":
+                band(center, width: side * (style == .doubao ? 0.15 : 0.18), height: side * 0.027, color: color)
             case "wristbands":
                 let distance = size.width / 2 - side * 0.035
                 for direction in [-1.0, 1.0] {
                     band(CGPoint(x: x + direction * distance, y: center.y), width: side * 0.07, height: side * 0.023, color: color)
                 }
-            case "glasses": symbol("eyeglasses", size: side * 0.23, color: AvatarPalette.ink)
-            case "sunglasses": symbol("sunglasses.fill", size: side * 0.23, color: AvatarPalette.ink)
-            case "cap": symbol("baseball.cap.fill", size: side * 0.19, color: color)
-            case "beard": symbol("mustache.fill", size: side * 0.11, color: spec.hairColor)
-            case "crown": symbol("crown.fill", size: side * 0.13, color: AvatarPalette.gold)
+            case "glasses": symbol("eyeglasses", width: side * glassesWidth, color: AvatarPalette.ink)
+            case "sunglasses": symbol("sunglasses.fill", width: side * glassesWidth, color: AvatarPalette.ink)
+            case "cap": symbol("baseball.cap.fill", width: side * (style == .doubao ? 0.18 : 0.20), color: color)
+            case "beard": symbol("mustache.fill", width: side * 0.11, color: spec.hairColor)
+            case "crown": symbol("crown.fill", width: side * 0.13, color: AvatarPalette.gold)
             case "halo":
                 let rect = CGRect(x: x - side * 0.08, y: center.y - side * 0.016, width: side * 0.16, height: side * 0.032)
                 context.stroke(Path(ellipseIn: rect), with: .color(AvatarPalette.gold), lineWidth: side * 0.012)
             default: break
             }
         }
-        .frame(width: side * accessoryWidth, height: side * 0.15)
+        .frame(width: side * accessoryWidth, height: side * accessoryCanvasHeight)
         .contentShape(Rectangle())
         .accessibilityLabel(CosmeticCatalog.item("accessory.\(spec.accessory)")?.name ?? CosmeticSlot.accessory.name)
     }
 
     private var accessoryWidth: CGFloat {
-        if spec.accessory != "wristbands" { return 0.3 }
+        switch spec.accessory {
+        case "glasses", "sunglasses": return glassesWidth + 0.02
+        case "headband": return style == .doubao ? 0.17 : 0.20
+        case "cap": return 0.22
+        case "beard": return 0.13
+        case "crown": return 0.15
+        case "halo": return 0.18
+        case "wristbands": break
+        default: return 0.18
+        }
+        if style == .doubao {
+            switch tier {
+            case .wood, .bronze, .silver, .gold, .platinum: return 0.27
+            case .diamond: return 0.30
+            case .champion, .titan: return 0.34
+            case .olympian: return 0.38
+            }
+        }
         return tier < .champion ? 0.50 : 0.55
     }
 
-    private var accessoryHeight: CGFloat {
+    private var accessoryCanvasHeight: CGFloat {
         switch spec.accessory {
+        case "headband", "wristbands", "halo": 0.06
+        default: 0.105
+        }
+    }
+
+    private var glassesWidth: CGFloat { style == .doubao ? 0.13 : 0.18 }
+
+    private var accessoryHeight: CGFloat {
+        if style == .doubao {
+            switch spec.accessory {
+            case "headband": return 0.14
+            case "glasses", "sunglasses": return tier >= .champion ? 0.17 : 0.195
+            case "wristbands": return 0.55
+            default: break
+            }
+        }
+        return switch spec.accessory {
         case "headband": 0.11
         case "glasses", "sunglasses": tier >= .titan ? 0.11 : (tier <= .bronze ? 0.17 : 0.14)
         case "beard": 0.25

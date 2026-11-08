@@ -8,28 +8,28 @@ struct ShopView: View {
     let muscles: [MuscleGroup: Int]
     let slots: [CosmeticSlot]
     let title: String
-    let previewsRankMascot: Bool
+    let mascotStyle: RankMascotStyle?
     @Environment(\.modelContext) private var context
     @State private var slot: CosmeticSlot
     @State private var toast: String?
     @State private var front = true
 
     init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases,
-         title: String = L("商店"), previewsRankMascot: Bool = false) {
+         title: String = L("商店"), mascotStyle: RankMascotStyle? = nil) {
         _profile = Bindable(wrappedValue: profile)
         self.gsr = gsr
         self.muscles = muscles
         self.slots = slots
         self.title = title
-        self.previewsRankMascot = previewsRankMascot
+        self.mascotStyle = mascotStyle
         _slot = State(initialValue: slots.first ?? .frame)
     }
 
     private var tier: RankTier { RankTier.tier(for: gsr) }
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
 
-    private func previewsMascot(for slot: CosmeticSlot) -> Bool {
-        previewsRankMascot && (slot == .accessory || slot == .backdrop)
+    private func mascotPreviewStyle(for slot: CosmeticSlot) -> RankMascotStyle? {
+        slot == .accessory || slot == .backdrop ? mascotStyle : nil
     }
 
     var body: some View {
@@ -74,8 +74,8 @@ struct ShopView: View {
     @ViewBuilder
     private var header: some View {
         HStack(spacing: 14) {
-            if previewsMascot(for: slot) {
-                RankMascotView(tier: tier, spec: profile.avatar)
+            if let style = mascotPreviewStyle(for: slot) {
+                RankMascotView(tier: tier, spec: profile.avatar, style: style)
                     .frame(width: 110, height: 130)
             } else if slot.isAvatar {
                 AvatarFigureView(spec: profile.avatar, muscles: muscles, front: front)
@@ -89,8 +89,8 @@ struct ShopView: View {
                 HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                 HStack(spacing: 6) { TierBadge(tier: tier, compact: true); Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary) }
                 HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
-                if previewsMascot(for: slot) {
-                    Text("装备后会显示在段位奶龙上。").font(.caption2).foregroundStyle(.secondary)
+                if mascotPreviewStyle(for: slot) != nil {
+                    Text("装备后会显示在当前训练化身上。").font(.caption2).foregroundStyle(.secondary)
                 } else if slot.isAvatar {
                     Text(muscles.isEmpty ? "小人的身体会按各肌群段位着色。点击小人翻转。" : "身体颜色 = 各肌群段位。点击小人翻转。").font(.caption2).foregroundStyle(.secondary)
                 }
@@ -109,8 +109,8 @@ struct ShopView: View {
                 if item.slot.isAvatar {
                     RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemGroupedBackground)).frame(height: previewHeight)
                     Group {
-                        if previewsMascot(for: item.slot) {
-                            RankMascotView(tier: tier, spec: profile.avatar.applying(item))
+                        if let style = mascotPreviewStyle(for: item.slot) {
+                            RankMascotView(tier: tier, spec: profile.avatar.applying(item), style: style)
                         } else {
                             AvatarFigureView(spec: profile.avatar.applying(item), muscles: muscles,
                                              bust: item.slot.bustPreview, showBackdrop: item.slot == .backdrop)
@@ -135,13 +135,26 @@ struct ShopView: View {
                     }
                 }
                 if locked {
-                    RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.35)).frame(height: previewHeight)
-                    Image(systemName: "lock.fill").foregroundStyle(.white)
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(.black.opacity(0.18))
+                        .frame(height: previewHeight)
+                        .overlay(alignment: .topTrailing) {
+                            Image(systemName: "lock.fill")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(.black.opacity(0.65), in: Circle())
+                                .padding(6)
+                        }
+                        .accessibilityHidden(true)
                 }
             }
             VStack(spacing: 2) {
                 Text(item.name).font(.subheadline.bold())
-                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                Text(item.requiredTier.map { L("需 %@ 段位", $0.name) } ?? item.detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             if equipped {
                 Button("已装备") { if item.price > 0 { profile.unequip(item.slot); try? context.save() } }

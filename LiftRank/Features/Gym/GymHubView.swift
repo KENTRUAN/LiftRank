@@ -161,6 +161,6 @@ struct GymAvatarView: View {
             }
             else { Image(systemName: profile?.avatar.symbol ?? "person.fill").font(.system(size: size * 0.4)).frame(width: size, height: size).background((profile?.avatar.tint ?? .teal).opacity(0.2)) }
         }.frame(width: size, height: size).clipShape(Circle())
-            .overlay(Circle().stroke(profile?.avatar.tint ?? .teal, lineWidth: 2))
+            .overlay(Circle().strokeBorder(profile?.avatar.tint ?? .teal, lineWidth: 2))
     }
 }
