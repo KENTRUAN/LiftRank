@@ -14,6 +14,7 @@ enum DemoData {
     static var initialTab: Int { Int(ProcessInfo.processInfo.environment["LIFTRANK_TAB"] ?? "") ?? 0 }
     static var autoOpenActive: Bool { ProcessInfo.processInfo.environment["LIFTRANK_ACTIVE"] == "1" }
 
+    @MainActor
     static func seedIfNeeded(context: ModelContext, profile: UserProfile) {
         guard isEnabled else { return }
         let published = (try? context.fetch(FetchDescriptor<Workout>()))?.filter { $0.isPublished } ?? []

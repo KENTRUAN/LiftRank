@@ -1,0 +1,8 @@
+// Copy to Signing.local.xcconfig and replace the values for your Apple team.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+LIFTRANK_APP_BUNDLE_IDENTIFIER[sdk=iphoneos*] = com.yourname.liftrank.dev
+LIFTRANK_APP_BUNDLE_IDENTIFIER[sdk=watchos*] = com.yourname.liftrank.dev
+LIFTRANK_TEST_BUNDLE_IDENTIFIER[sdk=iphoneos*] = com.yourname.liftrank.dev.tests
+LIFTRANK_UI_TEST_BUNDLE_IDENTIFIER[sdk=iphoneos*] = com.yourname.liftrank.dev.social-uitests
+// Register the device bundle ID in Firebase and use its matching local config.
+LIFTRANK_SOCIAL_CONFIG_PATH[sdk=iphoneos*] = $(SRCROOT)/configuration/SocialConfig.device.plist

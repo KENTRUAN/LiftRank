@@ -11,9 +11,9 @@ struct ActiveWorkoutView: View {
 
     @State private var showPicker = false
     @State private var showFinish = false
+    @State private var showStartOptions = false
+    @State private var showSet = false
     @State private var confirmDiscard = false
-    @State private var restEndsAt: Date?
-    @State private var restTotal: Int = 90
     @State private var plateWeight: PlateTarget?
     @State private var showChecklist = true
     @State private var prep: Set<String> = []
@@ -22,6 +22,10 @@ struct ActiveWorkoutView: View {
     private var exerciseByKey: [String: Exercise] { Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) }) }
 
     var body: some View {
+        if workout.activity != .strength { TimedCardioWorkoutView(workout: workout, profile: profile) }
+        else { strengthBody }
+    }
+    private var strengthBody: some View {
         NavigationStack {
             List {
                 Section {
@@ -38,19 +42,29 @@ struct ActiveWorkoutView: View {
                     TextField("备注", text: $workout.notes, axis: .vertical)
                 }
 
-                checklistSection
+                if workout.isOutdoor && workout.activity != .strength { Section { OutdoorWorkoutMap(workout: workout) } }
+                if workout.hasChecklist { checklistSection }
+                Section {
+                    WorkoutSetControl(workout: workout, profile: profile, onStart: { showSet = true }, onLog: { showSet = true })
+                    TrainingHealthStatusView(workout: workout)
+                    if workout.exercises.isEmpty && !workout.hasPendingSet {
+                        Button("Choose an optional preset") { showStartOptions = true }
+                    }
+                }
 
-                ForEach(workout.sortedExercises) { we in
+                if !workout.isPublished {
+                  ForEach(workout.sortedExercises) { we in
                     ExerciseSection(we: we, exercise: exerciseByKey[we.exerciseKey], profile: profile,
                                     previous: WorkoutPublisher.lastSets(for: we.exerciseKey, workouts: workouts, excluding: workout),
                                     onComplete: { startRest(we.restSeconds) },
                                     onPlates: { plateWeight = PlateTarget(kg: $0) },
-                                    onDelete: { context.delete(we); try? context.save() })
+                                    onDelete: { if !we.sets.contains(where: \.isCompleted) { context.delete(we); try? context.save() } })
+                  }
                 }
 
                 Section {
                     Button { showPicker = true } label: { Label("添加动作", systemImage: "plus") }
-                    Button(role: .destructive) { confirmDiscard = true } label: { Label("放弃本次训练", systemImage: "trash") }
+                    Button(role: .destructive) { confirmDiscard = true } label: { Label("Discard empty workout", systemImage: "trash") }.disabled(!workout.completedSets.isEmpty)
                 }
             }
             .listStyle(.insetGrouped)
@@ -59,16 +73,17 @@ struct ActiveWorkoutView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("收起") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") { showFinish = true }.bold().disabled(workout.completedSets.isEmpty)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if let end = restEndsAt {
-                    RestTimerBar(endsAt: end, total: restTotal, onSkip: { restEndsAt = nil }, onAdd: { restEndsAt = end.addingTimeInterval(30); restTotal += 30 })
+                    Button("完成") { showFinish = true }.bold().disabled(workout.hasPendingSet)
                 }
             }
             .sheet(isPresented: $showPicker) {
                 ExercisePickerView { ex in addExercise(ex) }
+            }
+            .sheet(isPresented: $showStartOptions) { WorkoutStartOptionsView(workout: workout, profile: profile) }
+            .sheet(isPresented: $showSet) { GymEquipmentSheet(workout: workout, profile: profile, station: "all") { _, _ in } }
+            .task {
+                if !workout.startOptionsChosen && workout.exercises.isEmpty { showStartOptions = true }
+                else { workout.startOptionsChosen = true; await TrainingHealthManager.shared.start(workout, context: context) }
             }
             .sheet(isPresented: $showFinish) {
                 FinishWorkoutSheet(workout: workout, profile: profile, onPublished: { dismiss() })
@@ -76,6 +91,8 @@ struct ActiveWorkoutView: View {
             .sheet(item: $plateWeight) { w in PlateCalculatorView(targetKg: w.kg, unit: profile.unit) }
             .confirmationDialog("放弃本次训练？所有记录将删除。", isPresented: $confirmDiscard, titleVisibility: .visible) {
                 Button("放弃训练", role: .destructive) {
+                    guard workout.completedSets.isEmpty else { return }
+                    TrainingHealthManager.shared.discard(workout)
                     context.delete(workout)
                     try? context.save()
                     dismiss()
@@ -139,8 +156,8 @@ struct ActiveWorkoutView: View {
 
     private func startRest(_ seconds: Int) {
         guard seconds > 0 else { return }
-        restTotal = seconds
-        restEndsAt = Date().addingTimeInterval(TimeInterval(seconds))
+        workout.restUntil = Date().addingTimeInterval(TimeInterval(seconds))
+        try? context.save()
     }
 }
 
@@ -173,15 +190,16 @@ private struct ExerciseSection: View {
             ForEach(we.sortedSets) { s in
                 SetRowView(set: s, exercise: exercise, profile: profile, bodyweightKg: we.workout?.bodyweightKg ?? profile.bodyweightKg,
                            previous: previous.indices.contains(s.order) ? previous[s.order] : nil, onComplete: onComplete)
+                    .deleteDisabled(s.isCompleted)
                     .contextMenu {
-                        ForEach(SetType.allCases) { t in Button(t.name) { s.type = t } }
+                        if !s.isCompleted { ForEach(SetType.allCases) { t in Button(t.name) { s.type = t } } }
                         if !we.isCardio { Button("杠铃片配重") { onPlates(s.weightKg) } }
-                        Button("删除本组", role: .destructive) { context.delete(s) }
+                        if !s.isCompleted { Button("删除本组", role: .destructive) { context.delete(s) } }
                     }
             }
             .onDelete { idx in
                 let sets = we.sortedSets
-                idx.map { sets[$0] }.forEach(context.delete)
+                idx.map { sets[$0] }.filter { !$0.isCompleted }.forEach(context.delete)
                 renumber()
             }
 
@@ -215,7 +233,7 @@ private struct ExerciseSection: View {
                     }
                     Button("添加备注") { showNotes = true }
                     if let ex = exercise, !ex.instructions.isEmpty { Button("动作要点") { showNotes = true; if we.notes.isEmpty { we.notes = "要点：" + ex.instructions } } }
-                    Button("移除动作", role: .destructive, action: onDelete)
+                    Button("移除动作", role: .destructive, action: onDelete).disabled(we.sets.contains(where: \.isCompleted))
                 } label: { Image(systemName: "ellipsis.circle").font(.title3) }
             }
         }
@@ -233,6 +251,8 @@ struct SetRowView: View {
     let bodyweightKg: Double
     let previous: WorkoutSet?
     let onComplete: () -> Void
+    @Environment(\.modelContext) private var context
+    @State private var saveError: String?
     @State private var weightText = ""
     @State private var repsText = ""
     @FocusState private var focus: Field?
@@ -264,14 +284,14 @@ struct SetRowView: View {
                 .keyboardType(.decimalPad).multilineTextAlignment(.center).focused($focus, equals: .weight)
                 .padding(6).background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
                 .onChange(of: weightText) { _, v in
-                    guard v != displayedWeight else { return }
+                    guard !set.isCompleted, v != displayedWeight else { return }
                     let raw = Double(v.replacingOccurrences(of: ",", with: ".")) ?? 0
                     set.weightKg = isCardio ? raw : unit.toKg(raw)
                 }
             TextField(isCardio ? "分" : "次", text: $repsText)
                 .keyboardType(.numberPad).multilineTextAlignment(.center).focused($focus, equals: .reps)
                 .padding(6).background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                .onChange(of: repsText) { _, v in set.reps = Int(v) ?? 0 }
+                .onChange(of: repsText) { _, v in if !set.isCompleted { set.reps = Int(v) ?? 0 } }
 
             Menu {
                 Button("—") { set.rpe = nil; set.rir = nil }
@@ -283,15 +303,18 @@ struct SetRowView: View {
             }
 
             Button {
-                set.isCompleted.toggle()
-                set.completedAt = set.isCompleted ? Date() : nil
-                if set.isCompleted { onComplete(); focus = nil }
+                guard !set.isCompleted, set.reps > 0, set.weightKg.isFinite, set.weightKg >= 0 else { return }
+                set.isCompleted = true; set.completedAt = Date()
+                do { try context.save(); onComplete(); focus = nil }
+                catch { set.isCompleted = false; set.completedAt = nil; saveError = error.localizedDescription }
             } label: {
                 Image(systemName: set.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2).foregroundStyle(set.isCompleted ? .green : .secondary)
             }
             .buttonStyle(.plain).frame(width: 32)
         }
+        .disabled(set.isCompleted)
+        .alert("Could not save set", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) { Button("OK") { saveError = nil } } message: { Text(saveError ?? "") }
         .listRowBackground(set.isCompleted ? Color.green.opacity(0.08) : nil)
         .onAppear {
             weightText = displayedWeight
@@ -362,6 +385,7 @@ struct FinishWorkoutSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section { TrainingHealthStatusView(workout: workout) }
                 if let s = summary {
                     Section {
                         VStack(spacing: 12) {

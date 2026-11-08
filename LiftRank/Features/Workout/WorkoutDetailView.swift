@@ -22,6 +22,7 @@ struct WorkoutDetailView: View {
                 }
                 if !workout.notes.isEmpty { Text(workout.notes).font(.footnote) }
             }
+            if workout.healthState != "notStarted" { Section("Apple Health") { TrainingHealthStatusView(workout: workout) } }
             ForEach(workout.sortedExercises) { we in
                 Section(we.exerciseName) {
                     ForEach(we.sortedSets) { s in

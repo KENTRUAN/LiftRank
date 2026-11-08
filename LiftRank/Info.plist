@@ -18,6 +18,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.liftrank.cardio</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>liftrank</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -30,16 +41,25 @@
 	<string>$(LIFTRANK_AI_MODEL)</string>
 	<key>LiftRankAIProvider</key>
 	<string>$(LIFTRANK_AI_PROVIDER)</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍照记餐与扫描食品条码。</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>读取 Apple Watch 与健康 App 中的运动、心率与距离，导入有氧记录。</string>
+	<string>Read workouts, heart rate and distance for your LiftRank training session.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>把手动记录的有氧运动写入健康 App，在 Fitness 中显示。</string>
+	<string>Save LiftRank strength and cardio workouts to Apple Health and Fitness.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Show your private outdoor workout route while LiftRank is open, and verify voluntary gym check-ins. Your coordinates are never shared with gym members.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>用于语音输入训练指令。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>把语音转换为文字，交给 AI 训练助手。</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

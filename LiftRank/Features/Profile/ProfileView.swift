@@ -6,12 +6,14 @@ struct ProfileView: View {
 
     @Bindable var profile: UserProfile
     @Environment(\.modelContext) private var context
+    @EnvironmentObject private var gym: GymStore
     @Query private var workouts: [Workout]
     @Query private var exercises: [Exercise]
     @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
     @State private var portrait: UIImage?
     @State private var nicknameDraft = ""
     @State private var showNicknameEditor = false
+    @State private var showCommunitySettings = false
     @State private var weightText = ""
     @State private var heightText = ""
     @State private var info: String?
@@ -83,9 +85,13 @@ struct ProfileView: View {
                     Text("Siri 快捷指令：「在段位健身开始训练」「用段位健身记录体重」。").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section("训练与总结") {
+                    Button { AppState.shared.tab = AppState.communityTab } label: { Label("Enter Gym · Community", systemImage: "person.2.wave.2.fill") }
+                    Button { showCommunitySettings = true } label: { Label("Community profile & avatar", systemImage: "person.crop.square") }
+                    Button { AppState.shared.perform(.openTab(2)) } label: { Label("奖励 · Rewards & cosmetics", systemImage: "gift.fill") }
                     NavigationLink { SummaryView(profile: profile) } label: { Label("周 / 月 / 季度 / 年总结", systemImage: "chart.xyaxis.line") }
-                    NavigationLink { SocialView(profile: profile) } label: { Label("好友与段位卡", systemImage: "person.2.fill") }
-                    Toggle(isOn: $profile.autoPublishDailyPlan) { Label("每日自动发布训练", systemImage: "calendar.badge.clock") }
+                    Button { AppState.shared.communitySection = 1; AppState.shared.tab = AppState.communityTab } label: { Label("Friends & messages", systemImage: "bubble.left.and.bubble.right") }
+                    NavigationLink { SocialView(profile: profile) } label: { Label("Rank cards", systemImage: "rectangle.portrait") }
+
                     Picker("每日训练目标", selection: $profile.planGoal) { ForEach(WorkoutGoal.allCases) { Text($0.name).tag($0) } }
                     Stepper("每周 \(profile.planDaysPerWeek) 天", value: $profile.planDaysPerWeek, in: 1...6)
                     Picker("可用器械", selection: $profile.planEquipment) { ForEach(EquipmentAccess.allCases) { Text($0.name).tag($0) } }
@@ -119,6 +125,7 @@ struct ProfileView: View {
             }
             .task(id: portraitRevision) { portrait = TrainingPortraitFile.image() }
             .navigationTitle("我的")
+            .sheet(isPresented: $showCommunitySettings) { GymProfileSettingsView(store: gym, profile: profile) }
             .scrollDismissesKeyboard(.interactively)
             .onSubmit { focusedField = nil }
             .onChange(of: focusedField) { previous, _ in saveMeasurement(previous) }

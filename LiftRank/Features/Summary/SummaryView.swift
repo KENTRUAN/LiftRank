@@ -55,7 +55,7 @@ enum SummaryEngine {
     static func compute(period: SummaryPeriod, interval: DateInterval, profile: UserProfile, workouts: [Workout], exercises: [Exercise],
                         cardio: [CardioSession], measurements: [BodyMeasurement], rewards: [RewardEvent]) -> SummaryStats {
         var s = SummaryStats()
-        let inRange = workouts.filter { $0.isPublished && interval.contains($0.publishedAt ?? $0.startedAt) }
+        let inRange = workouts.filter { $0.isPublished && $0.activity == .strength && interval.contains($0.publishedAt ?? $0.startedAt) }
         s.workouts = inRange.count
         s.sets = inRange.reduce(0) { $0 + $1.completedSets.count }
         s.volumeKg = inRange.reduce(0) { $0 + $1.totalVolumeKg }

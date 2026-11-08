@@ -7,15 +7,14 @@ struct CardioView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \CardioSession.date, order: .reverse) private var sessions: [CardioSession]
     @Query private var workouts: [Workout]
-    @Query private var exercises: [Exercise]
-    @Query private var claims: [QuestClaim]
-    @AppStorage("cardio.writeToHealth") private var writeToHealth = false
     @AppStorage(AIProgram.combinedKey) private var combined = Data()
-    @State private var showEditor = false
-    @State private var scheduled: AIProgram.Cardio?
     @State private var editing: CardioSession?
     @State private var healthStatus: String?
     @State private var importing = false
+    @State private var activeWorkout: Workout?
+    @State private var outdoor = false
+    @State private var showStart = false
+    @State private var pendingCardio: Workout?
 
     private var week: [CardioSession] { sessions.filter { $0.date.weekKey == Date().weekKey } }
 
@@ -32,12 +31,20 @@ struct CardioView: View {
 
     var body: some View {
         List {
-            if let program = AIProgram.load(combined) {
-                Section("AI 有氧安排") {
+            if let program = AIProgram.load(combined), program.weeks.contains(where: { !$0.cardio.isEmpty }) {
+                Section("Saved cardio plan") {
                     NavigationLink("查看四周有氧计划") {
-                        AIProgramView(program: program, focus: .cardio, onCardio: { scheduled = $0 })
+                        AIProgramView(program: program, focus: .cardio)
                     }
                 }
+            }
+            Section {
+                Picker("Location", selection: $outdoor) { Text("Indoor").tag(false); Text("Outdoor").tag(true) }.pickerStyle(.segmented)
+                Button("Start cardio") {
+                    if let current = workouts.first(where: { !$0.isPublished && $0.cardioTimerStartedAt != nil }) { activeWorkout = current }
+                    else { showStart = true }
+                }
+                if let active = workouts.first(where: { !$0.isPublished && $0.isOutdoor }), active.startOptionsChosen { OutdoorWorkoutMap(workout: active) }
             }
             Section {
                 HStack(spacing: 10) {
@@ -51,22 +58,20 @@ struct CardioView: View {
                 }
                 .chartXAxis { AxisMarks(values: .automatic(desiredCount: 4)) { _ in AxisValueLabel(format: .dateTime.month().day()) } }
                 .frame(height: 120)
-                Button { showEditor = true } label: { Label("记录有氧", systemImage: "plus.circle.fill").font(.headline) }
             } header: { Text("最近 8 周") }
 
             Section {
                 Button { connectHealth() } label: { Label("连接 Apple Health", systemImage: "heart.fill") }
                 Button { importFromHealth() } label: { Label(importing ? "导入中…" : "从健康 App 导入最近 90 天运动", systemImage: "square.and.arrow.down") }.disabled(importing)
-                Toggle(isOn: $writeToHealth) { Label("手动记录同步写入健康", systemImage: "arrow.up.heart") }
                 if let healthStatus { Text(healthStatus).font(.footnote).foregroundStyle(.secondary) }
             } header: { Text("Apple Watch 与 Fitness") } footer: {
-                Text("Apple Watch 上记录的跑步、骑行、游泳等体能训练会同步到健康 App；授权后在这里导入即可计入连续记录与每日奖励。手动记录可写回健康，在 Fitness 中显示。模拟器与未签名构建无法访问 HealthKit。")
+                Text("Start cardio begins timing and Apple Health tracking when enabled. End saves the elapsed time. You can also import workouts recorded with Apple Watch.")
             }
 
             Section(sessions.isEmpty ? "记录" : "记录 · \(sessions.count) 次") {
                 if sessions.isEmpty { Text("还没有有氧记录。").font(.footnote).foregroundStyle(.secondary) }
                 ForEach(sessions) { s in
-                    Button { editing = s } label: {
+                    Button { if s.sourceRaw == "timer", let record = workouts.first(where: { TrainingHealthManager.syncIdentifier($0.id) == s.externalID }) { activeWorkout = record } else { editing = s } } label: {
                         HStack {
                             Image(systemName: s.type.icon).font(.title3).frame(width: 30).foregroundStyle(Color.accentColor)
                             VStack(alignment: .leading, spacing: 2) {
@@ -79,39 +84,27 @@ struct CardioView: View {
                             Spacer()
                             Text(s.date.shortString).font(.caption).foregroundStyle(.secondary)
                         }
-                    }
+                    }.deleteDisabled(s.sourceRaw == "timer")
                 }
-                .onDelete { idx in idx.map { sessions[$0] }.forEach(context.delete); try? context.save() }
+                .onDelete { idx in idx.map { sessions[$0] }.filter { $0.sourceRaw != "timer" }.forEach(context.delete); try? context.save() }
             }
         }
-        .sheet(isPresented: $showEditor) { CardioEditor(profile: profile, session: nil) { s in saved(s) } }
-        .sheet(item: $scheduled) { day in
-            CardioEditor(profile: profile, session: nil, suggested: day) { saved($0) }
+        .sheet(isPresented: $showStart, onDismiss: {
+            if let pendingCardio { activeWorkout = pendingCardio; self.pendingCardio = nil }
+        }) {
+            CardioStartView(profile: profile, initialOutdoor: outdoor) { pendingCardio = $0; showStart = false }
         }
+        .fullScreenCover(item: $activeWorkout) { ActiveWorkoutView(workout: $0, profile: profile) }
         .sheet(item: $editing) { s in CardioEditor(profile: profile, session: s) { _ in try? context.save() } }
     }
 
     private func detail(_ s: CardioSession) -> String {
-        var parts = ["\(s.durationMinutes.fmt(0)) 分钟"]
+        var parts = [s.sourceRaw == "timer" ? (s.durationMinutes * 60).clockString : "\(s.durationMinutes.fmt(0)) 分钟"]
         if s.distanceKm > 0 { parts.append("\(s.distanceKm.fmt(2)) km") }
         if s.distanceKm > 0 && s.durationMinutes > 0 && s.type.usesDistance { parts.append("配速 \((s.durationMinutes / s.distanceKm).paceString)/km") }
         if s.calories > 0 { parts.append("\(s.calories.fmt(0)) kcal") }
         if s.avgHeartRate > 0 { parts.append("♥ \(s.avgHeartRate.fmt(0))") }
         return parts.joined(separator: " · ")
-    }
-
-    private func saved(_ s: CardioSession) {
-        context.insert(s)
-        try? context.save()
-        let gsr = RankAggregator.overall(muscleScores: RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)))
-        let eggs = DailyTrainingEngine.claimIfEarned(profile: profile, workouts: workouts, cardio: sessions + [s], claims: claims, gsr: gsr, context: context)
-        if eggs > 0 { AppState.shared.flash("今日训练完成 +\(eggs) Eggs") }
-        if writeToHealth {
-            Task {
-                do { try await HealthKitManager.shared.save(s); s.writtenToHealth = true; try? context.save() }
-                catch { healthStatus = "写入健康失败：\(error.localizedDescription)" }
-            }
-        }
     }
 
     private func connectHealth() {

@@ -30,11 +30,15 @@ final class UserProfile {
     var planDaysPerWeek: Int = 3
     var planEquipmentRaw: String = EquipmentAccess.fullGym.rawValue
     var planExperienceRaw: String = ExperienceLevel.beginner.rawValue
-    var autoPublishDailyPlan: Bool = true
+    var autoPublishDailyPlan: Bool = false
     // AI assistant persona: display name, the character parts drawn in chat ("hair.spiky", …) and the user's description.
     var coachName: String = "小段"
     var coachAvatarIDs: [String] = []
     var coachIntro: String = ""
+    // Retained only for compatibility with existing local stores.
+    var aiProviderRaw: String = AIProvider.anthropic.rawValue
+    var aiModel: String = ""
+    var aiBaseURL: String = ""
     var lastBodyAnalysis: String = ""
     var lastBodyAnalysisAt: Date?
     /// Stable identifier embedded in the rank code shared with friends.
@@ -137,6 +141,22 @@ final class Workout {
     var strengthScore: Int = 0
     var xpEarned: Int = 0
     var postToStrava: Bool = false
+    // Additive defaults keep existing local workouts readable.
+    var hasChecklist: Bool = false
+    var isOutdoor: Bool = false
+    var cardioTimerStartedAt: Date?
+    var cardioPauses: [CardioPause] = []
+    var routePoints: [WorkoutRoutePoint] = []
+    var startOptionsChosen: Bool = false
+    var activityRaw: String = "strength"
+    var currentExerciseKey: String = ""
+    var setStartedAt: Date?
+    var setEndedAt: Date?
+    var restUntil: Date?
+    var healthState: String = "notStarted"
+    var healthOwner: String = ""
+    var healthWorkoutID: String = ""
+    var healthError: String = ""
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout) var exercises: [WorkoutExercise] = []
 
     init(title: String = "训练", bodyweightKg: Double) {
@@ -145,7 +165,21 @@ final class Workout {
     }
 
     var sortedExercises: [WorkoutExercise] { exercises.sorted { $0.order < $1.order } }
-    var duration: TimeInterval { (endedAt ?? Date()).timeIntervalSince(startedAt) }
+    var activity: TrainingActivity { get { TrainingActivity(rawValue: activityRaw) ?? .strength } set { activityRaw = newValue.rawValue } }
+    var hasPendingSet: Bool { setStartedAt != nil }
+    func trainingState(at date: Date = Date()) -> String {
+        if isPublished || endedAt != nil { return "Ready" }
+        if activity != .strength && cardioTimerStartedAt != nil { return cardioIsPaused ? "Resting" : "Training" }
+        if setStartedAt != nil && setEndedAt == nil { return "Training" }
+        if let restUntil, restUntil > date { return "Resting" }
+        return "Ready"
+    }
+    var cardioIsPaused: Bool { cardioPauses.last.map { $0.endedAt == nil } ?? false }
+    func cardioElapsed(at date: Date = Date()) -> TimeInterval {
+        CardioClock.elapsed(start: cardioTimerStartedAt ?? startedAt, pauses: cardioPauses, at: endedAt ?? date)
+    }
+    var cardioClockRevision: String { "\(id)|\(cardioTimerStartedAt?.timeIntervalSince1970 ?? 0)|\(cardioPauses)|\(endedAt?.timeIntervalSince1970 ?? 0)|\(isPublished)" }
+    var duration: TimeInterval { cardioTimerStartedAt == nil ? (endedAt ?? Date()).timeIntervalSince(startedAt) : cardioElapsed() }
     var completedSets: [WorkoutSet] { exercises.flatMap { $0.sets }.filter { $0.isCompleted } }
     var totalVolumeKg: Double { completedSets.filter { $0.type != .warmup }.reduce(0) { $0 + $1.weightKg * Double($1.reps) } }
 }
@@ -368,6 +402,7 @@ final class DailyPlan {
     var dayKey: String = ""
     var title: String = ""
     var items: [TemplateExercise] = []
+    var requestedByUser: Bool = false
     var sourceRaw: String = "auto"
     var createdAt: Date = Date()
     var workoutID: UUID?
@@ -420,6 +455,7 @@ struct TemplateExercise: Codable, Hashable, Identifiable {
 
 @Model
 final class WorkoutTemplate {
+    var isPublic: Bool = false
     var name: String = ""
     var createdAt: Date = Date()
     var weeks: Int = 1
@@ -522,4 +558,19 @@ enum NutritionGoal: String, Codable, CaseIterable, Identifiable {
         case .bulk: 300
         }
     }
+}
+
+struct WorkoutRoutePoint: Codable, Equatable {
+    var latitude: Double
+    var longitude: Double
+    var timestamp: Date
+}
+
+@Model
+final class TrainerMessage {
+    var id: UUID = UUID()
+    var role: String = "user"
+    var text: String = ""
+    var createdAt: Date = Date()
+    init(role: String, text: String) { self.role = role; self.text = text }
 }

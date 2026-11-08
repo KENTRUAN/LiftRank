@@ -1,0 +1,31 @@
+{
+  "name": "liftrank-social",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --env-file-if-exists=.env --import tsx src/server.ts",
+    "start": "node dist/server.js",
+    "test": "tsx --test test/core.test.ts test/interactions.test.ts test/providers.test.ts",
+    "test:rules": "firebase emulators:exec --project demo-liftrank --only database 'tsx --test test/rules.test.ts'",
+    "test:integration": "firebase emulators:exec --project demo-liftrank --only auth,database 'tsx --test test/integration.test.ts'",
+    "training:dataset": "npm run build && node training/build-dataset.mjs && node training/build-rehearsal.mjs && node training/build-corrections.mjs && node training/build-fresh-checks.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "firebase-admin": "^14.5.0",
+    "google-auth-library": "^10.3.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.0",
+    "firebase": "^11.10.0",
+    "firebase-tools": "^14.12.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

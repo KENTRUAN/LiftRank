@@ -9,6 +9,7 @@ struct NutritionView: View {
     @State private var mode = 0
     @State private var day = Date()
     @AppStorage(AIProgram.combinedKey) private var combined = Data()
+    @AppStorage(AIProgram.nutritionKey) private var nutrition = Data()
     @State private var editor: MealType?
     @State private var showPhoto = false
     @State private var alert: String?
@@ -53,7 +54,7 @@ struct NutritionView: View {
                 }
             }
             Section("分析与计划") {
-                if let program = AIProgram.load(combined) {
+                if let program = AIProgram.load(nutrition) ?? AIProgram.load(combined) {
                     NavigationLink("查看四周饮食计划") { AIProgramView(program: program, focus: .nutrition) }
                 }
                 NavigationLink { BodyAnalysisView(profile: profile) } label: {

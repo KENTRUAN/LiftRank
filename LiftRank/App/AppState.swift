@@ -7,6 +7,7 @@ enum PendingAction: Equatable {
     case logBodyweight(kg: Double)
     case openCoach
     case openCardio
+    case openWorkout(UUID)
     case openTab(Int)
 }
 
@@ -14,12 +15,15 @@ enum PendingAction: Equatable {
 @Observable
 final class AppState {
     static let shared = AppState()
+    static let communityTab = 5
 
     var tab: Int = DemoData.initialTab
     var pending: PendingAction?
     /// Incremented when something outside the workout tab asks it to start today's plan.
     var startTodayRequest = 0
     var showCoach = false
+    var showRewards = false
+    var communitySection = 0
     var toast: String?
 
     func perform(_ action: PendingAction) {
@@ -30,11 +34,13 @@ final class AppState {
         case .openCoach:
             tab = 0
             showCoach = true
-        case .openCardio:
+        case .openCardio, .openWorkout:
             tab = 0
             pending = action
         case .openTab(let t):
-            tab = t
+            // Keep legacy Rewards links (tab 2) working after its move to Profile.
+            tab = t == 2 ? 4 : t
+            if t == 2 { showRewards = true }
         case .logBodyweight:
             pending = action
         }

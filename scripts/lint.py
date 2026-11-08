@@ -54,7 +54,7 @@ def main():
         r"(\w+) /\* Sources \*/ = \{\s*isa = PBXSourcesBuildPhase;.*?files = \((.*?)\);",
         project, re.S,
     ))
-    for target in ("LiftRank", "LiftRankTests"):
+    for target in ("LiftRank", "LiftRankTests", "LiftRankWatch", "LiftRankSocialUITests", "LiftRankLiveActivity"):
         match = re.search(
             rf"\w+ /\* {target} \*/ = \{{\s*isa = PBXNativeTarget;.*?buildPhases = \((.*?)\);",
             project, re.S,
@@ -69,6 +69,8 @@ def main():
             for name in re.findall(r"/\* ([^*]+\.swift) in Sources \*/", phases.get(phase, ""))
         ]
         expected = {path.name for path in (ROOT / target).rglob("*.swift")}
+        if target in ("LiftRank", "LiftRankWatch", "LiftRankLiveActivity"):
+            expected |= {path.name for path in (ROOT / "Shared").rglob("*.swift")}
         if set(included) != expected or len(included) != len(expected):
             errors.append(
                 f"{target}: source membership mismatch; missing={sorted(expected - set(included))}, "
@@ -84,7 +86,7 @@ def main():
         return 1
     print("Repository lint passed (whitespace, conflict markers, structured files, Xcode source membership and test scheme).")
     if args.swift:
-        for directory in ("LiftRank", "LiftRankTests"):
+        for directory in ("LiftRank", "LiftRankTests", "LiftRankWatch", "Shared", "LiftRankSocialUITests", "LiftRankLiveActivity"):
             sources = sorted(str(path) for path in (ROOT / directory).rglob("*.swift"))
             subprocess.run(["xcrun", "swiftc", "-frontend", "-parse", *sources], check=True, cwd=ROOT)
         print("Swift syntax checks passed. Type checking and runtime coverage require xcodebuild test.")

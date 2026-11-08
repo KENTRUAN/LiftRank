@@ -111,7 +111,7 @@ enum DailyTrainingEngine {
 
     static func status(profile: UserProfile, workouts: [Workout], cardio: [CardioSession], claims: [QuestClaim], gsr: Int, today: Date = Date()) -> DailyTrainingStatus {
         let key = today.dayKey
-        let strength = workouts.filter { $0.isPublished && ($0.publishedAt ?? $0.startedAt).dayKey == key }.count
+        let strength = workouts.filter { $0.isPublished && $0.activity == .strength && ($0.publishedAt ?? $0.startedAt).dayKey == key }.count
         let minutes = cardio.filter { $0.date.dayKey == key }.reduce(0) { $0 + $1.durationMinutes }
         let streak = StreakEngine.current(profile: profile, workouts: workouts, cardio: cardio, today: today)
         let complete = strength > 0 || minutes >= minCardioMinutes

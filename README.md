@@ -1,5 +1,23 @@
 # 段位健身（LiftRank）iOS
 
+## AI avatars and live social gym
+
+[Feature branch documentation](docs/FEATURE_BRANCH.md) describes the implemented app, architecture, verification and remaining prototype work.
+
+[AI provider keys and workout fine-tuning setup](docs/AI_SETUP.md): Tinker powers the specialized workout trainer; generic introductions and avatar generation require a separate Gemini key.
+
+Open the **Community** bottom tab (also linked from **Workout → Enter Gym**). The five tabs are Workout, Ranks, Community, Nutrition and Profile; **Rewards & cosmetics** now lives in Profile. Existing Rewards navigation actions still open it there.
+
+Set up your shared profile once, then enter the preset **Demo Gym** for real multiplayer without location permission. Profile and avatar edits are available in **Profile → Community profile & avatar** or Community settings. Friend requests appear in the room, with **Accept & chat**, a private-message banner and an **Inbox** sheet. The room stays open while you chat or switch tabs; backgrounding or leaving removes your presence.
+
+Entering the live gym starts or resumes the same local workout shown on Home. Tap a bench, rack or platform to log strength sets with weight/reps. Logging fills the next planned set, then adds extra sets as needed. Cardio machines open a separate single-activity timer: **Start cardio** starts timing and **End cardio** saves the exact elapsed duration. Switching from a strength workout with content asks to finish it first; its recorded sets are kept. **Review** opens the appropriate strength or cardio screen. Leaving the room keeps the workout available to resume. The offline sample never starts or records a workout.
+
+Gym data and the floor layout are preset for this prototype. Places search/check-in support remains on the backend but is not exposed in the current UI. Gym image scanning and real floor-plan capture are deferred.
+
+The offline sample works without cloud configuration and labels its simulated members. Real multiplayer uses Firebase and a Cloud Run API; no VM is required. See [backend setup and validation](backend/README.md) for local emulators and the `liftrank-514018` development project. Provider credentials stay server-side. Existing workouts and offline rank cards remain local.
+
+All changes must be made on a new feature branch; never commit or push directly to `main` (see `AGENTS.md`).
+
 SwiftUI + SwiftData，iOS 17+，本地离线版本。按《游戏化力量训练软件｜功能与使用机制》实现第一版。
 
 ## 打开与运行
@@ -55,21 +73,20 @@ Windows 无法运行 iOS 编译或 XCTest；请等待原生 CI 通过再合并�
 
 - **等级系统已删除**，任务页改为「奖励」：每日完成一次力量训练或 10 分钟以上有氧即可领取 Eggs，奖励随段位与连续天数提高；周奖励与赛季里程碑按训练天数计算。
 - **商店与外观**：用 Eggs 购买头像框、称号、主题色、段位卡；高段位外观需要达到对应 GSR 段位才能购买与装备。装备后影响头像、称号、全局主题色与分享卡。
-- **设置训练 / 开始训练分离**：训练页「设置训练」编辑计划（动作、组数、次数、休息、排序）；「今日训练」每天自动发布（按已保存计划轮换，没有计划时按「我的」里的目标/天数/器械/经验生成）；开始训练后页面顶部是训练清单（准备项 + 每个动作完成进度）。
-- **AI（开发者提供接口）**：用户不再填写 API Key。接口由 `Config/AI.xcconfig` 配置并在构建时写入 Info.plist：把密钥放在 git 忽略的 `Config/AI.local.xcconfig`（参考 `AI.local.example.xcconfig`），协议支持 Claude / OpenAI 兼容（GPT、DeepSeek）/ Gemini；正式发布建议把 `LIFTRANK_AI_BASE_URL` 指向自己的中转服务器、App 里只放应用令牌，避免把服务商密钥打进安装包。调试时也可用 `LIFTRANK_AI_*` 环境变量覆盖。功能：身体综合分析、训练助手对话（自然语言修改今日训练，语音输入，开始训练 / 记录体重 / 记录有氧 / 切换页面）、总结点评。
-- **个人形象（小人）**：「段位」页的肌群段位图改为可定制的卡通小人，身体各部位按肌群段位着色（正面 / 背面）。「修改形象」进入形象工坊：肤色、发型、发色、表情、上衣、衣服颜色、配饰、背景共 8 类部件，基础款免费，其余用 Eggs 在商店购买，高级部件需要对应段位。头像、段位卡、好友榜与好友对比都显示小人。
-- **AI 助手虚拟形象**：「我的 → AI 助手」或对话页左上角可定义助手的名字和外观：用一句话描述（「粉色长发、戴墨镜、穿黑色连帽衫的女生，叫小粉」）即可生成，离线按关键词解析，AI 开通后由模型理解更自由的描述；也可逐项微调。聊天中直接说「把你的头发改成蓝色」同样会生效。
-- **有氧**：训练页顶部切换「有氧」，记录 11 种有氧运动（时长、距离、配速、消耗、心率）；可连接 Apple Health 导入 Apple Watch / Fitness 的运动，手动记录可写回健康 App。需要真机与 HealthKit 权限（entitlements 已配置，签名后生效）。
+- **训练入口统一**：Home 与 Community 都开始或恢复同一份空白训练；第二步可选择预设。只有明确选择预设或请求训练教练安排时才显示清单；不会自动发布每日计划。
+- **AI**：所有训练对话与计划使用服务器上的 Tinker 专用模型；已记录组不可修改。身体分析、四周饮食建议、拍照记餐、总结和外观工具使用独立的开发者配置（`Config/AI.xcconfig`，本机密钥文件不入 Git）。通用 AI 不能创建或修改训练计划。社区头像生成与自我介绍另需后端 Gemini Key，见 [AI 配置文档](docs/AI_SETUP.md)。
+- **个人与教练形象**：保留 main 的可定制段位小人、个人照片头像和教练名字/外观编辑器；社区健身房仍使用单独确认发布的头像。教练对话支持听写，外观描述在独立编辑器中处理。旧四周方案与旧助手聊天保留；新训练计划进入 Tinker 的统一日程。
+- **有氧**：使用单项计时器开始、暂停/继续和结束；结束时保存实际有效时长，不手动填写时间。支持户外小地图、Apple Health、Watch 与锁屏/灵动岛实时活动，详见下文。
 - **总结**：训练页右上角或「我的 → 周 / 月 / 季度 / 年总结」，含训练天数、训练量、组数、有氧、段位变化、PR、肌群分布与可选 AI 点评。
-- **社交（离线）**：「好友与段位卡」生成可分享的段位卡图片与段位码（含二维码），粘贴好友段位码即可加入好友排行榜并对比肌群评分。实时同步与全球榜仍需云端账号。
+- **本地健身社交**：Community 的 Gym / Messages 支持同馆相遇后加好友、聊天和查看共享训练档案。段位卡仍可分享为图片；旧离线卡片只读保留，不能再通过段位码、二维码或账号 ID 添加好友。
 - **欢迎页**：体重输入旁可直接切换 kg / lb。
 
-关于 Thinking Machines 的 Tinker：它是模型微调 API，不是语音/助手运行时，暂未接入；若以后要训练一个专属教练模型，可用它微调后把兼容接口地址填到 `Config/AI.local.xcconfig`。
+Tinker 已通过服务器的 Anthropic 兼容接口接入训练教练，支持微调检查点推理。模型与密钥由后端配置，不要填入通用 AI 配置。微调脚本、预算限制与验证流程见 [AI 配置文档](docs/AI_SETUP.md)。
 
 ## 调试开关（环境变量）
 
 - `LIFTRANK_DEMO=1` 跳过引导并写入 6 次示例训练、体重与饮食记录。
-- `LIFTRANK_TAB=0..4` 启动后直接打开对应标签页。
+- `LIFTRANK_TAB=0,1,3,4,5` 启动后打开训练、段位、饮食、我的、Community；旧值 2 保留奖励导航兼容。
 - `LIFTRANK_ACTIVE=1` 配合 DEMO 自动打开一个进行中的训练。
 
 ## 代码结构
@@ -79,9 +96,34 @@ Windows 无法运行 iOS 编译或 XCTest；请等待原生 CI 通过再合并�
   `RankAggregator`（动作最佳、肌群与总体 GSR）、`Gamification`（连续记录、赛季、XP 等级、任务）、
   `Calculators`（TDEE/营养目标、海军体脂、杠铃片、训练生成器）、`WorkoutPublisher`（发布训练并结算奖励与 PR）。
 - `LiftRank/Data`：内置动作库（约 70 个，含力量标准）与演示数据。
-- `LiftRank/Features`：训练、段位、任务、饮食/身体、我的 五个标签页。
+- `LiftRank/Features`：训练、段位、Community、饮食/身体、我的 五个标签页；奖励在「我的」中。
 
 ## 尚未接入（需要账号、云端或内购）
 
-好友动态与排行榜、AI 拍照记餐、条码数据库、Apple Health、Strava、Strong/Hevy 导入、Apple Watch/小组件/实时活动、
-Pro 内购（目前为本地模拟开关）、肌肉恢复追踪。
+全球好友动态与排行榜、条码数据库、Strava、Strong/Hevy 导入、Pro 内购（目前为本地模拟开关）、肌肉恢复追踪。Apple Health / Watch / 实时活动与拍照记餐代码已接入；设备权限、真实 Watch 传感器以及通用 AI 接口仍需各自配置和验证。
+
+## Unified training and local gym profiles
+
+All new Home, Siri and Community workout starts create or resume one **blank** SwiftData workout. A separate setup sheet offers an optional preset and the Apple workout type. Start set / End set controls persist the current set, switch presence automatically between Ready, Training and Resting, and open weight/reps confirmation only after the set ends. The gym control remains above the tab bar while scrolling. Public/Anonymous visibility is controlled separately in Community settings. Switching tabs or leaving a room keeps the workout.
+
+Community has **Gym / Messages** sections. Requests and conversations remain accessible inside the room and in Messages afterward. New friend requests require fresh presence and unexpired check-ins for both identities in the same gym; there is no friend-code, QR-code or account-ID adding flow. Previously stored offline rank cards remain read-only. Demo Gym is the clearly labeled development exception to physical proximity; real-gym check-in retains the server location gate.
+
+Lifter profiles use the actual local rank engine. Community settings controls rank sharing, optional workout highlights (recent workout memories, seven-day muscle scores, six-month activity and streak), and up to five public routines. Published workouts refresh opted-in summaries. No body measurements, set weights, actual reps or private notes are uploaded in these summaries. Seven-day body colors represent logged strength scores, not body composition or medical recovery estimates. Public routines contain planned exercise names, sets and reps.
+
+### Apple Health and Apple Watch
+
+The shared workout starts Health tracking after the separate setup step. With the LiftRank Watch companion installed on a paired Watch, the phone requests a live Watch workout, mirrors metrics, and ends/saves it when the local workout finishes. Finishing on Watch stops the same local session; review and publish it on iPhone. Without the companion, iOS 26+ uses a live iPhone HealthKit workout session. iOS 17–25 records timing and manually entered activity into Health when finished; it cannot supply Watch sensor metrics. LiftRank does not remotely start Apple's built-in Workout app.
+
+Install the embedded **LiftRank** app from the Watch app on iPhone, open it once, and allow Health permissions. On iPhone choose **Sync with Apple Health** during workout setup. Strength uses **Traditional strength training**. The separate **Start cardio** flow selects Running, Cycling or another cardio activity and starts its timer and Apple tracking together. A saved workout has a stable Health sync identifier and is excluded from LiftRank's separate Health import to avoid duplicate local records. Sync failures preserve local training and expose Retry Apple Health, including in workout history. The Watch path still needs rehearsal on an actual paired Apple Watch; simulator builds do not validate real sensors or background delivery.
+
+## Community privacy and interactive training
+
+- **Community → settings → Public / Anonymous** controls gym identity. Anonymous members use a generic avatar and cannot receive profile views or make new connections. Sharing recent activity remains a separate choice; existing messages remain in the inbox.
+- Blank workouts stay blank. Choose a preset separately, or message **AI trainer** to create, edit or delete remaining todos and daily/weekly schedules. Only requested schedules appear on Home. Saved sets are locked.
+- Tap equipment to reserve it. Occupied lifting stations offer **Ask to work in** or **Ask to train together**; the current lifter must accept. Cardio is exclusive. Release a station when finished, or leave the room.
+- Start/End set drives orange Training and cyan Resting avatar borders. A saved-set popup appears on the avatar. Community shows a red notification badge for messages and requests.
+- Cardio is a single activity with an automatic elapsed timer, no presets or strength exercise controls. **Pause / Resume** excludes breaks from recorded duration. The timer continues while the phone is locked or another app is open; reopening restores the same session. **End cardio** saves active duration without manual entry. Choose **Outdoor** when starting cardio to see a private minimap and local route. Route collection runs while LiftRank is open; no background route recording or route sharing is included.
+
+During cardio, LiftRank shows a Live Activity on the Lock Screen and compatible Dynamic Island. Long-press the island for Pause / Resume and Open. End removes the activity. Live Activities must be enabled in iPhone Settings → LiftRank; their availability does not affect local timing. The elapsed clock needs no continuous background process. Outdoor **route points** are still collected only while LiftRank is open, separately from elapsed time.
+
+See [backend setup and rehearsal](backend/README.md) for cloud configuration and verification commands.

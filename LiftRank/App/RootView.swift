@@ -25,7 +25,9 @@ struct RootTabView: View {
     @Query private var exercises: [Exercise]
     @Query private var workouts: [Workout]
     @Query private var plans: [DailyPlan]
+    @Query private var cardio: [CardioSession]
     @State private var app = AppState.shared
+    @StateObject private var gym = GymStore()
 
     var body: some View {
         @Bindable var app = app
@@ -34,8 +36,9 @@ struct RootTabView: View {
                 .tabItem { Label("训练", systemImage: "dumbbell.fill") }.tag(0)
             RanksView(profile: profile)
                 .tabItem { Label("段位", systemImage: "chart.bar.fill") }.tag(1)
-            RewardsView(profile: profile)
-                .tabItem { Label("奖励", systemImage: "gift.fill") }.tag(2)
+            GymHubView(profile: profile)
+                .tabItem { Label("Community", systemImage: "person.2.wave.2.fill") }.tag(AppState.communityTab)
+                .badge(gym.inboxCount > 0 ? "" : nil)
             NutritionView(profile: profile)
                 .tabItem { Label("饮食", systemImage: "fork.knife") }.tag(3)
             ProfileView(profile: profile)
@@ -43,15 +46,57 @@ struct RootTabView: View {
         }
         .tint(profile.accentColor)
         .environment(app)
+        .environmentObject(gym)
         .toast($app.toast)
-        .onAppear(perform: refreshDailyPlan)
-        .onChange(of: scenePhase) { _, phase in if phase == .active { refreshDailyPlan(); handlePending() } }
+        .sheet(isPresented: $app.showRewards) { RewardsView(profile: profile) }
+        .onAppear {
+            TrainingHealthManager.shared.bind(context: context)
+            refreshDailyPlan()
+            if app.tab == 2 { app.perform(.openTab(2)) }
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["LIFTRANK_GYM"] != nil { app.tab = AppState.communityTab }
+            #endif
+        }
+        .onOpenURL { url in
+            guard url.scheme == "liftrank", url.host == "cardio", let id = UUID(uuidString: url.lastPathComponent) else { return }
+            app.perform(.openWorkout(id))
+        }
+        .task(id: workouts.first(where: { !$0.isPublished })?.cardioClockRevision) { CardioLiveActivityManager.shared.refresh() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshDailyPlan(); handlePending(); CardioLiveActivityManager.shared.refresh() }
+            if phase == .background { gym.suspend(); OutdoorWorkoutTracker.shared.follow(nil, foreground: false) }
+        }
+        .task(id: sharedProfileRevision) { await syncSharedProfile() }
         .onChange(of: app.pending) { _, _ in handlePending() }
+        .onReceive(TrainingPulse.shared.$now) { now in
+            let active = workouts.first(where: { !$0.isPublished })
+            gym.setTrainingState(active?.trainingState(at: now) ?? "Ready")
+            OutdoorWorkoutTracker.shared.follow(active, foreground: scenePhase == .active)
+            if let completed = active?.completedSets.compactMap(\.completedAt).max(), now.timeIntervalSince(completed) < 8 { gym.recordSetCompletion(completed) }
+        }
+    }
+
+    private var sharedProfileRevision: String {
+        [gym.connected.description, gym.uid, gym.sharesRank.description,
+         workouts.filter(\.isPublished).map { "\($0.id):\($0.completedSets.count):\($0.strengthScore)" }.sorted().joined(),
+         cardio.map { "\($0.id):\($0.durationMinutes)" }.sorted().joined(),
+         templates.filter(\.isPublic).map { "\($0.id):\($0.name):\((try? JSONEncoder().encode($0.items).base64EncodedString()) ?? "")" }.sorted().joined(),
+         profile.sharedCosmeticIDs.joined(), Date().dayKey].joined(separator: "|")
+    }
+    private func syncSharedProfile() async {
+        guard gym.connected, !gym.offlineSample, let me = gym.me else { return }
+        let ranks = GymProfileSnapshot.ranks(profile: profile, workouts: workouts, exercises: exercises)
+        let total = RankAggregator.overall(muscleScores: Dictionary(uniqueKeysWithValues: ranks.compactMap { key, value in MuscleGroup(rawValue: key).map { ($0, value) } }))
+        do {
+            try await gym.updateProfile(name: me.name, interests: me.interests, shareRank: gym.sharesRank, gsr: total, cosmetics: profile.sharedCosmeticIDs,
+                muscleRanks: ranks, shareActivity: me.shareActivity,
+                highlights: me.shareActivity ? GymProfileSnapshot.highlights(profile: profile, workouts: workouts, exercises: exercises, cardio: cardio) : nil,
+                routines: GymProfileSnapshot.routines(templates, exercises: exercises), snapshotOnly: true)
+        } catch { gym.error = "Could not refresh your shared profile. \(error.localizedDescription)" }
     }
 
     private func refreshDailyPlan() {
-        if profile.friendCode.isEmpty { profile.friendCode = String(UUID().uuidString.prefix(8)) }
-        DailyPlanEngine.ensureToday(profile: profile, templates: templates, exercises: exercises, workouts: workouts, plans: plans, context: context)
+        // Training schedules are created only after an explicit trainer request.
     }
 
     private func handlePending() {

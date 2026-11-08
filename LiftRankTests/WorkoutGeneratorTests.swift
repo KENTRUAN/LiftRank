@@ -88,6 +88,36 @@ final class WorkoutGeneratorTests: XCTestCase {
 }
 
 final class AIProgramTests: XCTestCase {
+    func testNutritionGuidancePersistsWithoutCreatingWorkouts() throws {
+        let plan = try AIProgram.validated(nutritionProposal(), exercises: ExerciseSeed.all, equipment: .bodyweight, scope: .nutrition)
+        let restored = try XCTUnwrap(AIProgram.load(plan.encoded()))
+        XCTAssertEqual(restored.scope, .nutrition)
+        XCTAssertEqual(restored.weeks.count, 4)
+        XCTAssertTrue(restored.weeks.allSatisfy { $0.strength.isEmpty && $0.cardio.isEmpty && $0.nutrition != nil })
+        XCTAssertNotEqual(AIProgram.nutritionKey, AIProgram.combinedKey, "Generating nutrition must not replace stored workout programs")
+    }
+
+    func testNutritionResponseRejectsWorkoutChangesAndMissingWeeks() {
+        var value = nutritionProposal()
+        var weeks = value["weeks"] as! [[String: Any]]
+        weeks[0]["cardio"] = [["day": 1, "type": "walking", "minutes": 20, "effort": "Easy"]]
+        value["weeks"] = weeks
+        XCTAssertThrowsError(try AIProgram.validated(value, exercises: ExerciseSeed.all, equipment: .bodyweight, scope: .nutrition))
+        weeks[0]["cardio"] = []
+        weeks[0]["strength"] = [["day": 1, "title": "Strength", "items": [["key": "pushup", "sets": 2, "reps": 10]]]]
+        value["weeks"] = weeks
+        XCTAssertThrowsError(try AIProgram.validated(value, exercises: ExerciseSeed.all, equipment: .bodyweight, scope: .nutrition))
+        value["weeks"] = Array(weeks.dropFirst())
+        XCTAssertThrowsError(try AIProgram.validated(value, exercises: ExerciseSeed.all, equipment: .bodyweight, scope: .nutrition))
+        XCTAssertThrowsError(try AIProgram.validated(combinedProposal(), exercises: ExerciseSeed.all, equipment: .bodyweight, scope: .nutrition))
+    }
+
+    private func nutritionProposal() -> [String: Any] {
+        ["title": "Nutrition", "scope": "nutrition", "weeks": (1...4).map { week -> [String: Any] in
+            ["week": week, "strength": [], "cardio": [], "nutrition": ["focus": "Log complete meals", "meals": ["Oats and yogurt"]]]
+        }]
+    }
+
     func testCombinedPlanPersistsAllThreePartsAndResolvesExercises() throws {
         let plan = try AIProgram.validated(combinedProposal(), exercises: ExerciseSeed.all, equipment: .bodyweight)
         let restored = try XCTUnwrap(AIProgram.load(plan.encoded()))
