@@ -4833,6 +4833,22 @@
         }
       }
     },
+    "Reset gym zoom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset gym zoom"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还原健身房缩放"
+          }
+        }
+      }
+    },
     "Rest %@": {
       "localizations": {
         "en": {

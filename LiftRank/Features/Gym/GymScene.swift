@@ -2,7 +2,9 @@ import SpriteKit
 import SwiftUI
 
 @MainActor
-final class GymScene: SKScene {
+final class GymScene: SKScene, ObservableObject {
+    static let roomSize = CGSize(width: 780, height: 520)
+    private static let floorOrigin = CGPoint(x: 360, y: 421)
     var onMove: ((Double, Double) -> Void)?
     var onProfile: ((String) -> Void)?
     var onTrainer: (() -> Void)?
@@ -16,6 +18,9 @@ final class GymScene: SKScene {
     private var lastTime: TimeInterval = 0
     private var trainer: SKNode?
     private let world = SKNode()
+    private weak var zoomGesture: UIPinchGestureRecognizer?
+    private var zoomAnchor = CGPoint.zero
+    private var startingZoom: CGFloat = 1
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -25,77 +30,147 @@ final class GymScene: SKScene {
         buildRoom()
     }
     required init?(coder aDecoder: NSCoder) { fatalError("Use init(size:)") }
-    private func point(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: 370 + (x - y) * 30, y: 470 - (x + y) * 16) }
+    private func point(_ x: Double, _ y: Double) -> CGPoint {
+        CGPoint(x: Self.floorOrigin.x + (x - y) * 30, y: Self.floorOrigin.y - (x + y) * 16)
+    }
+
     private func cell(at p: CGPoint) -> GymLayout.Cell {
-        let a = (p.x - 370) / 30, b = (470 - p.y) / 16
+        let a = (p.x - Self.floorOrigin.x) / 30, b = (Self.floorOrigin.y - p.y) / 16
         return GymLayout.Cell(x: Int(((a + b) / 2).rounded()), y: Int(((b - a) / 2).rounded()))
     }
-    private func polygon(_ vertices: [CGPoint], fill: UIColor, stroke: UIColor = .clear) -> SKShapeNode {
-        let path = CGMutablePath(); path.addLines(between: vertices); path.closeSubpath()
-        let node = SKShapeNode(path: path); node.fillColor = fill; node.strokeColor = stroke; node.lineWidth = 1
-        return node
+
+    override func didMove(to view: SKView) {
+        view.isMultipleTouchEnabled = true
+        guard zoomGesture == nil else { return }
+        let pinch = UIPinchGestureRecognizer(target: self, action: #selector(zoomRoom(_:)))
+        view.addGestureRecognizer(pinch)
+        zoomGesture = pinch
     }
+
+    override func willMove(from view: SKView) {
+        if let zoomGesture { view.removeGestureRecognizer(zoomGesture) }
+        zoomGesture = nil
+    }
+
+    @objc private func zoomRoom(_ pinch: UIPinchGestureRecognizer) {
+        guard let view = pinch.view else { return }
+        let center = convertPoint(fromView: pinch.location(in: view))
+        switch pinch.state {
+        case .began:
+            dragged = true
+            startingZoom = world.xScale
+            zoomAnchor = world.convert(center, from: self)
+        case .changed:
+            guard pinch.numberOfTouches == 2 else { return }
+            let scale = min(max(startingZoom * pinch.scale, 1), 2.4)
+            world.setScale(scale)
+            // Hold the same point of the floor between the fingers while scaling or panning.
+            world.position = CGPoint(
+                x: min(0, max(size.width * (1 - scale), center.x - zoomAnchor.x * scale)),
+                y: min(0, max(size.height * (1 - scale), center.y - zoomAnchor.y * scale))
+            )
+        default:
+            break
+        }
+    }
+
+    func resetZoom() {
+        world.setScale(1)
+        world.position = .zero
+    }
+
     private func label(_ text: String, size: CGFloat, color: UIColor = .white) -> SKLabelNode {
         let node = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
         node.text = text; node.fontSize = size; node.fontColor = color; node.verticalAlignmentMode = .center
         return node
     }
     private func buildRoom() {
-        let title = label(L("LIFT / SOCIAL CLUB"), size: 20, color: .white)
-        title.position = CGPoint(x: 390, y: 555); addChild(title)
-        let subtitle = label(L("YOUR PEOPLE. YOUR PACE."), size: 10, color: .systemMint)
-        subtitle.position = CGPoint(x: 390, y: 529); addChild(subtitle)
-        for x in 0..<GymLayout.width {
-            for y in 0..<GymLayout.height {
-                let p = point(Double(x), Double(y))
-                let tint = (x + y) % 2 == 0 ? UIColor(white: 0.18, alpha: 1) : UIColor(white: 0.21, alpha: 1)
-                let tile = polygon([CGPoint(x: p.x, y: p.y + 16), CGPoint(x: p.x + 30, y: p.y), CGPoint(x: p.x, y: p.y - 16), CGPoint(x: p.x - 30, y: p.y)], fill: tint, stroke: UIColor.white.withAlphaComponent(0.05))
-                tile.zPosition = -100; world.addChild(tile)
-            }
+        let left = point(-0.5, Double(GymLayout.height) - 0.5)
+        let back = point(-0.5, -0.5)
+        let right = point(Double(GymLayout.width) - 0.5, -0.5)
+        let front = point(Double(GymLayout.width) - 0.5, Double(GymLayout.height) - 0.5)
+        addSurface(floorTexture(), corners: [left, front, back, right], depth: -100)
+
+        let wall = SKTexture(imageNamed: "GymWall")
+        for (start, end) in [(left, back), (back, right)] {
+            let topStart = CGPoint(x: start.x, y: start.y + 66)
+            let topEnd = CGPoint(x: end.x, y: end.y + 66)
+            addSurface(wall, corners: [start, end, topStart, topEnd], depth: -90)
         }
-        for (start, end) in [(point(-0.5, -0.5), point(11.5, -0.5)), (point(-0.5, -0.5), point(-0.5, 9.5))] {
-            let wall = polygon([start, end, CGPoint(x: end.x, y: end.y + 45), CGPoint(x: start.x, y: start.y + 45)], fill: UIColor(red: 0.12, green: 0.17, blue: 0.23, alpha: 1), stroke: .darkGray)
-            wall.zPosition = -90; world.addChild(wall)
-            let neon = SKShapeNode(); let line = CGMutablePath()
-            line.move(to: CGPoint(x: start.x, y: start.y + 44)); line.addLine(to: CGPoint(x: end.x, y: end.y + 44))
-            neon.path = line; neon.strokeColor = .systemMint; neon.lineWidth = 2; neon.glowWidth = 3; neon.zPosition = -89; world.addChild(neon)
-        }
-        equipment("rack", x: 1, y: 1, color: .systemCyan)
-        equipment("bench", x: 4, y: 2, color: .systemOrange)
-        equipment("cardio", x: 8, y: 1, color: .systemMint)
-        equipment("platform", x: 8, y: 5, color: .systemPurple)
-        equipment("lounge", x: 1, y: 8, color: .systemIndigo)
-        let helper = label(L("Tap equipment to train · Tap a lifter to connect"), size: 12, color: .lightGray)
-        helper.position = CGPoint(x: 390, y: 91); addChild(helper)
+
+        equipment("rack", x: 1, y: 1, width: 105, color: .systemCyan)
+        equipment("bench", x: 4, y: 2, width: 98, color: .systemOrange)
+        equipment("cardio", x: 8, y: 1, width: 105, color: .systemMint)
+        equipment("platform", x: 8, y: 5, width: 106, color: .systemPurple)
+        equipment("lounge", x: 1, y: 8, width: 87, color: .systemIndigo)
+
         let coach = makePerson(profile: SocialProfile(uid: "trainer", name: L("AI trainer"), gsr: 0, cosmetics: [], interests: "", avatar: AvatarAppearance(preset: "star", color: "green")), portrait: nil)
         coach.name = "trainer"; coach.position = point(4, 7); coach.zPosition = 30
         world.addChild(coach); trainer = coach
     }
-    private func equipment(_ kind: String, x: Double, y: Double, color: UIColor) {
-        let node = SKNode(); node.position = point(x, y); node.name = "station:\(kind)"; node.zPosition = CGFloat(x + y)
-        let shadow = SKShapeNode(ellipseOf: CGSize(width: 70, height: 28)); shadow.fillColor = .black.withAlphaComponent(0.4); shadow.strokeColor = .clear; node.addChild(shadow)
-        let base = polygon([CGPoint(x: -20, y: 4), CGPoint(x: 15, y: 22), CGPoint(x: 50, y: 4), CGPoint(x: 15, y: -14)], fill: color.withAlphaComponent(0.7), stroke: color)
-        node.addChild(base)
-        switch kind {
-        case "rack":
-            for x in [-14.0, 40.0] {
-                let bar = SKShapeNode(rectOf: CGSize(width: 5, height: 53), cornerRadius: 2); bar.position = CGPoint(x: x, y: 24); bar.fillColor = .lightGray; bar.strokeColor = .clear; node.addChild(bar)
+
+    private func floorTexture() -> SKTexture {
+        let tileSize: CGFloat = 64
+        let width = CGFloat(GymLayout.width) * tileSize
+        let height = CGFloat(GymLayout.height) * tileSize
+        let tile = UIImage(named: "GymFloor")
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
+            for x in 0..<GymLayout.width {
+                for y in 0..<GymLayout.height {
+                    let rect = CGRect(x: CGFloat(x) * tileSize, y: CGFloat(y) * tileSize, width: tileSize, height: tileSize)
+                    UIColor(red: 0.09, green: 0.12, blue: 0.17, alpha: 1).setFill()
+                    context.fill(rect)
+                    tile?.draw(in: rect)
+                    UIColor.white.withAlphaComponent((x + y).isMultiple(of: 2) ? 0.035 : 0.005).setFill()
+                    context.fill(rect)
+                    UIColor(red: 0.38, green: 0.53, blue: 0.68, alpha: 0.26).setStroke()
+                    context.stroke(rect.insetBy(dx: 0.5, dy: 0.5))
+                }
             }
-            let weight = SKShapeNode(rectOf: CGSize(width: 70, height: 5), cornerRadius: 2); weight.position = CGPoint(x: 13, y: 42); weight.fillColor = .white; node.addChild(weight)
-        case "bench":
-            let pad = SKShapeNode(rectOf: CGSize(width: 58, height: 16), cornerRadius: 5); pad.fillColor = color; pad.strokeColor = .clear; pad.zRotation = -0.45; pad.position = CGPoint(x: 14, y: 14); node.addChild(pad)
-            let bar = SKShapeNode(rectOf: CGSize(width: 66, height: 4)); bar.position = CGPoint(x: 12, y: 33); bar.fillColor = .white; node.addChild(bar)
-            for x in [-17.0, 40.0] { let plate = SKShapeNode(rectOf: CGSize(width: 7, height: 19), cornerRadius: 2); plate.fillColor = .darkGray; plate.position = CGPoint(x: x, y: 33); node.addChild(plate) }
-        case "cardio":
-            for x in [0.0, 25.0] { let rail = SKShapeNode(rectOf: CGSize(width: 4, height: 34)); rail.position = CGPoint(x: x, y: 23); rail.fillColor = .lightGray; node.addChild(rail) }
-            let screen = SKShapeNode(rectOf: CGSize(width: 32, height: 17), cornerRadius: 3); screen.fillColor = .black; screen.strokeColor = color; screen.position = CGPoint(x: 13, y: 42); node.addChild(screen)
-        case "lounge":
-            let seat = SKShapeNode(rectOf: CGSize(width: 62, height: 23), cornerRadius: 8); seat.fillColor = color; seat.position = CGPoint(x: 13, y: 15); node.addChild(seat)
-        default:
-            let bar = SKShapeNode(rectOf: CGSize(width: 60, height: 5)); bar.fillColor = .lightGray; bar.position = CGPoint(x: 14, y: 14); node.addChild(bar)
-            for x in [-10.0, 38.0] { let plate = SKShapeNode(circleOfRadius: 9); plate.fillColor = .darkGray; plate.strokeColor = color; plate.position = CGPoint(x: x, y: 14); node.addChild(plate) }
         }
-        let caption = label(kind.uppercased(), size: 9, color: color); caption.position = CGPoint(x: 15, y: -26); node.addChild(caption)
+        return SKTexture(image: image)
+    }
+
+    // The visual surfaces use the same projection as taps, paths, and station positions.
+    private func addSurface(_ texture: SKTexture, corners: [CGPoint], depth: CGFloat) {
+        let path = CGMutablePath()
+        path.addLines(between: corners)
+        let bounds = path.boundingBox
+        let node = SKSpriteNode(texture: texture, size: bounds.size)
+        let source = [SIMD2<Float>(0, 0), SIMD2<Float>(1, 0), SIMD2<Float>(0, 1), SIMD2<Float>(1, 1)]
+        let destination = corners.map {
+            SIMD2(Float(($0.x - bounds.minX) / bounds.width), Float(($0.y - bounds.minY) / bounds.height))
+        }
+        node.warpGeometry = SKWarpGeometryGrid(columns: 1, rows: 1, sourcePositions: source, destinationPositions: destination)
+        node.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        node.zPosition = depth
+        world.addChild(node)
+    }
+
+    private func equipment(_ kind: String, x: Double, y: Double, width: CGFloat, color: UIColor) {
+        let node = SKNode()
+        node.position = point(x + 0.5, y)
+        node.name = "station:\(kind)"
+        node.zPosition = x + y + 0.5
+        let shadow = SKShapeNode(ellipseOf: CGSize(width: width * 0.72, height: 20))
+        shadow.fillColor = .black.withAlphaComponent(0.38)
+        shadow.strokeColor = .clear
+        node.addChild(shadow)
+
+        let texture = SKTexture(imageNamed: "Gym\(kind.capitalized)")
+        let sprite = SKSpriteNode(texture: texture)
+        let aspectRatio = texture.size().height / max(texture.size().width, 1)
+        sprite.size = CGSize(width: width, height: width * aspectRatio)
+        sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
+        sprite.position.y = -14
+        node.addChild(sprite)
+
+        let caption = label(L(kind.capitalized), size: 15, color: color)
+        caption.position.y = -24
+        node.addChild(caption)
         world.addChild(node)
     }
     private func makePerson(profile: SocialProfile, portrait: UIImage?) -> SKNode {
@@ -133,7 +208,7 @@ final class GymScene: SKScene {
                 let count = members.filter { $0.station == station }.count
                 if count > 0 {
                     let tag = label(station == "cardio" ? L("IN USE") : L("IN USE · %lld/2", count), size: 9, color: .systemOrange)
-                    tag.name = "occupancy"; tag.position = CGPoint(x: 10, y: 34); node.addChild(tag)
+                    tag.name = "occupancy"; tag.position = CGPoint(x: 0, y: -38); node.addChild(tag)
                 }
             }
         }
@@ -200,7 +275,13 @@ final class GymScene: SKScene {
     private var touchOrigin: CGPoint?
     private var dragged = false
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touchOrigin = touches.first?.location(in: self); dragged = false
+        guard event?.allTouches?.count == 1 else {
+            touchOrigin = nil
+            dragged = true
+            return
+        }
+        touchOrigin = touches.first?.location(in: self)
+        dragged = false
     }
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let origin = touchOrigin, let point = touches.first?.location(in: self), hypot(point.x - origin.x, point.y - origin.y) > 12 { dragged = true }
@@ -211,16 +292,16 @@ final class GymScene: SKScene {
         guard !dragged, let origin = touchOrigin, let touch = touches.first,
               hypot(touch.location(in: self).x - origin.x, touch.location(in: self).y - origin.y) <= 12 else { return }
         let p = touch.location(in: world)
-        for hit in world.nodes(at: p) {
-            var node: SKNode? = hit
-            while let n = node, n !== world {
-                if let name = n.name {
-                    if name == "trainer" { onTrainer?(); return }
-                    if name.hasPrefix("avatar:") { onProfile?(String(name.dropFirst(7))); return }
-                    if name.hasPrefix("station:") { let station = String(name.dropFirst(8)); onStation?(station); return }
-                }
-                node = n.parent
-            }
+        let hits = world.nodes(at: p).compactMap { hit -> SKNode? in
+            var node = hit
+            while let parent = node.parent, parent !== world { node = parent }
+            return node.parent === world ? node : nil
+        }
+        for hit in hits.sorted(by: { $0.zPosition > $1.zPosition }) {
+            guard let name = hit.name else { continue }
+            if name == "trainer" { onTrainer?(); return }
+            if name.hasPrefix("avatar:") { onProfile?(String(name.dropFirst(7))); return }
+            if name.hasPrefix("station:") { onStation?(String(name.dropFirst(8))); return }
         }
         walk(to: cell(at: p))
     }

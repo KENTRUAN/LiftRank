@@ -25,7 +25,7 @@ struct GymRoomView: View {
     let session: Workout?
     let workoutSummary: String
     let startSession: () -> Void
-    @State private var scene = GymScene(size: CGSize(width: 780, height: 610))
+    @StateObject private var scene = GymScene(size: GymScene.roomSize)
     @State private var sheet: GymRoomSheet?
     @State private var lastLogged: String?
     @State private var occupiedStation: String?
@@ -35,15 +35,7 @@ struct GymRoomView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                HStack {
-                    Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
-                    Text(store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
-                        .font(.caption.bold())
-                    Spacer()
-                    Text("Preset layout").font(.caption2).foregroundStyle(.secondary)
-                }.padding(12).background(.teal.opacity(0.08))
-                SpriteView(scene: scene).aspectRatio(780 / 610, contentMode: .fit)
-                    .accessibilityLabel("Isometric gym. Tap equipment to start a set, or use the station picker and Start set button below.")
+                roomMap
                 VStack(spacing: 12) {
                     workoutCard
                     HStack {
@@ -119,6 +111,55 @@ struct GymRoomView: View {
             sheetContent(route).presentationDetents(detents(for: route)).presentationDragIndicator(.visible)
         }
     }
+    private var roomMap: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("LIFT / SOCIAL CLUB").font(.subheadline.bold()).foregroundStyle(.white)
+                    Text("YOUR PEOPLE. YOUR PACE.").font(.caption).foregroundStyle(.mint)
+                }
+                Spacer(minLength: 0)
+                Button { scene.resetZoom() } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.subheadline.bold())
+                        .frame(width: 44, height: 44)
+                        .background(.white.opacity(0.10), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white)
+                .accessibilityLabel("Reset gym zoom")
+                .accessibilityIdentifier("gymResetZoom")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
+            HStack(spacing: 7) {
+                Circle().fill(store.offlineSample ? .orange : .mint).frame(width: 7, height: 7)
+                    .accessibilityHidden(true)
+                Text(store.offlineSample ? "OFFLINE SAMPLE · simulated members" : "LIVE · \(store.members.filter { $0.isFresh() }.count) in the room")
+                    .font(.caption.bold()).foregroundStyle(.white.opacity(0.86))
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+
+            SpriteView(scene: scene)
+                .aspectRatio(GymScene.roomSize.width / GymScene.roomSize.height, contentMode: .fit)
+                .clipped()
+                .accessibilityLabel("Isometric gym. Tap equipment to start a set, or use the station picker and Start set button below.")
+                .accessibilityIdentifier("gymMap")
+
+            Text("Tap equipment to train · Tap a lifter to connect")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white.opacity(0.93))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.white.opacity(0.07))
+        }
+        .background(Color(red: 0.055, green: 0.08, blue: 0.13))
+    }
+
     private func detents(for route: GymRoomSheet) -> Set<PresentationDetent> {
         switch route {
         case .chat, .inbox, .trainer, .roomChat: [.medium, .large]
