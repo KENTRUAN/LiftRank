@@ -90,7 +90,7 @@ final class CommunityWorkoutTests: XCTestCase {
         context.insert(profile); context.insert(bench)
         let workout = try WorkoutSession.startOrResume(profile: profile, context: context)
         try WorkoutSession.log(exercise: bench, workout: workout, weight: 60, reps: 8, unit: .kg, restSeconds: 90, context: context)
-        let result = WorkoutPublisher.publish(workout, profile: profile, exercises: [bench], workouts: [workout], context: context)
+        let result = try WorkoutPublisher.publish(workout, profile: profile, exercises: [bench], workouts: [workout], context: context)
         XCTAssertTrue(workout.isPublished)
         XCTAssertGreaterThan(result.bestScore, 0)
         XCTAssertNotNil(workout.endedAt)
@@ -189,7 +189,7 @@ final class CommunityWorkoutTests: XCTestCase {
             try WorkoutSession.applyPreset(to: workout, title: "Planned", items: [TemplateExercise(exerciseKey: bench.key, exerciseName: bench.nameEn, sets: 2, repsLow: 8, repsHigh: 12, restSeconds: 90)], exercises: [bench], context: context)
             let entry = try XCTUnwrap(workout.exercises.first)
             if completedCount == 1 { try WorkoutSession.log(exercise: bench, workout: workout, weight: 60, reps: 8, unit: .kg, restSeconds: 90, context: context) }
-            _ = WorkoutPublisher.publish(workout, profile: profile, exercises: [bench], workouts: [workout], context: context)
+            _ = try WorkoutPublisher.publish(workout, profile: profile, exercises: [bench], workouts: [workout], context: context)
             XCTAssertEqual(workout.completedSets.count, completedCount)
             XCTAssertEqual(workout.exercises.count, completedCount)
             if completedCount == 1 { XCTAssertEqual(entry.sets.count, 1); XCTAssertTrue(entry.sets.allSatisfy(\.isCompleted)) }

@@ -7,7 +7,7 @@ struct TrainerWelcomeView: View {
     @Environment(\.scenePhase) private var phase
     let workout: Workout?
     let plan: DailyPlan?
-    @State private var message = "Ready when you are. Start a workout, or tell me what you want to train."
+    @State private var message = L("Ready when you are. Start a workout, or tell me what you want to train.")
     @State private var loading = false
     @State private var unavailable = false
     @State private var lastAttempt = Date.distantPast
@@ -22,7 +22,7 @@ struct TrainerWelcomeView: View {
                         .accessibilityLabel("Trainer unavailable. Retry welcome message")
                 }
             }
-            Text(message).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+            Text(message).font(.subheadline).lineLimit(3).fixedSize(horizontal: false, vertical: true)
             Button("Talk to your trainer") { app.showCoach = true }
                 .font(.caption.bold())
         }.padding(16).background(.teal.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))

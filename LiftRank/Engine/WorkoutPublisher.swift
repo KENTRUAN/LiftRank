@@ -29,7 +29,7 @@ enum WorkoutPublisher {
     /// Finalises a workout: strips unfinished sets, scores it, pays the daily training reward and updates the streak.
     @MainActor
     static func publish(_ workout: Workout, profile: UserProfile, exercises: [Exercise], workouts: [Workout],
-                        cardio: [CardioSession] = [], claims: [QuestClaim] = [], context: ModelContext) -> PublishSummary {
+                        cardio: [CardioSession] = [], claims: [QuestClaim] = [], context: ModelContext) throws -> PublishSummary {
         let byKey = Dictionary(uniqueKeysWithValues: exercises.map { ($0.key, $0) })
         // Drop unfinished sets and empty exercises so history only holds real work.
         for we in workout.exercises {
@@ -66,9 +66,13 @@ enum WorkoutPublisher {
         let gsr = RankAggregator.overall(muscleScores: RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: all, exercises: exercises, sex: profile.sex)))
         let streak = StreakEngine.current(profile: profile, workouts: all, cardio: cardio, today: now)
         context.insert(RewardEvent(date: now, kind: .workout, xp: 0, eggs: 0, note: L("发布训练：%@", workout.title)))
-        let eggs = DailyTrainingEngine.claimIfEarned(profile: profile, workouts: all, cardio: cardio, claims: claims, gsr: gsr, context: context, today: now)
+        let eggs = DailyTrainingEngine.claimIfEarned(profile: profile, workouts: all, cardio: cardio, claims: claims, gsr: gsr, context: context, today: now, save: false)
         workout.xpEarned = 0
-        try? context.save()
+        do { try context.save() }
+        catch {
+            context.rollback()
+            throw GymFailure.message(L("无法发布训练，请重试。"))
+        }
         if workout.startOptionsChosen, workout.healthState != "off" {
             // Keep the store alive until the asynchronous Health write completes.
             Task { [container = context.container] in

@@ -69,7 +69,7 @@ enum DemoData {
                 }
                 w.exercises.append(we)
             }
-            _ = WorkoutPublisher.publish(w, profile: profile, exercises: exercises, workouts: allWorkouts, context: context)
+            _ = try? WorkoutPublisher.publish(w, profile: profile, exercises: exercises, workouts: allWorkouts, context: context)
             w.publishedAt = w.endedAt
             allWorkouts.append(w)
         }

@@ -83,11 +83,54 @@ extension Exercise {
 
 /// Resolves stored exercise names (set logs, templates, plans) to the interface language.
 enum ExerciseNames {
-    private static let english: [String: String] = Dictionary(ExerciseSeed.all.map { ($0.name, $0.nameEn) }, uniquingKeysWith: { first, _ in first })
+    private static let pairs = ExerciseSeed.all.filter { !$0.nameEn.isEmpty }.map { ($0.name, $0.nameEn) }
+    private static let english = Dictionary(pairs, uniquingKeysWith: { first, _ in first })
+    private static let chinese = Dictionary(pairs.map { ($0.1, $0.0) }, uniquingKeysWith: { first, _ in first })
+
     static func display(_ name: String) -> String {
-        guard AppLanguage.current.isEnglish, let en = english[name], !en.isEmpty else { return name }
-        return en
+        (AppLanguage.current.isEnglish ? english[name] : chinese[name]) ?? name
     }
+}
+
+/// Recognizes the app's stock names and rule-based templates without rewriting saved text.
+enum WorkoutLabels {
+    private static let splits = ["全身 A", "全身 B", "全身 C", "上肢 A", "上肢 B", "下肢 A", "下肢 B",
+                                 "推", "拉", "腿", "上肢", "下肢核心", "弱项补强"]
+    private static let goals = ["力量", "增肌", "综合体能", "减脂"]
+    private static let stock = ["训练", "今日训练", "晨间训练", "午后训练", "夜间训练", "推力日", "拉力日", "腿部日", "推拉日（进行中）"]
+
+    private static let keys: [String: String] = {
+        let bundles = AppLanguage.allCases.compactMap {
+            Bundle.main.path(forResource: $0.rawValue, ofType: "lproj").flatMap(Bundle.init(path:))
+        }
+        let aliases = (stock + splits + goals).flatMap { key in
+            [(key, key)] + bundles.map { ($0.localizedString(forKey: key, value: nil, table: nil), key) }
+        }
+        return Dictionary(aliases, uniquingKeysWith: { first, _ in first })
+    }()
+
+    static func title(_ saved: String) -> String {
+        if let key = keys[saved], stock.contains(key) { return L(key) }
+        let match = saved.wholeMatch(of: #/(?:Day ([1-6])|第 ([1-6]) 天) · (.+)/#)
+        guard let (_, englishDay, chineseDay, split) = match?.output,
+              let dayText = englishDay ?? chineseDay, let day = Int(dayText),
+              let key = keys[String(split)], splits.contains(key) else { return saved }
+        return L("第 %lld 天 · %@", day, L(key))
+    }
+
+    static func planSummary(_ saved: String) -> String {
+        let match = saved.wholeMatch(of: #/(.+) · (?:([1-6]) days/week · ([0-9]{1,2}) weeks|每周 ([1-6]) 天 · ([0-9]{1,2}) 周)/#)
+        guard let (_, goal, enDays, enWeeks, zhDays, zhWeeks) = match?.output,
+              let dayText = enDays ?? zhDays, let days = Int(dayText),
+              let weekText = enWeeks ?? zhWeeks, let weeks = Int(weekText), (1...12).contains(weeks),
+              let key = keys[String(goal)], goals.contains(key) else { return saved }
+        return L("%@ · 每周 %lld 天 · %lld 周", L(key), days, weeks)
+    }
+}
+
+extension WorkoutTemplate {
+    var displayName: String { planName.isEmpty ? name : WorkoutLabels.title(name) }
+    var displayPlanName: String { WorkoutLabels.planSummary(planName) }
 }
 
 /// A picker for the interface language; the two options stay in their own scripts.

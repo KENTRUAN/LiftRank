@@ -4,14 +4,15 @@ import SwiftData
 /// "设置训练": plan the exercises, sets, reps and rest before starting. Used for templates and the daily plan.
 struct WorkoutSetupView: View {
     let isNew: Bool
-    let onSave: (String, [TemplateExercise]) -> Void
+    let onSave: (String, [TemplateExercise]) throws -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var items: [TemplateExercise]
+    @State private var saveError: String?
     @State private var showPicker = false
     @State private var expanded: UUID?
 
-    init(title: String, items: [TemplateExercise], isNew: Bool, onSave: @escaping (String, [TemplateExercise]) -> Void) {
+    init(title: String, items: [TemplateExercise], isNew: Bool, onSave: @escaping (String, [TemplateExercise]) throws -> Void) {
         self.isNew = isNew
         self.onSave = onSave
         _name = State(initialValue: title)
@@ -62,10 +63,15 @@ struct WorkoutSetupView: View {
                 ToolbarItem(placement: .primaryAction) { EditButton() }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        onSave(name.trimmingCharacters(in: .whitespaces).isEmpty ? L("训练") : name, items)
-                        dismiss()
+                        do {
+                            try onSave(name.trimmingCharacters(in: .whitespaces).isEmpty ? L("训练") : name, items)
+                            dismiss()
+                        } catch { saveError = L("无法保存训练模板，请重试。") }
                     }.bold().disabled(items.isEmpty)
                 }
+            }
+            .alert("无法保存训练模板，请重试。", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+                Button("OK") { saveError = nil }
             }
             .sheet(isPresented: $showPicker) {
                 ExercisePickerView { ex in

@@ -160,11 +160,13 @@ struct SummaryView: View {
 
                 if !s.buckets.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("训练量分布").font(.headline)
+                        Text("训练量分布（\(profile.unit.label)）").font(.headline)
                         Chart(s.buckets, id: \.0) { b in
-                            BarMark(x: .value("时间", b.0, unit: period == .year ? .month : period == .quarter ? .weekOfYear : .day), y: .value("kg", profile.unit.fromKg(b.1)))
+                            BarMark(x: .value("时间", b.0, unit: period == .year ? .month : period == .quarter ? .weekOfYear : .day), y: .value(L("训练量"), profile.unit.fromKg(b.1)))
                                 .foregroundStyle(Color.accentColor.gradient)
-                        }.frame(height: 140)
+                        }
+                        .chartYAxisLabel(profile.unit.label)
+                        .frame(height: 160)
                     }.card()
                 }
 
@@ -175,6 +177,7 @@ struct SummaryView: View {
                             BarMark(x: .value("组", m.1), y: .value("肌群", m.0.name)).foregroundStyle(by: .value("肌群", m.0.name))
                         }
                         .chartLegend(.hidden)
+                        .chartXAxisLabel(L("组数"))
                         .frame(height: CGFloat(max(100, s.muscleSets.count * 24)))
                     }.card()
                 }

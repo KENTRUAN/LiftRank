@@ -263,7 +263,7 @@ struct GymRoomView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(active.endedAt == nil ? "WORKOUT ACTIVE" : "WORKOUT STOPPED · REVIEW & FINISH").font(.caption2.bold()).foregroundStyle(.teal)
-                        Text(active.title).font(.headline).lineLimit(1)
+                        Text(WorkoutLabels.title(active.title)).font(.headline).lineLimit(1)
                     }
                     Spacer()
                     Group { if active.cardioTimerStartedAt != nil { CardioElapsedText(workout: active) } else if active.endedAt == nil { Text(active.startedAt, style: .timer) } else { Text(active.duration.clockString) } }.font(.callout.monospacedDigit())

@@ -22,6 +22,50 @@ final class TrainerInteractionTests: XCTestCase {
         XCTAssertTrue(workout.hasChecklist)
         XCTAssertEqual(workout.exercises.first?.sets.count, 2)
     }
+    @MainActor func testApplyingDailyPresetRejectsMissingMovesAndLinksTheCompleteWorkout() throws {
+        let (container, _, bench, workout) = try fixture(), context = container.mainContext
+        let item = TemplateExercise(exerciseKey: bench.key, exerciseName: bench.nameEn, sets: 2, repsLow: 8, repsHigh: 10, restSeconds: 90)
+        var missing = item
+        missing.exerciseKey = "missing"
+        let plan = DailyPlan(dayKey: Date().dayKey, title: "Push day", items: [item, missing], source: "ai")
+        context.insert(plan)
+        try context.save()
+
+        XCTAssertThrowsError(try WorkoutSession.applyPreset(to: workout, title: plan.title, items: plan.items,
+                                                            exercises: [bench], context: context, plan: plan))
+        XCTAssertTrue(workout.exercises.isEmpty)
+        XCTAssertFalse(workout.startOptionsChosen)
+        XCTAssertNil(plan.workoutID)
+
+        plan.items = [item]
+        try WorkoutSession.applyPreset(to: workout, title: plan.title, items: plan.items,
+                                       exercises: [bench], context: context, plan: plan)
+        let saved = try XCTUnwrap(ModelContext(container).fetch(FetchDescriptor<DailyPlan>()).first)
+        XCTAssertEqual(saved.workoutID, workout.id)
+        XCTAssertEqual(workout.exercises.first?.sets.count, 2)
+        XCTAssertTrue(workout.startOptionsChosen)
+    }
+
+    @MainActor func testLateCoachReplyCannotOverwriteAChangedDay() throws {
+        let (container, _, bench, workout) = try fixture(), context = container.mainContext
+        let today = Date()
+        let original = DailyPlan(dayKey: today.dayKey, title: "Before", items: [], source: "ai")
+        context.insert(original)
+        try context.save()
+        let snapshot = TrainerPlanEditor.scheduleRevision([original])
+        original.title = "Newer schedule"
+        try context.save()
+
+        let edit = TrainerScheduleDay(dayOffset: 0, title: "Late reply", remove: false, items: [todo(bench)])
+        XCTAssertThrowsError(try TrainerPlanEditor.apply(TrainerReply(reply: "Old answer", todos: [todo(bench)], schedule: [edit]),
+                                                         workout: workout, expectedRevision: TrainerPlanEditor.revision(workout),
+                                                         exercises: [bench], plans: [original], context: context, today: today,
+                                                         expectedSchedule: snapshot, recordReply: true))
+        XCTAssertEqual(original.title, "Newer schedule")
+        XCTAssertTrue(workout.exercises.isEmpty)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<TrainerMessage>()), 0)
+    }
+
     @MainActor func testTrainerCanCreateReplaceAndDeleteTodosWithoutChangingRecordedSets() throws {
         let (container, _, bench, workout) = try fixture(), context = container.mainContext
         let completed = try WorkoutSession.log(exercise: bench, workout: workout, weight: 72.5, reps: 9, unit: .kg, restSeconds: 90, context: context)

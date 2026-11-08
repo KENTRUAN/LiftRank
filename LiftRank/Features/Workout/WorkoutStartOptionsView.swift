@@ -34,7 +34,7 @@ struct WorkoutStartOptionsView: View {
                         if let today = plans.first(where: { $0.dayKey == Date().dayKey && ($0.requestedByUser || $0.sourceRaw == "ai") }), !today.items.isEmpty {
                             Button("Today's plan · \(today.title)") { apply(today.title, today.items, plan: today) }
                         }
-                        ForEach(templates) { preset in Button(preset.name) { apply(preset.name, preset.items, plan: nil) } }
+                        ForEach(templates) { preset in Button(preset.displayName) { apply(preset.name, preset.items, plan: nil) } }
                         if let program = AIProgram.load(savedStrength) { savedChoices(program) }
                         if let program = AIProgram.load(savedCombined) { savedChoices(program) }
                         if templates.isEmpty && savedStrength.isEmpty && savedCombined.isEmpty && !plans.contains(where: { $0.dayKey == Date().dayKey && ($0.requestedByUser || $0.sourceRaw == "ai") && !$0.items.isEmpty }) {
@@ -70,18 +70,20 @@ struct WorkoutStartOptionsView: View {
     }
     private func apply(_ title: String, _ items: [TemplateExercise], plan: DailyPlan?) {
         do {
-            try WorkoutSession.applyPreset(to: workout, title: title, items: items, exercises: exercises, context: context)
-            plan?.workoutID = workout.id
-            finishSetup()
+            try WorkoutSession.applyPreset(to: workout, title: title, items: items, exercises: exercises, context: context, plan: plan)
+            openWorkout()
         } catch { self.error = error.localizedDescription }
     }
     private func finishSetup() {
         workout.startOptionsChosen = true
         do {
             try context.save()
-            dismiss()
-            Task { await TrainingHealthManager.shared.start(workout, context: context) }
+            openWorkout()
         } catch { workout.startOptionsChosen = false; self.error = error.localizedDescription }
+    }
+    private func openWorkout() {
+        dismiss()
+        Task { await TrainingHealthManager.shared.start(workout, context: context) }
     }
 }
 

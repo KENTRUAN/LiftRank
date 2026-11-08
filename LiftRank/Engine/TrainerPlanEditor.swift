@@ -32,7 +32,23 @@ enum TrainerPlanEditor {
     }
     static func revision(_ workout: Workout?) -> String {
         guard let workout else { return "none" }
-        return "\(workout.id)|\(workout.isPublished)|\(workout.setStartedAt?.timeIntervalSince1970 ?? 0)|" + workout.sortedExercises.map { "\($0.exerciseKey):" + $0.sortedSets.map { "\($0.order):\($0.isCompleted):\($0.reps):\($0.weightKg)" }.joined(separator: ",") }.joined(separator: "|")
+        let status = "\(workout.id)|\(workout.activityRaw)|\(workout.isPublished)|\(workout.endedAt?.timeIntervalSince1970 ?? 0)|\(workout.setStartedAt?.timeIntervalSince1970 ?? 0)"
+        let entries = workout.sortedExercises.map { entry in
+            let sets = entry.sortedSets.map { "\($0.order):\($0.isCompleted):\($0.reps):\($0.weightKg)" }.joined(separator: ",")
+            return "\(entry.exerciseKey):\(entry.restSeconds):\(sets)"
+        }
+        return ([status] + entries).joined(separator: "|")
+    }
+    struct ScheduleRevision: Equatable {
+        let id: PersistentIdentifier
+        let title: String
+        let items: [TemplateExercise]
+        let workoutID: UUID?
+    }
+    static func scheduleRevision(_ plans: [DailyPlan]) -> [String: ScheduleRevision] {
+        Dictionary(plans.map { plan in
+            (plan.dayKey, ScheduleRevision(id: plan.persistentModelID, title: plan.title, items: plan.items, workoutID: plan.workoutID))
+        }, uniquingKeysWith: { first, _ in first })
     }
     static func validate(_ items: [TrainerPlanItem], exercises: [Exercise]) throws {
         let catalog = Set(exercises.map(\.key))
@@ -50,7 +66,7 @@ enum TrainerPlanEditor {
         }
         for item in items {
             guard let exercise = exercises.first(where: { $0.key == item.exerciseKey }) else { continue }
-            let entry = workout.exercises.first { $0.exerciseKey == item.exerciseKey } ?? WorkoutExercise(order: workout.exercises.count, exercise: exercise, restSeconds: item.restSeconds)
+            let entry = workout.exercises.first { $0.exerciseKey == item.exerciseKey } ?? WorkoutExercise(order: (workout.exercises.map(\.order).max() ?? -1) + 1, exercise: exercise, restSeconds: item.restSeconds)
             if !workout.exercises.contains(where: { $0 === entry }) { workout.exercises.append(entry) }
             entry.restSeconds = item.restSeconds
             let next = (entry.sets.map(\.order).max() ?? -1) + 1
@@ -58,7 +74,8 @@ enum TrainerPlanEditor {
         }
         workout.hasChecklist = !items.isEmpty
     }
-    static func apply(_ reply: TrainerReply, workout: Workout?, expectedRevision: String, exercises: [Exercise], plans: [DailyPlan], context: ModelContext, today: Date) throws -> String {
+    static func apply(_ reply: TrainerReply, workout: Workout?, expectedRevision: String, exercises: [Exercise], plans: [DailyPlan], context: ModelContext, today: Date,
+                      expectedSchedule: [String: ScheduleRevision]? = nil, recordReply: Bool = false) throws -> String {
         if let todos = reply.todos {
             try validate(todos, exercises: exercises)
             guard let workout, workout.activity == .strength, revision(workout) == expectedRevision, !workout.hasPendingSet, !workout.isPublished, workout.endedAt == nil else {
@@ -70,10 +87,18 @@ enum TrainerPlanEditor {
             guard (0...27).contains(day.dayOffset), !day.title.isEmpty else { throw GymFailure.message(L("Invalid schedule date.")) }
             try validate(day.items, exercises: exercises)
         }
+        let currentPlans = reply.schedule.isEmpty ? plans : try context.fetch(FetchDescriptor<DailyPlan>())
+        if let expectedSchedule, !reply.schedule.isEmpty {
+            let current = scheduleRevision(currentPlans)
+            guard reply.schedule.allSatisfy({ day in
+                let key = today.adding(days: day.dayOffset).dayKey
+                return current[key] == expectedSchedule[key]
+            }) else { throw GymFailure.message(L("训练日程在等待回复时已更新，请重新发送请求。")) }
+        }
         if let todos = reply.todos, let workout { try replaceTodos(todos, workout: workout, exercises: exercises, context: context) }
         for day in reply.schedule {
             let key = today.adding(days: day.dayOffset).dayKey
-            let existing = plans.first { $0.dayKey == key }
+            let existing = currentPlans.first { $0.dayKey == key }
             if day.remove { if let existing { context.delete(existing) }; continue }
             let items = day.items.compactMap { item -> TemplateExercise? in
                 guard let exercise = exercises.first(where: { $0.key == item.exerciseKey }) else { return nil }
@@ -83,11 +108,15 @@ enum TrainerPlanEditor {
             if existing == nil { context.insert(plan) }
             plan.title = day.title; plan.items = items; plan.sourceRaw = "ai"; plan.requestedByUser = true
         }
-        do { try context.save() }
-        catch { context.rollback(); throw GymFailure.message(L("Your changes could not be saved. The previous workout and schedule were restored.")) }
         var notes: [String] = []
         if reply.todos != nil { notes.append(L("Remaining workout todos updated. Recorded sets are locked.")) }
         if !reply.schedule.isEmpty { notes.append(L("Schedule updated for %lld day(s).", reply.schedule.count)) }
-        return notes.joined(separator: "\n")
+        let result = notes.joined(separator: "\n")
+        if recordReply {
+            context.insert(TrainerMessage(role: "assistant", text: reply.reply + (result.isEmpty ? "" : "\n\n" + result)))
+        }
+        do { try context.save() }
+        catch { context.rollback(); throw GymFailure.message(L("Your changes could not be saved. The previous workout and schedule were restored.")) }
+        return result
     }
 }

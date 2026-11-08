@@ -63,7 +63,7 @@ struct CardioStartView: View {
                 if let current = active {
                     guard !current.hasPendingSet else { throw GymFailure.message(L("Finish the current set first.")) }
                     if finishing {
-                        _ = WorkoutPublisher.publish(current, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
+                        _ = try WorkoutPublisher.publish(current, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
                         await TrainingHealthManager.shared.finish(current, context: context)
                     } else {
                         guard current.exercises.isEmpty, current.notes.isEmpty, current.routePoints.isEmpty else { throw GymFailure.message(L("Finish your current workout first.")) }

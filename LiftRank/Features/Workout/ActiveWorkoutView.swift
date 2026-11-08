@@ -384,6 +384,7 @@ struct FinishWorkoutSheet: View {
     @Query private var claims: [QuestClaim]
     @State private var bodyweightText = ""
     @State private var summary: PublishSummary?
+    @State private var publishError: String?
 
     var body: some View {
         NavigationStack {
@@ -438,8 +439,12 @@ struct FinishWorkoutSheet: View {
                                 context.insert(BodyMeasurement(date: Date(), metric: .weight, value: workout.bodyweightKg))
                             }
                             workout.endedAt = Date()
-                            summary = WorkoutPublisher.publish(workout, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
+                            do {
+                                summary = try WorkoutPublisher.publish(workout, profile: profile, exercises: exercises, workouts: workouts, cardio: cardio, claims: claims, context: context)
+                                publishError = nil
+                            } catch { publishError = error.localizedDescription }
                         } label: { Text("发布训练").frame(maxWidth: .infinity).bold() }
+                        if let publishError { Text(publishError).font(.footnote).foregroundStyle(.red) }
                     }
                 }
             }

@@ -48,7 +48,7 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-        .navigationTitle(workout.title)
+        .navigationTitle(WorkoutLabels.title(workout.title))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

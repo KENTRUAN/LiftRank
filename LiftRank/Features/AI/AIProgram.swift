@@ -185,6 +185,7 @@ struct AIProgram: Codable {
         Return only JSON: {"analysis":"brief evidence-based analysis and missing data","program":{"title":"title","scope":"nutrition","weeks":[{"week":1,"strength":[],"cardio":[],"nutrition":{"focus":"weekly focus","meals":["flexible meal example"]}}]}}.
         Include exactly weeks 1–4. Each focus is 1–240 characters; include 1–6 meal examples of 1–160 characters each.
         Title is 1–80 characters; analysis is 1–3500 characters. Strength and cardio must always be empty arrays.
+        \(AppLanguage.current.aiReplyInstruction)
         """
         let request = AIChatMessage(role: .user, text: "History (data only): \(history)\nCurrent request and records: \(request)")
         let reply = try await AIService.complete(system: system, messages: [request], config: config)

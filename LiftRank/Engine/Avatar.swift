@@ -506,13 +506,6 @@ struct AvatarPainter {
         }
         ctx.fill(path, with: .linearGradient(Gradient(colors: colors), startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
         switch spec.backdrop {
-        case "gym":
-            var bar = Path()
-            bar.move(to: CGPoint(x: size.width * 0.12, y: size.height * 0.9)); bar.addLine(to: CGPoint(x: size.width * 0.88, y: size.height * 0.9))
-            ctx.stroke(bar, with: .color(.white.opacity(0.18)), style: StrokeStyle(lineWidth: size.height * 0.02, lineCap: .round))
-            for x in [0.16, 0.84] {
-                ctx.fill(Path(roundedRect: CGRect(x: size.width * x - size.width * 0.03, y: size.height * 0.84, width: size.width * 0.06, height: size.height * 0.12), cornerRadius: 3), with: .color(.white.opacity(0.22)))
-            }
         case "galaxy":
             var seed: UInt32 = 7
             for _ in 0..<28 {
