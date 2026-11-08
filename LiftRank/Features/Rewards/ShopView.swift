@@ -83,23 +83,18 @@ struct ShopView: View {
                 AvatarBadge(name: profile.name, frame: profile.equipped(.frame), size: 64)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 TitleTag(cosmetic: profile.equipped(.title))
                     .fixedSize(horizontal: false, vertical: true)
-                Text(profile.name).font(.headline)
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 8) {
-                        shopRank
-                        Spacer(minLength: 8)
-                        shopBalance
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        shopRank
-                        shopBalance
-                    }
+                Spacer(minLength: 6)
+                HStack(spacing: 6) {
+                    Text(profile.name).font(.headline).lineLimit(1)
+                    shopRank
                 }
+                Spacer(minLength: 6)
+                shopBalance
                 if style != nil {
-                    Spacer(minLength: 4)
+                    Spacer(minLength: 6)
                     Text("装备后会显示在当前训练化身上。")
                         .font(.caption2)
                         .foregroundStyle(.secondary)

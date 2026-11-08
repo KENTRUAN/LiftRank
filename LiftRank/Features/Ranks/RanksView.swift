@@ -361,6 +361,7 @@ private struct TrainingAvatarCard: View {
     let history: [MuscleRankSnapshot]
 
     @AppStorage("trainingAvatar.mascotStyle") private var mascotStyle: RankMascotStyle = .nailong
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var range: RankHistoryRange = .all
     @State private var selectedDate: Date?
 
@@ -428,38 +429,46 @@ private struct TrainingAvatarCard: View {
     }
 
     private func historySelection(date: Date, score: Int, tier: RankTier) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-                selectedDateLabel(date)
-                Spacer(minLength: 8)
-                selectedRankLabel(score: score, tier: tier)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                selectedDateLabel(date)
-                selectedRankLabel(score: score, tier: tier)
-            }
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
+            Text(date, format: .dateTime.year().month(.abbreviated).day().locale(AppLanguage.current.locale))
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            selectedRankLabel(tier: score > 0 ? tier : nil)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("rankHistorySelection")
     }
 
-    private func selectedDateLabel(_ date: Date) -> some View {
-        Text(date, format: .dateTime.year().month(.abbreviated).day().locale(AppLanguage.current.locale))
-            .font(.subheadline.weight(.semibold))
+    private func selectedRankLabel(tier: RankTier?) -> some View {
+        ZStack {
+            ForEach(RankTier.allCases) { rank in
+                rankLabel(rank)
+            }
+            Text("待评分")
+        }
+        .fixedSize()
+        .hidden()
+        .accessibilityHidden(true)
+        .overlay {
+            if let tier {
+                rankLabel(tier).foregroundStyle(tier.color)
+            } else {
+                Text("待评分").foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background((tier?.color ?? .secondary).opacity(0.12), in: Capsule())
     }
 
-    @ViewBuilder
-    private func selectedRankLabel(score: Int, tier: RankTier) -> some View {
-        if score > 0 {
-            Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tier.color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(tier.color.opacity(0.12), in: Capsule())
-        } else {
-            Text("待评分").font(.caption).foregroundStyle(.secondary)
-        }
+    private func rankLabel(_ tier: RankTier) -> some View {
+        Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
     }
 
     private func historyControls(_ timeline: RankHistoryTimeline, date: Date) -> some View {
