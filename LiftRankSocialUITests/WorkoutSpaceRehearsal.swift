@@ -75,6 +75,11 @@ final class WorkoutSpaceRehearsal: XCTestCase {
             if app.buttons["keepWorkoutBlank"].waitForExistence(timeout: 3) { app.buttons["keepWorkoutBlank"].tap() }
         }
         XCTAssertTrue(app.buttons["Leave"].waitForExistence(timeout: 10))
+        // The dedicated rehearsal app retains history between runs. Clear only an
+        // unfinished test set so a previous interrupted run can be repeated.
+        if app.buttons["workoutEndSet"].exists { app.buttons["workoutEndSet"].tap() }
+        if app.buttons["workoutLogFinishedSet"].exists { app.buttons["workoutLogFinishedSet"].tap() }
+        if app.buttons["Discard this set"].exists { app.buttons["Discard this set"].tap() }
         XCTAssertFalse(app.buttons["gymStation"].exists, "Open spaces have no machine picker")
         app.buttons["Zoom in"].tap(); app.buttons["Zoom out"].tap()
         let scene = app.otherElements["walkableGymScene"]
@@ -86,8 +91,19 @@ final class WorkoutSpaceRehearsal: XCTestCase {
         XCTAssertTrue(app.buttons["workoutEndSet"].waitForExistence(timeout: 10))
         app.buttons["workoutEndSet"].tap()
         XCTAssertTrue(app.textFields["gymSetWeight"].waitForExistence(timeout: 10))
-        app.textFields["gymSetReps"].tap(); app.textFields["gymSetReps"].typeText("8")
+        let reps = app.textFields["gymSetReps"]
+        reps.tap()
+        if let previous = reps.value as? String, Int(previous) != nil {
+            // SwiftUI exposes the whole labeled row. Place the caret at the
+            // value's trailing edge, inside the row's 20-point content inset.
+            reps.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5))
+                .withOffset(CGVector(dx: -22, dy: 0)).tap()
+            reps.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: previous.count))
+        }
+        reps.typeText("8")
+        XCTAssertEqual(reps.value as? String, "8")
         let save = app.buttons["gymSaveSet"]
+        XCTAssertTrue(save.isEnabled)
         if !save.isHittable { app.swipeUp() }
         save.tap()
         XCTAssertTrue(app.staticTexts["gymSetSaved"].waitForExistence(timeout: 10))
