@@ -13,7 +13,6 @@ struct GymHubView: View {
     @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
     @State private var portrait: UIImage?
     @State private var showSettings = false
-    @State private var showFriends = false
     private var session: Workout? { workouts.first { !$0.isPublished } }
     private var gsr: Int {
         RankAggregator.overall(muscleScores: RankAggregator.muscleScores(bests: RankAggregator.exerciseBests(workouts: workouts, exercises: exercises, sex: profile.sex)))
@@ -51,7 +50,6 @@ struct GymHubView: View {
                         } else { lobby }
                     }
                     .sheet(isPresented: $showSettings) { CommunityProfileView(store: store, profile: profile) }
-                    .sheet(isPresented: $showFriends) { GymFriendsView(store: store, workout: workoutSummary) }
                 }
             }
         }
@@ -101,9 +99,6 @@ struct GymHubView: View {
                             Text("Your profile and avatar are ready.").font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    Button { showFriends = true } label: {
-                        Label(store.inboxCount > 0 ? "Friends & inbox · \(store.inboxCount) new" : "Friends & inbox", systemImage: "bubble.left.and.bubble.right.fill")
-                    }.buttonStyle(.bordered).accessibilityIdentifier("gymInbox")
                 }
                 if let error = store.error { Text(error).font(.callout).foregroundStyle(.orange).accessibilityIdentifier("gymError") }
                 if store.busy { ProgressView("One moment…") }

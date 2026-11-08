@@ -2977,22 +2977,6 @@
         }
       }
     },
-    "Friends & inbox · %lld new": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Friends & inbox · %lld new"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好友与收件箱 · %lld 条新消息"
-          }
-        }
-      }
-    },
     "Friends & messages": {
       "localizations": {
         "en": {
