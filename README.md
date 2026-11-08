@@ -1,5 +1,7 @@
 # 段位健身（LiftRank）iOS
 
+The [website guide](docs/WEBSITE.md) covers the static showcase, interactive demo, local preview, and GitHub Pages deployment.
+
 The [workout spaces guide](docs/GYM_SPACES.md) documents the unified Start workout flow, pinch zoom, nearby public/private spaces and trainer welcomes.
 
 ## Demo on a new Mac
