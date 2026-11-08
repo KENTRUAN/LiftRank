@@ -98,6 +98,135 @@ struct AvatarFigureView: View {
     }
 }
 
+// MARK: - Rank mascot
+
+extension RankTier {
+    var mascotAsset: String {
+        switch self {
+        case .wood: "RankMascotWood"
+        case .bronze: "RankMascotBronze"
+        case .silver: "RankMascotSilver"
+        case .gold: "RankMascotGold"
+        case .platinum: "RankMascotPlatinum"
+        case .diamond: "RankMascotDiamond"
+        case .champion: "RankMascotChampion"
+        case .titan: "RankMascotTitan"
+        case .olympian: "RankMascotOlympian"
+        }
+    }
+}
+
+struct RankMascotView: View {
+    let tier: RankTier
+    let spec: AvatarSpec
+    var allowsAccessoryPlacement = false
+    @AppStorage("trainingAvatar.mascotAccessoryOffsets") private var savedOffsets = Data()
+    @GestureState private var drag = CGSize.zero
+
+    private var offsets: [String: CGSize] {
+        (try? JSONDecoder().decode([String: CGSize].self, from: savedOffsets)) ?? [:]
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            let side = min(geometry.size.width, geometry.size.height) * 0.91
+            let offset = offsets[spec.accessory] ?? .zero
+            ZStack {
+                Canvas { context, size in
+                    AvatarPainter(spec: spec, muscles: [:], front: true, physique: nil).drawBackdrop(&context, size: size)
+                }
+                .accessibilityHidden(true)
+
+                ZStack {
+                    Image(tier.mascotAsset)
+                        .resizable()
+                        .scaledToFit()
+                        .accessibilityLabel(L("%@ 奶龙", AppLanguage.current.isEnglish ? tier.name : tier.nameZh))
+                        .accessibilityIdentifier("rankMascot")
+
+                    if spec.accessory != "none" {
+                        Group {
+                            if allowsAccessoryPlacement {
+                                accessoryLayer(side: side)
+                                    .gesture(DragGesture()
+                                        .updating($drag) { value, state, _ in state = value.translation }
+                                        .onEnded { value in saveOffset(offset, translation: value.translation, side: side) })
+                                    .accessibilityAction(named: "重置饰品位置") { saveOffset(.zero, translation: .zero, side: side) }
+                            } else {
+                                accessoryLayer(side: side).allowsHitTesting(false)
+                            }
+                        }
+                        .position(x: side * (0.5 + offset.width) + drag.width,
+                                  y: side * (accessoryHeight + offset.height) + drag.height)
+                    }
+                }
+                .frame(width: side, height: side)
+            }
+        }
+    }
+
+    private func saveOffset(_ offset: CGSize, translation: CGSize, side: CGFloat) {
+        guard side > 0 else { return }
+        var updated = offsets
+        updated[spec.accessory] = CGSize(width: min(0.25, max(-0.25, offset.width + translation.width / side)),
+                                         height: min(0.30, max(-0.12, offset.height + translation.height / side)))
+        if let data = try? JSONEncoder().encode(updated) { savedOffsets = data }
+    }
+
+    private func accessoryLayer(side: CGFloat) -> some View {
+        let color = spec.accessoryColor
+        return Canvas { context, size in
+            let x = size.width * 0.5
+            let center = CGPoint(x: x, y: size.height * 0.5)
+            func band(_ point: CGPoint, width: CGFloat, height: CGFloat, color: Color) {
+                let rect = CGRect(x: point.x - width / 2, y: point.y - height / 2, width: width, height: height)
+                context.fill(Path(roundedRect: rect, cornerRadius: height * 0.35), with: .color(color))
+            }
+            func symbol(_ name: String, size: CGFloat, color: Color) {
+                let image = Text(Image(systemName: name)).font(.system(size: size, weight: .bold)).foregroundColor(color)
+                context.draw(image, at: center)
+            }
+            switch spec.accessory {
+            case "headband": band(center, width: side * 0.18, height: side * 0.027, color: color)
+            case "wristbands":
+                let distance = size.width / 2 - side * 0.035
+                for direction in [-1.0, 1.0] {
+                    band(CGPoint(x: x + direction * distance, y: center.y), width: side * 0.07, height: side * 0.023, color: color)
+                }
+            case "glasses": symbol("eyeglasses", size: side * 0.23, color: AvatarPalette.ink)
+            case "sunglasses": symbol("sunglasses.fill", size: side * 0.23, color: AvatarPalette.ink)
+            case "cap": symbol("baseball.cap.fill", size: side * 0.19, color: color)
+            case "beard": symbol("mustache.fill", size: side * 0.11, color: spec.hairColor)
+            case "crown": symbol("crown.fill", size: side * 0.13, color: AvatarPalette.gold)
+            case "halo":
+                let rect = CGRect(x: x - side * 0.08, y: center.y - side * 0.016, width: side * 0.16, height: side * 0.032)
+                context.stroke(Path(ellipseIn: rect), with: .color(AvatarPalette.gold), lineWidth: side * 0.012)
+            default: break
+            }
+        }
+        .frame(width: side * accessoryWidth, height: side * 0.15)
+        .contentShape(Rectangle())
+        .accessibilityLabel(CosmeticCatalog.item("accessory.\(spec.accessory)")?.name ?? CosmeticSlot.accessory.name)
+    }
+
+    private var accessoryWidth: CGFloat {
+        if spec.accessory != "wristbands" { return 0.3 }
+        return tier < .champion ? 0.50 : 0.55
+    }
+
+    private var accessoryHeight: CGFloat {
+        switch spec.accessory {
+        case "headband": 0.11
+        case "glasses", "sunglasses": tier >= .titan ? 0.11 : (tier <= .bronze ? 0.17 : 0.14)
+        case "beard": 0.25
+        case "cap", "crown": 0.07
+        case "halo": 0.045
+        case "wristbands": 0.59
+        default: 0.05
+        }
+    }
+}
+
 // MARK: - Painter
 
 /// Draws in a 100×180 unit space (x: 0–100, y: −10–182) and scales to the canvas.
@@ -155,7 +284,7 @@ struct AvatarPainter {
 
     // MARK: Layers
 
-    private func drawBackdrop(_ ctx: inout GraphicsContext, size: CGSize) {
+    func drawBackdrop(_ ctx: inout GraphicsContext, size: CGSize) {
         let rect = CGRect(origin: .zero, size: size)
         let path = Path(roundedRect: rect, cornerRadius: min(size.width, size.height) * 0.12)
         let colors: [Color]

@@ -8,22 +8,29 @@ struct ShopView: View {
     let muscles: [MuscleGroup: Int]
     let slots: [CosmeticSlot]
     let title: String
+    let previewsRankMascot: Bool
     @Environment(\.modelContext) private var context
     @State private var slot: CosmeticSlot
     @State private var toast: String?
     @State private var front = true
 
-    init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases, title: String = L("商店")) {
+    init(profile: UserProfile, gsr: Int, muscles: [MuscleGroup: Int] = [:], slots: [CosmeticSlot] = CosmeticSlot.allCases,
+         title: String = L("商店"), previewsRankMascot: Bool = false) {
         _profile = Bindable(wrappedValue: profile)
         self.gsr = gsr
         self.muscles = muscles
         self.slots = slots
         self.title = title
+        self.previewsRankMascot = previewsRankMascot
         _slot = State(initialValue: slots.first ?? .frame)
     }
 
     private var tier: RankTier { RankTier.tier(for: gsr) }
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: 12)]
+
+    private func previewsMascot(for slot: CosmeticSlot) -> Bool {
+        previewsRankMascot && (slot == .accessory || slot == .backdrop)
+    }
 
     var body: some View {
         ScrollView {
@@ -67,7 +74,10 @@ struct ShopView: View {
     @ViewBuilder
     private var header: some View {
         HStack(spacing: 14) {
-            if slot.isAvatar {
+            if previewsMascot(for: slot) {
+                RankMascotView(tier: tier, spec: profile.avatar)
+                    .frame(width: 110, height: 130)
+            } else if slot.isAvatar {
                 AvatarFigureView(spec: profile.avatar, muscles: muscles, front: front)
                     .frame(width: 110, height: 170)
                     .contentShape(Rectangle())
@@ -79,7 +89,9 @@ struct ShopView: View {
                 HStack(spacing: 6) { Text(profile.name).font(.headline); TitleTag(cosmetic: profile.equipped(.title)) }
                 HStack(spacing: 6) { TierBadge(tier: tier, compact: true); Text("GSR \(gsr)").font(.caption).foregroundStyle(.secondary) }
                 HStack(spacing: 4) { Text("余额").font(.caption).foregroundStyle(.secondary); EggAmount(amount: profile.eggs).font(.subheadline.bold()) }
-                if slot.isAvatar {
+                if previewsMascot(for: slot) {
+                    Text("装备后会显示在段位奶龙上。").font(.caption2).foregroundStyle(.secondary)
+                } else if slot.isAvatar {
                     Text(muscles.isEmpty ? "小人的身体会按各肌群段位着色。点击小人翻转。" : "身体颜色 = 各肌群段位。点击小人翻转。").font(.caption2).foregroundStyle(.secondary)
                 }
             }
@@ -96,9 +108,17 @@ struct ShopView: View {
             ZStack {
                 if item.slot.isAvatar {
                     RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemGroupedBackground)).frame(height: previewHeight)
-                    AvatarFigureView(spec: profile.avatar.applying(item), muscles: muscles, bust: item.slot.bustPreview, showBackdrop: item.slot == .backdrop)
-                        .frame(height: previewHeight - 8).frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    Group {
+                        if previewsMascot(for: item.slot) {
+                            RankMascotView(tier: tier, spec: profile.avatar.applying(item))
+                        } else {
+                            AvatarFigureView(spec: profile.avatar.applying(item), muscles: muscles,
+                                             bust: item.slot.bustPreview, showBackdrop: item.slot == .backdrop)
+                        }
+                    }
+                    .frame(height: previewHeight - 8)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 } else {
                     RoundedRectangle(cornerRadius: 12).fill(item.gradient).frame(height: previewHeight)
                     if item.slot == .frame {

@@ -28,7 +28,7 @@ struct RanksView: View {
                         LPBar(score: overall)
                     }.card()
 
-                    TrainingAvatarCard(profile: profile, overall: overall, scores: muscleScores, history: history)
+                    TrainingAvatarCard(profile: profile, overall: overall, history: history)
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -350,74 +350,26 @@ private extension Path {
     }
 }
 
-private enum AvatarBuild: String, CaseIterable, Identifiable {
-    case slim, balanced, broad
-
-    var id: Self { self }
-    var title: String {
-        switch self {
-        case .slim: L("轻盈")
-        case .balanced: L("均衡")
-        case .broad: L("厚实")
-        }
-    }
-    var offset: Double {
-        switch self {
-        case .slim: -1
-        case .balanced: 0
-        case .broad: 1
-        }
-    }
-}
-
 private struct TrainingAvatarCard: View {
     let profile: UserProfile
     let overall: Int
-    let scores: [MuscleGroup: Int]
     let history: [MuscleRankSnapshot]
 
-    @AppStorage("trainingAvatar.startingBuild") private var build: AvatarBuild = .balanced
     @State private var position = 1.0
-    @State private var showPortrait = false
-    @State private var portrait: UIImage?
-    @AppStorage(TrainingPortraitFile.revisionKey) private var portraitRevision = 0
 
     private var dates: [Date] { history.map(\.date) }
 
     var body: some View {
         let points = positions
         let frame = frame(at: position, positions: points)
+        let tier = RankTier.tier(for: frame.score)
         VStack(alignment: .leading, spacing: 12) {
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    heading
-                    Spacer()
-                    if portrait == nil { buildPicker }
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    heading
-                    if portrait == nil { buildPicker }
-                }
-            }
-
-            Group {
-                if let portrait {
-                    Image(uiImage: portrait)
-                        .resizable()
-                        .scaledToFit()
-                        .accessibilityLabel("玩家的 AI 肖像")
-                } else {
-                    AvatarFigureView(spec: profile.avatar, physique: AvatarPhysique(build: build.offset, scores: frame.strength))
-                }
-            }
-            .frame(height: 230)
-            .frame(maxWidth: .infinity)
-            .background(Color(.tertiarySystemGroupedBackground).gradient)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            if portrait != nil {
-                Text("已应用 AI 肖像 · 滑块可回看历史评分")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+            heading
+            RankMascotView(tier: tier, spec: profile.avatar, allowsAccessoryPlacement: true)
+                .frame(height: 230)
+                .frame(maxWidth: .infinity)
+                .background(Color(.tertiarySystemGroupedBackground).gradient)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
             if let first = history.first, let last = history.last {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -425,15 +377,12 @@ private struct TrainingAvatarCard: View {
                         .font(.subheadline.weight(.semibold))
                         .accessibilityAddTraits(.updatesFrequently)
                     Spacer(minLength: 4)
-                    if let snapshot = frame.snapshot {
-                        let score = RankAggregator.overall(muscleScores: snapshot.scores)
-                        if score > 0 {
-                            TierBadge(tier: RankTier.tier(for: score), compact: true)
-                        } else {
-                            Text("待评分").font(.caption).foregroundStyle(.secondary)
-                        }
+                    if frame.score > 0 {
+                        Label(AppLanguage.current.isEnglish ? tier.name : tier.nameZh, systemImage: tier.icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(tier.color)
                     } else {
-                        Text("过渡预览").font(.caption).foregroundStyle(.secondary)
+                        Text("待评分").font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 if history.count > 1 {
@@ -480,29 +429,22 @@ private struct TrainingAvatarCard: View {
             }
             HStack(spacing: 12) {
                 NavigationLink {
-                    ShopView(profile: profile, gsr: overall)
+                    ShopView(profile: profile, gsr: overall, previewsRankMascot: true)
                 } label: {
                     Label("商店", systemImage: "cart.fill")
                 }
                 NavigationLink {
-                    ShopView(profile: profile, gsr: overall, muscles: scores, slots: CosmeticSlot.avatarSlots, title: "形象工坊")
+                    ShopView(profile: profile, gsr: overall, slots: [.accessory, .backdrop],
+                             title: L("形象工坊"), previewsRankMascot: true)
                 } label: {
                     Label("修改形象", systemImage: "wand.and.stars")
                 }
             }
             .font(.subheadline.weight(.semibold))
             .buttonStyle(.bordered)
-            Button { showPortrait = true } label: {
-                Label("AI 肖像", systemImage: "photo")
-            }
-            .font(.subheadline.weight(.semibold))
-        }
-        .sheet(isPresented: $showPortrait) {
-            PortraitEditorView(profile: profile)
         }
         .card()
         .onChange(of: dates) { _, _ in position = 1 }
-        .task(id: portraitRevision) { portrait = TrainingPortraitFile.image() }
     }
 
     private var heading: some View {
@@ -512,60 +454,34 @@ private struct TrainingAvatarCard: View {
         }
     }
 
-    private var buildPicker: some View {
-        Picker(selection: $build) {
-            ForEach(AvatarBuild.allCases) { option in Text(option.title).tag(option) }
-        } label: {
-            Label("体型 · \(build.title)", systemImage: "person.crop.circle")
-        }
-        .pickerStyle(.menu)
-        .accessibilityLabel("起始体型")
-    }
-
     private var positions: [Double] {
         guard history.count > 1, let start = history.first?.date, let end = history.last?.date else { return [1] }
         let duration = end.timeIntervalSince(start)
         return history.map { $0.date.timeIntervalSince(start) / duration }
     }
 
-    private func frame(at position: Double, positions: [Double]) -> AvatarFrame {
+    private func frame(at position: Double, positions: [Double]) -> (score: Int, caption: String) {
+        func frame(for snapshot: MuscleRankSnapshot) -> (Int, String) {
+            let score = RankAggregator.overall(muscleScores: snapshot.scores)
+            let caption = snapshot.date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
+            return (score, caption)
+        }
         guard let last = history.last else {
-            return AvatarFrame(strength: [:], snapshot: nil, caption: L("起始形象"))
+            return (overall, "")
         }
         guard let rightIndex = positions.firstIndex(where: { $0 >= position }), rightIndex > 0 else {
-            return AvatarFrame(snapshot: position >= 1 ? last : history[0])
+            return frame(for: position >= 1 ? last : history[0])
         }
         let right = history[rightIndex]
         let rightPosition = positions[rightIndex]
-        if abs(rightPosition - position) < 0.00001 { return AvatarFrame(snapshot: right) }
+        if abs(rightPosition - position) < 0.00001 { return frame(for: right) }
 
         let left = history[rightIndex - 1]
         let leftPosition = positions[rightIndex - 1]
         let fraction = (position - leftPosition) / (rightPosition - leftPosition)
-        let strength = Dictionary(uniqueKeysWithValues: MuscleGroup.rankable.map { group in
-            let start = Double(left.scores[group, default: 0])
-            let end = Double(right.scores[group, default: 0])
-            return (group, start + (end - start) * fraction)
-        })
-        return AvatarFrame(strength: strength, snapshot: nil,
-                           caption: "\(left.date.shortString) → \(right.date.shortString)")
-    }
-}
-
-private struct AvatarFrame {
-    let strength: [MuscleGroup: Double]
-    let snapshot: MuscleRankSnapshot?
-    let caption: String
-
-    init(strength: [MuscleGroup: Double], snapshot: MuscleRankSnapshot?, caption: String) {
-        self.strength = strength
-        self.snapshot = snapshot
-        self.caption = caption
-    }
-
-    init(snapshot: MuscleRankSnapshot) {
-        strength = snapshot.scores.mapValues(Double.init)
-        self.snapshot = snapshot
-        caption = snapshot.date.formatted(.dateTime.year().month().day().locale(AppLanguage.current.locale))
+        let leftScore = Double(RankAggregator.overall(muscleScores: left.scores))
+        let rightScore = Double(RankAggregator.overall(muscleScores: right.scores))
+        let score = Int((leftScore + (rightScore - leftScore) * fraction).rounded())
+        return (score, "\(left.date.shortString) → \(right.date.shortString)")
     }
 }
