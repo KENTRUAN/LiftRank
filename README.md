@@ -114,6 +114,8 @@ Lifter profiles use the actual local rank engine. Community settings controls ra
 
 The shared workout starts Health tracking after the separate setup step. With the LiftRank Watch companion installed on a paired Watch, the phone requests a live Watch workout, mirrors metrics, and ends/saves it when the local workout finishes. Finishing on Watch stops the same local session; review and publish it on iPhone. Without the companion, iOS 26+ uses a live iPhone HealthKit workout session. iOS 17–25 records timing and manually entered activity into Health when finished; it cannot supply Watch sensor metrics. LiftRank does not remotely start Apple's built-in Workout app.
 
+Build with Xcode 26+ (Swift 6.2+) to enable live iPhone HealthKit sessions. Builds made with Xcode 16.4 use the save-on-finish phone path on all supported iOS versions; Watch tracking remains available.
+
 Install the embedded **LiftRank** app from the Watch app on iPhone, open it once, and allow Health permissions. On iPhone choose **Sync with Apple Health** during workout setup. Strength uses **Traditional strength training**. The separate **Start cardio** flow selects Running, Cycling or another cardio activity and starts its timer and Apple tracking together. A saved workout has a stable Health sync identifier and is excluded from LiftRank's separate Health import to avoid duplicate local records. Sync failures preserve local training and expose Retry Apple Health, including in workout history. The Watch path still needs rehearsal on an actual paired Apple Watch; simulator builds do not validate real sensors or background delivery.
 
 ## Community privacy and interactive training

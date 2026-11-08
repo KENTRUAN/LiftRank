@@ -111,12 +111,19 @@ final class TrainingHealthManager: NSObject, ObservableObject {
     private func startPhone(_ workout: Workout) async throws {
         guard !workout.isDeleted, !workout.isPublished, current?.id == workout.id else { return }
         workout.healthOwner = "phone"
+        try await beginPhoneCollection(workout)
+        if workout.cardioIsPaused { session?.pause() }
+        workout.healthState = "recordingPhone"; save()
+    }
+
+    private func beginPhoneCollection(_ workout: Workout) async throws {
+        // Xcode 16's SDK marks live builders unavailable on iOS; runtime availability alone is insufficient.
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             if workout.healthState == "recordingPhone", let recovered = try? await healthStore.recoverActiveWorkoutSession() {
                 session = recovered; recovered.delegate = self
                 let live = recovered.associatedWorkoutBuilder()
                 live.delegate = self; live.shouldCollectWorkoutEvents = workout.cardioTimerStartedAt == nil; builder = live
-                workout.healthState = "recordingPhone"; save()
                 return
             }
             let liveSession = try HKWorkoutSession(healthStore: healthStore, configuration: workout.healthConfiguration)
@@ -129,14 +136,13 @@ final class TrainingHealthManager: NSObject, ObservableObject {
             liveSession.startActivity(with: workout.startedAt)
             do { try await live.beginCollection(at: workout.startedAt) }
             catch { liveSession.end(); live.discardWorkout(); session = nil; builder = nil; throw error }
-        } else {
-            let recorder = HKWorkoutBuilder(healthStore: healthStore, configuration: workout.healthConfiguration, device: .local())
-            try await recorder.addMetadata(metadata(workout))
-            try await recorder.beginCollection(at: workout.startedAt)
-            builder = recorder
+            return
         }
-        if workout.cardioIsPaused { session?.pause() }
-        workout.healthState = "recordingPhone"; save()
+        #endif
+        let recorder = HKWorkoutBuilder(healthStore: healthStore, configuration: workout.healthConfiguration, device: .local())
+        try await recorder.addMetadata(metadata(workout))
+        try await recorder.beginCollection(at: workout.startedAt)
+        builder = recorder
     }
 
     func finish(_ workout: Workout, context: ModelContext?) async {
@@ -196,7 +202,12 @@ final class TrainingHealthManager: NSObject, ObservableObject {
         }
     }
 
-    private var isLivePhone: Bool { if #available(iOS 26.0, *) { return builder is HKLiveWorkoutBuilder }; return false }
+    private var isLivePhone: Bool {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) { return builder is HKLiveWorkoutBuilder }
+        #endif
+        return false
+    }
     private func metadata(_ workout: Workout) -> [String: Any] {
         [HKMetadataKeySyncIdentifier: Self.syncIdentifier(workout.id), HKMetadataKeySyncVersion: 1,
          "LiftRankWorkoutID": workout.id.uuidString]
@@ -316,6 +327,7 @@ extension TrainingHealthManager: HKWorkoutSessionDelegate {
         }
     }
 }
+#if compiler(>=6.2)
 @available(iOS 26.0, *)
 extension TrainingHealthManager: HKLiveWorkoutBuilderDelegate {
     nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {}
@@ -325,6 +337,7 @@ extension TrainingHealthManager: HKLiveWorkoutBuilderDelegate {
         Task { @MainActor in self.heartRate = hr; self.calories = energy }
     }
 }
+#endif
 
 struct TrainingHealthStatusView: View {
     @Bindable var workout: Workout

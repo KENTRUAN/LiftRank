@@ -35,6 +35,7 @@ This document describes the feature work carried from `codex/training-ai-provide
 - Outdoor cardio has a private MapKit minimap and local route. Route collection is foreground-only; elapsed timing continues in the background. Paused intervals do not create connecting distance jumps.
 - A WidgetKit Live Activity shows cardio on the Lock Screen and supported Dynamic Islands. Pause/Resume controls update the same saved session; Open returns to its screen. Availability depends on device and user settings.
 - The LiftRank Watch companion can own a live HealthKit workout and mirror metrics/control to iPhone. Without the companion, iOS 26+ supports a live phone workout; iOS 17–25 saves the locally tracked workout when it finishes. LiftRank does not launch Apple's built-in Workout app remotely.
+- Live iPhone tracking requires a build made with Xcode 26+ (Swift 6.2+). Xcode 16.4 builds use the existing phone workout builder and save on completion, including on newer devices; Watch tracking remains available. Compile-time guards keep the newer HealthKit APIs out of older SDK builds.
 - Stable workout identifiers and import exclusions prevent duplicate local/Health records. Health failures preserve local data and provide retry. Real paired-Watch sensors and outdoor route accuracy still need hardware/field rehearsal.
 
 ### AI roles
